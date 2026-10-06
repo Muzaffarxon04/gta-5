@@ -67,6 +67,13 @@ const Panel = {
     document.getElementById('btnStats').addEventListener('click', () => this.stats());
     document.getElementById('btnInfo').addEventListener('click', () => this.info());
     document.getElementById('btnGuide').addEventListener('click', () => this.guide());
+    // Burger menyu: bo'lim ochilganda yopiladi (Saqlash va Yangi o'yin — javob shu yerda ko'rinsin)
+    const burger = document.getElementById('btnBurger'), drawer = document.getElementById('menuDrawer');
+    const setDrawer = open => { drawer.hidden = !open; burger.setAttribute('aria-expanded', String(open)); };
+    burger.addEventListener('click', () => setDrawer(drawer.hidden));
+    drawer.addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.id !== 'btnSave' && b.id !== 'btnReset') setDrawer(false); });
+    document.addEventListener('click', e => { if (!drawer.hidden && !drawer.contains(e.target) && !burger.contains(e.target)) setDrawer(false); });
+    addEventListener('keydown', e => { if (e.code === 'Escape' && !drawer.hidden) setDrawer(false); });
     const saveBtn = document.getElementById('btnSave'), resetBtn = document.getElementById('btnReset');
     saveBtn.addEventListener('click', () => { saveBtn.textContent = Save.write(true) ? 'Saqlandi' : 'Saqlab bo\'lmadi'; setTimeout(() => (saveBtn.textContent = 'Saqlash'), 1600); });
     resetBtn.addEventListener('click', () => {
