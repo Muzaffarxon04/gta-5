@@ -307,6 +307,7 @@ function setupSky(scene) {
   sun.shadow.mapSize.set(2048, 2048);
   const sc = sun.shadow.camera; sc.left = sc.bottom = -75; sc.right = sc.top = 75; sc.near = 10; sc.far = 400;
   sun.shadow.bias = -0.0006;
+  sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
   World.sun = sun;
   scene.fog = new THREE.Fog(0x8fc3ec, 90, 420);

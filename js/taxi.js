@@ -7,7 +7,7 @@ const Taxi = {
   toggle() {
     if (this.active) return this.stop('Taksi ishi tugatildi.');
     const c = Player.inCar;
-    if (!c || c.type !== 'taxi') return HUD.help('Taksi ishi uchun sariq taksiga o\'tiring.', 3);
+    if (!c || c.type !== 'taxi' || Player.passenger) return HUD.help('Taksi ishi uchun sariq taksiga o\'tiring.', 3);
     if (Missions.active) return HUD.help('Avval boshlangan vazifani tugating.', 3);
     this.active = true;
     HUD.help('Taksi ishi boshlandi! Yo\'lovchilarni manziliga yetkazing. <kbd>T</kbd> — tugatish', 4);

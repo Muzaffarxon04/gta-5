@@ -40,10 +40,17 @@ function finishInit(data) {
   populate();
   Pickups.init();
   Missions.init(scene);
+  placePeople(scene);
   Shops.init(scene);
   Garage.init(scene);
   MapUI.init(scene);
   Panel.init();
+  MPUI.init();
+  // Saytdan ochilganda (GitHub Pages) internetsiz ishlash uchun keshni yoqamiz
+  try {
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && window.top === window.self && !/claude/.test(location.hostname))
+      navigator.serviceWorker.register('sw.js').catch(() => { /* kesh ixtiyoriy */ });
+  } catch (e) { /* iframe ichida */ }
   if (had) document.getElementById('play').textContent = 'Davom etish';
   addEventListener('resize', onResize);
   addEventListener('keydown', e => { if (e.code === 'KeyP' && Game.started && !e.repeat) togglePause(); });
@@ -96,6 +103,7 @@ function frame(now) {
   Pad.poll();
   if (!Game.started) menuDemo(raw);
   else if (!Game.paused && !Game.shopOpen) step(raw);
+  MP.update(raw);
   renderer.render(scene, camera);
   endFrameInput();
 }
@@ -160,6 +168,7 @@ function handleActions() {
 }
 function updatePlayerCar(dt) {
   const c = Player.inCar;
+  if (Player.passenger) return;
   const J = activeStick(), pad = Input.pad;
   c.thr = J.active ? (Math.abs(J.y) < 0.15 ? 0 : clamp(-J.y * 1.3, -1, 1)) : (kd('KeyW') || kd('ArrowUp') ? 1 : 0) - (kd('KeyS') || kd('ArrowDown') ? 1 : 0);
   if (pad.active && (pad.rt > 0.05 || pad.lt > 0.05)) c.thr = pad.rt - pad.lt;
@@ -185,6 +194,7 @@ function bailOut(c) {
 function simulateWorld(dt) {
   const P = Player, cars = Game.cars;
   for (const c of cars) {
+    if (c.driver === 'remote') { c.sync(dt, Game.time); continue; } // boshqa o'yinchi mashinasi
     if (!c.dead) {
       if (c.onFire && (c.driver === 'traffic' || c.driver === 'police')) bailOut(c);
       if (c.driver === 'traffic') updateTrafficAI(c, dt, cars, P);
@@ -359,7 +369,7 @@ function radarBlips() {
   for (const c of Game.cars) if (c.driver === 'police' && dist2(c.x, c.z, P.x, P.z) < 40000)
     out.push({ x: c.x, z: c.z, color: Game.wanted && Math.floor(Game.time * 4) % 2 ? '#ef4b46' : '#3d7bff', size: 5.5 });
   if (MapUI.wp) out.push({ x: MapUI.wp.x, z: MapUI.wp.z, color: '#b36bff', size: 7, edge: true, label: '★' });
-  return out.concat(Landmarks.blips(P.x, P.z), Shops.blips(), Garage.blips(), Missions.blips(), Taxi.blips());
+  return out.concat(Landmarks.blips(P.x, P.z), Shops.blips(), Garage.blips(), Missions.blips(), Taxi.blips(), MP.blips());
 }
 
 // ===== Ishga tushirish =====

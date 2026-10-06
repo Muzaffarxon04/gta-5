@@ -1,6 +1,12 @@
 <title>Ko'cha Qiroli</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#120f1c">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="lib/fonts.css">
 <style>
 /* Layout: to'liq ekranli 3D shahar, HUD burchaklarda (GTA uslubi), menyu chap tomonda */
@@ -188,7 +194,37 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); cursor: pointer; }
 .sw:disabled { opacity: .35; cursor: default; }
 #radar { pointer-events: auto; cursor: pointer; }
-#panel { z-index: 20; }
+#panel, #mpPanel { z-index: 20; }
+/* Ko'p o'yinchi oynasi */
+.mp-card { width: min(720px, 100%); }
+.mp-row { display: flex; align-items: center; gap: 12px; padding: 10px 8px; font-size: 18px; }
+.mp-row input, .mp-join input, .mp-qr textarea { font-family: var(--f-ui); font-size: 18px; color: var(--ink); background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.25); border-radius: 4px; padding: 8px 10px; min-width: 0; }
+.mp-row input { flex: 1; }
+.mp-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 4px 8px; }
+.mp-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; min-width: 0; }
+.mp-box h3, .mp-h { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 18px; }
+.mp-h { margin: 12px 8px 4px; }
+.mp-room { font-family: var(--f-display); font-size: 34px; letter-spacing: .12em; color: var(--sun); font-variant-numeric: tabular-nums; }
+.mp-room:empty { display: none; }
+.mp-check { display: flex; gap: 8px; align-items: center; font-size: 15px; color: var(--muted); }
+.mp-check input { accent-color: var(--sun); width: 18px; height: 18px; }
+.mp-join { display: flex; gap: 8px; }
+.mp-join input { flex: 1; text-transform: uppercase; letter-spacing: .1em; }
+.mp-qr { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px 8px; align-items: flex-start; }
+.mp-qr img { width: min(300px, 100%); image-rendering: pixelated; background: #fff; border-radius: 6px; }
+.mp-qr img:not([src]) { display: none; }
+.mp-qr-side { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+.mp-qr-side p { margin: 0; line-height: 1.35; }
+.mp-qr video { width: 100%; max-width: 320px; border-radius: 6px; background: #000; }
+.mp-qr textarea { width: 100%; font-size: 13px; resize: vertical; }
+.mp-qr details { color: var(--muted); }
+.mp-qr details > * { margin-top: 6px; }
+.mp-qr summary { cursor: pointer; }
+.mp-list { margin: 0; padding: 0 8px 8px 28px; font-size: 18px; }
+.mp-status { color: var(--cash); font-size: 15px; }
+.mp-foot-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.mp-play { font-size: 18px; padding: 9px 18px; box-shadow: none; }
+.mp-hud { position: absolute; top: calc(52px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); background: var(--shade); padding: 4px 10px; border-radius: 4px; font-size: 15px; font-weight: 600; color: #7ee0ff; text-shadow: none; white-space: nowrap; }
 .toast { z-index: 30; }
 .tbtn[data-act="taxi"] { grid-area: aim; }
 .tbtn[data-act="nitro"] { grid-area: weapon; background: rgba(79,195,247,.45); }
@@ -217,6 +253,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <div class="weapon"><span id="wname">Mushtlar</span><span id="ammo"></span></div>
     <div class="money" id="money">$0</div>
   </div>
+  <div class="mp-hud" id="mpHud" hidden></div>
   <div class="cross" id="cross"></div>
   <div class="prompt" id="prompt" hidden></div>
   <div class="objective" id="objective" hidden></div>
@@ -245,6 +282,54 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <div class="shop-head"><div><div class="eyebrow" id="panelKicker">O'yin</div><h2 id="panelTitle">Sozlamalar</h2></div></div>
     <div class="shop-list" id="panelBody"></div>
     <div class="shop-foot"><span></span><button class="shop-close" id="panelClose" type="button">Yopish (Esc)</button></div>
+  </div>
+</div>
+
+<div class="shop" id="mpPanel" hidden>
+  <div class="shop-card mp-card" role="dialog" aria-labelledby="mpTitle">
+    <div class="shop-head"><div><div class="eyebrow">Do'stlar bilan</div><h2 id="mpTitle">Ko'p o'yinchi</h2></div></div>
+    <div class="shop-list">
+      <p class="set-note" id="mpWarn" hidden>Ko'p o'yinchi rejimi claude.ai sahifasida ishlamaydi: bu yerda telefonlar o'rtasidagi to'g'ridan-to'g'ri ulanish taqiqlangan. O'yinni o'z saytingizdan (masalan, GitHub Pages) yoki <b>dist/kocha-qiroli.html</b> faylidan oching.</p>
+      <div id="mpSetup">
+        <label class="mp-row" for="mpName"><span>Ismingiz</span><input id="mpName" maxlength="16" placeholder="Masalan, Ali" autocomplete="nickname"></label>
+        <div class="mp-cols">
+          <section class="mp-box">
+            <h3>Xona ochish (host)</h3>
+            <button class="ghost" id="mpHost" type="button">Xona kodi bilan</button>
+            <button class="ghost" id="mpQrHost" type="button">QR-kod bilan (internetsiz)</button>
+            <div class="mp-room" id="mpRoom" aria-live="polite"></div>
+            <label class="mp-check" for="mpPvp"><input type="checkbox" id="mpPvp" checked> O'yinchilar bir-biriga zarar yetkaza oladi</label>
+          </section>
+          <section class="mp-box">
+            <h3>Qo'shilish</h3>
+            <div class="mp-join"><input id="mpCode" maxlength="8" placeholder="Xona kodi" autocapitalize="characters" autocomplete="off"><button class="ghost" id="mpJoin" type="button">Qo'shilish</button></div>
+            <button class="ghost" id="mpQrJoin" type="button">QR orqali qo'shilish (internetsiz)</button>
+          </section>
+        </div>
+        <div class="mp-qr" id="mpQrBox" hidden>
+          <img id="mpQrImg" alt="Ulanish QR-kodi">
+          <div class="mp-qr-side">
+            <p id="mpQrCap"></p>
+            <button class="ghost" id="mpScan" type="button">Skanerlash (kamera)</button>
+            <video id="mpVideo" playsinline muted hidden></video>
+            <details><summary>Kamera ishlamasa — matn orqali</summary>
+              <label for="mpOut">Bu kodni qarshi tomonga yuboring:</label>
+              <textarea id="mpOut" readonly rows="3"></textarea>
+              <button class="ghost" id="mpCopy" type="button">Nusxalash</button>
+              <label for="mpIn">Qarshi tomon kodini joylang:</label>
+              <textarea id="mpIn" rows="3"></textarea>
+              <button class="ghost" id="mpApply" type="button">Qo'llash</button>
+            </details>
+          </div>
+        </div>
+        <h3 class="mp-h">O'yinchilar</h3>
+        <ul class="mp-list" id="mpList"></ul>
+        <p class="set-note">Hammangiz bir Wi-Fi tarmog'ida bo'lsangiz, o'yin ma'lumotlari to'g'ridan-to'g'ri lokal tarmoq orqali yuradi. Xona kodi faqat ulanish uchun internetdan foydalanadi; QR-kod usuli internetsiz ishlaydi.</p>
+      </div>
+    </div>
+    <div class="shop-foot"><span class="mp-status" id="mpStatus" aria-live="polite"></span>
+      <div class="mp-foot-btns"><button class="ghost danger" id="mpLeave" type="button" hidden>Chiqish</button><button class="ghost" id="mpClose" type="button">Yopish</button><button class="play mp-play" id="mpPlay" type="button">O'ynash</button></div>
+    </div>
   </div>
 </div>
 
@@ -308,6 +393,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     </dl>
     <button class="play" id="play" type="button">O'yinni boshlash</button>
     <div class="menu-actions">
+      <button class="ghost" id="btnMP" type="button">Ko'p o'yinchi</button>
       <button class="ghost" id="btnSettings" type="button">Sozlamalar</button>
       <button class="ghost" id="btnStats" type="button">Statistika</button>
       <button class="ghost" id="btnSave" type="button">Saqlash</button>
@@ -326,6 +412,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 <script src="models/gls.js"></script>
 <script src="models/charger.js"></script>
 <script src="models/police.js"></script>
+<script src="models/person.js"></script>
 <script src="js/core.js"></script>
 <script src="js/world.js"></script>
 <script src="js/landmarks.js"></script>
@@ -345,5 +432,9 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 <script src="js/taxi.js"></script>
 <script src="js/garage.js"></script>
 <script src="js/police.js"></script>
+<script src="lib/qrcode.js"></script>
+<script src="lib/jsQR.js"></script>
+<script src="js/net.js"></script>
+<script src="js/multiplayer.js"></script>
 <script src="js/game.js"></script>
 <script src="js/loop.js"></script>

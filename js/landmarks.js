@@ -265,6 +265,24 @@ function buildBusStops(scene) {
   if (P.length) addMerged(scene, P);
 }
 
+// ----- Skanerlangan haqiqiy odam (models/person.js): turgan holatda, uch joyda -----
+function placePeople(scene) {
+  const M = MODELS.person;
+  if (!M) return;
+  const spots = [], g = Missions.givers.find(v => v.type === 'race');
+  if (g) spots.push([g.x + 1.4, g.z + 1.2, -Math.PI / 2]);
+  const sq = Landmarks.areas.find(a => a.name === 'Amir Temur xiyoboni'), tw = Landmarks.areas.find(a => a.name === 'Teleminora');
+  if (sq) spots.push([sq.b.cx - 12.5, sq.b.cz + 9, -Math.PI / 2 + 0.4]);
+  if (tw) spots.push([tw.b.cx + 7, tw.b.cz - 21.5, Math.PI - 0.3]);
+  for (const [x, z, h] of spots) {
+    const p = M.scene.clone(true);
+    p.position.set(x, groundH(x, z), z); p.rotation.y = h;
+    p.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    scene.add(p);
+    addCollider(x - 0.25, z - 0.25, x + 0.25, z + 0.25, 1.7, 'lamp');
+  }
+}
+
 // ----- Yangilash, xarita va nomlar -----
 Landmarks.update = function (t) {
   const night = 1 - World.daylight;

@@ -149,7 +149,7 @@ const Shops = {
       s.ring.rotation.y += dt;
       const d = dist2(s.x, s.z, P.x, P.z);
       if (s.lock && d > 9) s.lock = false;
-      const carOk = s.kind === 'garage' && P.inCar && P.inCar.speed < 3;
+      const carOk = s.kind === 'garage' && P.inCar && !P.passenger && P.inCar.speed < 3;
       if (!this.open && !s.lock && (!P.inCar || carOk) && !P.dead && d < (carOk ? 10.5 : 3.2)) this.show(s);
     }
   },

@@ -1,0 +1,6 @@
+.DS_Store
+# Asl 3D model fayllari (o'yin models/*.js dagi yengil nusxalarni ishlatadi)
+models/*.glb
+models/*.fbx
+models/*.obj
+models/*.blend

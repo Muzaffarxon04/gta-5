@@ -82,7 +82,7 @@ class Car {
     }
   }
   damage(d) {
-    if (this.dead || d <= 0) return;
+    if (this.dead || d <= 0 || this.driver === 'remote') return;
     this.hp -= d;
     if (this.hp <= 0 && !this.onFire) { this.hp = 0; this.onFire = true; this.burnT = rand(3.5, 5.5); }
   }
@@ -127,6 +127,20 @@ class Car {
     this.mesh.add(hm.g);
     this.driverHM = hm;
     if (this.T.kind === 'moto') poseRider(hm); else poseSeated(hm);
+  }
+  // Yo'lovchi o'rindig'i (o'ng tomon; mototsiklda — orqada)
+  seatPassenger(hm) {
+    const S = this.T.seat, moto = this.T.kind === 'moto';
+    hm.g.position.set(moto ? 0 : -S.x, (moto ? S.y + 0.05 : S.y) - 0.95 * hm.mesh.scale.y, moto ? S.z - 0.55 : S.z);
+    hm.g.rotation.set(0, 0, 0);
+    this.mesh.add(hm.g); this.passHM = hm;
+    if (moto) poseRider(hm); else poseSeated(hm);
+  }
+  unseatPassenger() {
+    const hm = this.passHM;
+    if (hm) this.mesh.remove(hm.g);
+    this.passHM = null;
+    return hm;
   }
   unseat() {
     const hm = this.driverHM;

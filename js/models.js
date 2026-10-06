@@ -43,7 +43,8 @@ function prepModel(name, scene) {
       else if (o.name === 'red') mat = MODEL_RED;
       else if (o.name === 'chrome') mat = MODEL_CHROME;
       else mat = MODEL_DARK;
-    } else mat = new THREE.MeshPhongMaterial({ map: src.map, shininess: 40, specular: 0x333333, side: src.side });
+    } else if (name === 'person') mat = new THREE.MeshLambertMaterial({ map: src.map, emissive: 0xffffff, emissiveMap: src.map, emissiveIntensity: 0.3 }); // skanerda yorug'lik bor
+    else mat = new THREE.MeshPhongMaterial({ map: src.map, shininess: 40, specular: 0x333333, side: src.side });
     if (mat) o.material = mat;
     o.castShadow = !o.userData.glass;
   });

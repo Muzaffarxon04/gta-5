@@ -8,7 +8,7 @@ const Missions = {
   init(scene) {
     const defs = [
       { blk: [2, 5], who: 'Akmal aka', type: 'deliver', title: 'Yetkazib berish' },
-      { blk: [5, 5], who: 'Dilshod', type: 'race', title: 'Tungi poyga' },
+      { blk: [5, 5], who: 'Malika', type: 'race', title: 'Tungi poyga' },
       { blk: [5, 1], who: 'Bobur', type: 'escape', title: 'Katta ta\'qib' },
     ];
     for (const d of defs) {

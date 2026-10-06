@@ -114,7 +114,7 @@ function manageSpawns(dt) {
   let traffic = 0, parked = 0, cops = 0, buses = 0;
   for (let i = Game.cars.length - 1; i >= 0; i--) {
     const c = Game.cars[i];
-    if (c === P.inCar || (c.persist && !c.dead)) continue;
+    if (c === P.inCar || c.driver === 'remote' || (c.persist && !c.dead)) continue;
     const d = Math.hypot(c.x - px, c.z - pz);
     const far = c.dead ? 180 : c.driver === 'police' ? (Game.wanted ? 320 : 240) : 260;
     if (d > far) { c.remove(); Game.cars.splice(i, 1); continue; }
@@ -209,6 +209,16 @@ function nearestCar(maxD) {
 }
 function enterCar(c) {
   const P = Player;
+  // Boshqa o'yinchining mashinasi — yo'lovchi bo'lib o'tirish
+  if (c.driver === 'remote') {
+    if (c.passHM) { HUD.help('Bu mashinada bo\'sh joy yo\'q.', 2); return; }
+    P.inCar = c; P.passenger = c.remote.id; P.punchT = 0; P.aimT = 0;
+    c.seatPassenger(P.hm);
+    if (P.gun) P.gun.visible = false;
+    SFX.door();
+    HUD.help(`<b>${c.remote.name}</b> mashinasida yo'lovchisiz. <kbd>F</kbd> — tushish`, 4);
+    return;
+  }
   if (c.driver === 'traffic' || c.driver === 'police') {
     // Haydovchini tortib chiqarish
     const rx = -Math.cos(c.h), rz = Math.sin(c.h), b = blockAt(c.x, c.z) || nearestBlock(c.x, c.z);
@@ -241,8 +251,13 @@ function exitCar() {
   pushOut(spot, 0.35, 0.5);
   P.x = spot.x; P.z = spot.z; P.y = groundH(P.x, P.z);
   P.vx = c.vx * 0.3; P.vz = c.vz * 0.3; P.vy = 0; P.h = c.h;
-  c.thr = 0; c.hand = false; c.siren = false;
-  leaveSeat();
+  if (P.passenger) {
+    c.unseatPassenger(); World.scene.add(P.hm.g); P.hm.g.rotation.set(0, P.h, 0);
+    P.passenger = null; P.inCar = null; updateWeaponModel();
+  } else {
+    c.thr = 0; c.hand = false; c.siren = false;
+    leaveSeat();
+  }
   Game.camYaw = c.h;
   SFX.door(); SFX.setEngine(false, 0);
 }
@@ -274,6 +289,7 @@ function playerAttack(camera) {
     const bat = P.weapon === 'bat';
     P.punchT = bat ? 0.4 : 0.3; SFX.swing();
     const fx = Math.sin(Game.camYaw), fz = Math.cos(Game.camYaw), kb = bat ? 6 : 3;
+    if (MP.melee(fx, fz, W.range, W.dmg)) { SFX.punch(); return; }
     for (const p of Game.peds) {
       if (!p.alive) continue;
       const dx = p.x - P.x, dz = p.z - P.z, d = Math.hypot(dx, dz);
@@ -293,11 +309,14 @@ function playerAttack(camera) {
   P.shootCd = W.cd; P.ammo[P.weapon]--; P.aimT = 1.2;
   const o = camera.position, base = camera.getWorldDirection(_dir);
   const gx = P.x + Math.sin(P.h) * 0.7 - Math.cos(P.h) * 0.33, gy = P.y + 1.48, gz = P.z + Math.cos(P.h) * 0.7 + Math.sin(P.h) * 0.33;
+  let first = null;
   for (let k = 0; k < W.pellets; k++) {
     const sp = W.spread;
     const dir = sp ? _dir2.set(base.x + rand(-sp, sp), base.y + rand(-sp, sp), base.z + rand(-sp, sp)).normalize() : base;
-    fireRay(o, dir, W, gx, gy, gz);
+    const h = fireRay(o, dir, W, gx, gy, gz);
+    if (!first) first = h;
   }
+  MP.shot(gx, gy, gz, first[0], first[1], first[2], P.weapon);
   FX.spawn(gx, gy, gz, 0, 0, 0, 0.05, 0xffe08a, W.pellets > 1 ? 0.4 : 0.25);
   FX.flash(gx, gy, gz, 1.5);
   SFX.shot(P.weapon);
@@ -318,12 +337,19 @@ function fireRay(o, dir, W, gx, gy, gz) {
     }
   }
   for (const c of Game.cars) {
+    if (c.driver === 'remote') continue;
     const t = rayCar(c, o.x, o.y, o.z, dir.x, dir.y, dir.z, best);
     if (t > 0 && t < best) { best = t; hitCar = c; hitPed = null; }
   }
+  // Boshqa o'yinchilar (ko'p o'yinchi rejimida)
+  const rp = MP.rayPlayers(o, dir, best);
+  if (rp) { best = rp.t; hitPed = null; hitCar = null; }
   const hx = o.x + dir.x * best, hy = o.y + dir.y * best, hz = o.z + dir.z * best;
   FX.tracer(gx, gy, gz, hx, hy, hz);
-  if (hitPed) {
+  if (rp) {
+    MP.hit(rp.r, rp.head ? W.dmg * 4.5 : rp.car ? W.dmg * 0.35 : W.dmg);
+    FX.sparks(hx, hy, hz, rp.car ? 0xffd27a : 0xb01818);
+  } else if (hitPed) {
     const killed = hitPed.hurt(head ? W.dmg * 4.5 : W.dmg, P.x, P.z, dir.x * 2, 1, dir.z * 2);
     FX.sparks(hx, hy, hz, 0xb01818); Game.hitMark = 0.2;
     crime(killed ? 0 : 0.5);
@@ -334,6 +360,7 @@ function fireRay(o, dir, W, gx, gy, gz) {
     if (hitCar.driver === 'traffic') hitCar.panic = 8;
     if (hitCar.driver === 'police') crime(0.4);
   } else FX.sparks(hx, hy, hz, 0xcccccc);
+  return [hx, hy, hz];
 }
 
 // ===== Portlash =====
