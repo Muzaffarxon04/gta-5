@@ -96,7 +96,7 @@ function startGame() {
   if (!Game.started) {
     Game.started = true;
     Game.camYaw = Player.h;
-    HUD.help('Yoningizda qora Malibu va qizil mototsikl turibdi — <kbd>F</kbd> bilan o\'tiring. Ko\'chaning narigi tomonida qurol (<b>Q</b>) va kiyim (<b>K</b>) do\'konlari bor. Sariq <b>!</b> — vazifalar.', 9);
+    HUD.help(`Yoningizda qora Malibu va qizil mototsikl turibdi — ${Input.touch ? 'yoniga borib, eshik oldidagi «Minish» ni bosing' : '<kbd>F</kbd> bilan o\'tiring'}. Ko\'chaning narigi tomonida qurol (<b>Q</b>) va kiyim (<b>K</b>) do\'konlari bor. Sariq <b>!</b> — vazifalar.`, 9);
   }
   Game.paused = false;
   TouchUI.show(true);
@@ -380,7 +380,7 @@ function prompts() {
   if (Game.bustT > 0.3) return HUD.prompt('Politsiya seni ushlamoqda — qoch!');
   if (!P.inCar) {
     const c = nearestCar(4.2);
-    if (c) return HUD.prompt(`<kbd>F</kbd> ${c.driver ? 'haydovchini tushirish' : c.T.kind === 'moto' ? 'mototsiklga minish' : 'mashinaga o\'tirish'}`);
+    if (c && !Input.touch) return HUD.prompt(`<kbd>F</kbd> ${c.driver ? 'haydovchini tushirish' : c.T.kind === 'moto' ? 'mototsiklga minish' : 'mashinaga o\'tirish'}`);
   }
   HUD.prompt(null);
 }

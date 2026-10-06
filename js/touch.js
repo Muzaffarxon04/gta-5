@@ -1,7 +1,8 @@
 'use strict';
+const _doorV = new THREE.Vector3(), _doorP = new THREE.Vector3(), _doorY = new THREE.Vector3(0, 1, 0);
 // ===== Telefon uchun ekrandagi boshqaruv: joystik, kamera, tugmalar =====
 const TouchUI = {
-  root: null, running: false, _car: null,
+  root: null, running: false, aiming: false, _car: null,
   detect() {
     const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
     Input.touch = !!(coarse || location.hash === '#touch');
@@ -69,9 +70,10 @@ const TouchUI = {
   press(act, down) {
     if (act === 'fire') { Input.mouseL = down; if (down) Input.clickL = true; }
     else if (act === 'jump') { Input.keys.Space = down; if (down) Input.pressed.Space = true; }
-    else if (act === 'enter') { if (down) Input.pressed.KeyF = true; }
+    else if (act === 'enter' || act === 'door') { if (down) Input.pressed.KeyF = true; }
     else if (act === 'run') { if (down) { this.running = !this.running; Input.keys.ShiftLeft = this.running; this.btn('run').classList.toggle('lock', this.running); } }
-    else if (act === 'aim') Input.mouseR = down;
+    // Nishon: bir bosish — yoqiladi, yana bosish — o'chadi (bosib turish shart emas, o'ng barmoq otish uchun bo'sh)
+    else if (act === 'aim') { if (down) this.setAim(!this.aiming); }
     else if (act === 'weapon') { if (down) Input.wheel += 1; }
     else if (act === 'pause') { if (down) togglePause(); }
     else if (act === 'siren') { if (down) Input.pressed.KeyG = true; }
@@ -80,13 +82,38 @@ const TouchUI = {
     else if (act === 'nitro') Input.keys.KeyN = down;
     else if (act === 'view') { if (down) Input.pressed.KeyV = true; }
   },
+  setAim(on) {
+    this.aiming = on; Input.mouseR = on;
+    this.btn('aim').classList.toggle('lock', on);
+  },
   btn(act) { return this.root.querySelector(`[data-act="${act}"]`); },
   show(v) { if (this.root) this.root.hidden = !v || !Game.started || Game.paused || Game.shopOpen; },
+  // "Minish" tugmasi faqat mashina yonida, uning eshigi turgan joyda (ekranda) chiqadi
+  updateDoor() {
+    const P = Player, b = this.door || (this.door = this.btn('door'));
+    const c = !P.inCar && !P.dead ? nearestCar(4.2) : null;
+    if (c) {
+      // Eshik: o'yinchi turgan tomonda, haydovchi o'rindig'i ro'parasida
+      const T = c.T, l = carLocal(c, P.x, P.z), s = l.r > 0 ? -1 : 1;
+      _doorV.set(s * (T.kind === 'moto' ? 0.45 : T.w / 2 + 0.1), T.kind === 'moto' ? 0.85 : Math.min(1.1, T.H * 0.62), T.seat.z + 0.1)
+        .applyAxisAngle(_doorY, c.h).add(_doorP.set(c.x, c.y, c.z)).project(camera);
+      const W = innerWidth, H = innerHeight;
+      if (_doorV.z < 1) {
+        b.style.left = clamp((_doorV.x + 1) / 2 * W, 50, W - 50) + 'px';
+        b.style.top = clamp((1 - _doorV.y) / 2 * H, 60, H - 50) + 'px';
+        b.textContent = c.driver ? 'Tushirish' : 'Minish';
+      } else b.style.left = b.style.top = '50%';
+    }
+    b.hidden = !c;
+  },
   update() {
     if (!this.root || this.root.hidden) return;
+    this.updateDoor();
     const c = Player.inCar, car = !!c, pol = car && c.type === 'police', taxi = car && c.type === 'taxi', nitro = !!(car && c.mods && c.mods.nitro);
     const driving = car && !Player.passenger;
-    const key = [car, pol, taxi, nitro, driving].join('|');
+    // Nishonga olish faqat o'qotar qurolda ishlaydi (musht va bitada kerak emas)
+    const gun = !car && !WEAPONS[Player.weapon].melee;
+    const key = [car, pol, taxi, nitro, driving, gun].join('|');
     if (key === this._car) return;
     this._car = key;
     // Haydaganda joystik o'rniga chap/o'ng tugmalari va gaz/tormoz pedallari
@@ -104,7 +131,10 @@ const TouchUI = {
     this.btn('jump').innerHTML = car ? 'Qo\'l<br>tormoz' : 'Sakrash';
     this.btn('enter').textContent = car ? 'Tushish' : 'Minish';
     this.btn('fire').textContent = car ? 'Signal' : 'Otish';
-    for (const a of ['aim', 'run', 'weapon']) this.btn(a).hidden = car;
+    for (const a of ['run', 'weapon']) this.btn(a).hidden = car;
+    this.btn('enter').hidden = !car; // piyodaga "Minish" mashina eshigi yonida chiqadi
     if (nitro) this.btn('weapon').hidden = true;
+    this.btn('aim').hidden = !gun;
+    if (!gun && this.aiming) this.setAim(false);
   },
 };

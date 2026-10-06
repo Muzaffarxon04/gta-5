@@ -125,6 +125,7 @@ const Panel = {
       <h3>Telefonda</h3>
       <ul>${li([
         'Piyoda: chapdagi joystik — yurish, ekranni surish — kamerani burish, o\'ngdagi tugmalar — otish, sakrash, qurol',
+        '«Nishon» faqat qo\'lda o\'qotar qurol bo\'lsa chiqadi: bir bosish — kamera yaqinlashadi va mo\'ljal paydo bo\'ladi (aniq otish uchun), yana bosish — o\'chadi',
         'Mashina va mototsiklda: chapda ◀ ▶ — rulni burish, o\'ngda <b>GAZ</b> va <b>TORMOZ</b> pedallari (to\'xtaganda tormoz — orqaga yurish)',
         '«Qo\'l tormoz» — drift, «Kamera» — mashina ichidan ko\'rish, «Tushish» — mashinadan chiqish',
         'Telefonni yotqizib (gorizontal) o\'ynang',
