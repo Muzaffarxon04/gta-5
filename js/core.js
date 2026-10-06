@@ -133,6 +133,14 @@ function lineOfSight(ax, ay, az, bx, by, bz) {
 // ===== Klaviatura va sichqoncha =====
 const Input = { keys: {}, pressed: {}, mdx: 0, mdy: 0, mouseL: false, mouseR: false, clickL: false, locked: false, canvas: null,
   joy: { x: 0, y: 0, active: false }, wheel: 0, touch: false, pad: { active: false, x: 0, y: 0, rt: 0, lt: 0 } };
+// Telefon tik turganda o'yin 90° burib ko'rsatiladi (doim albom rejimi). View — o'yin sahifasining o'lchami;
+// toView/viewRect — ekrandagi nuqta/to'rtburchakni o'yin sahifasi koordinatalariga o'tkazadi.
+const View = { rot: false, w: innerWidth, h: innerHeight };
+const toView = (x, y) => (View.rot ? { x: y, y: innerWidth - x } : { x, y });
+function viewRect(el) {
+  const r = el.getBoundingClientRect();
+  return View.rot ? { left: r.top, top: innerWidth - r.right, width: r.height, height: r.width } : r;
+}
 // Faol tayoq: telefon joystigi yoki geympadning chap tayog'i
 const _noStick = { x: 0, y: 0, active: false };
 function activeStick() {

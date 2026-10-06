@@ -42,8 +42,8 @@ const MapUI = {
     this.routeT = 0;
   },
   onClick(e) {
-    const r = this.cv.getBoundingClientRect(), v = this.view;
-    const u = (e.clientX - r.left) * (this.cv.width / r.width), w = (e.clientY - r.top) * (this.cv.height / r.height);
+    const r = viewRect(this.cv), v = this.view, q = toView(e.clientX, e.clientY);
+    const u = (q.x - r.left) * (this.cv.width / r.width), w = (q.y - r.top) * (this.cv.height / r.height);
     const x = (u - v.ox) / v.s + World.mapMin, z = (w - v.oy) / v.s + World.mapMin;
     if (Math.abs(x) > CITY.LIMIT || Math.abs(z) > CITY.LIMIT) return;
     if (this.wp && dist2(x, z, this.wp.x, this.wp.z) < 400) this.setWaypoint(null);
@@ -69,7 +69,7 @@ const MapUI = {
   },
   render() {
     const cv = this.cv, g = this.g, dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const box = Math.max(200, Math.min(innerWidth - 32, innerHeight - 150));
+    const box = Math.max(200, Math.min(View.w - 32, View.h - 150));
     cv.style.width = cv.style.height = box + 'px';
     cv.width = cv.height = Math.round(box * dpr);
     const W = cv.width, img = World.mapCanvas, s = W / img.width;

@@ -14,7 +14,8 @@ const TouchUI = {
     const joy = document.getElementById('joy'), knob = document.getElementById('joyKnob'), R = 56;
     let joyId = null, camId = null, cx = 0, cy = 0, lx = 0, ly = 0;
     const move = t => {
-      let dx = t.clientX - cx, dy = t.clientY - cy;
+      const q = toView(t.clientX, t.clientY);
+      let dx = q.x - cx, dy = q.y - cy;
       const d = Math.hypot(dx, dy);
       if (d > R) { dx *= R / d; dy *= R / d; }
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -22,7 +23,7 @@ const TouchUI = {
     };
     joy.addEventListener('touchstart', e => {
       e.preventDefault();
-      const t = e.changedTouches[0], r = joy.getBoundingClientRect();
+      const t = e.changedTouches[0], r = viewRect(joy);
       joyId = t.identifier; cx = r.left + r.width / 2; cy = r.top + r.height / 2;
       move(t);
     }, { passive: false });
@@ -30,12 +31,12 @@ const TouchUI = {
     Input.canvas.addEventListener('touchstart', e => {
       e.preventDefault();
       const t = e.changedTouches[0];
-      if (camId === null) { camId = t.identifier; lx = t.clientX; ly = t.clientY; }
+      if (camId === null) { const q = toView(t.clientX, t.clientY); camId = t.identifier; lx = q.x; ly = q.y; }
     }, { passive: false });
     addEventListener('touchmove', e => {
       for (const t of e.changedTouches) {
         if (t.identifier === joyId) move(t);
-        else if (t.identifier === camId) { Input.mdx += (t.clientX - lx) * 2.2; Input.mdy += (t.clientY - ly) * 2.2; lx = t.clientX; ly = t.clientY; }
+        else if (t.identifier === camId) { const q = toView(t.clientX, t.clientY); Input.mdx += (q.x - lx) * 2.2; Input.mdy += (q.y - ly) * 2.2; lx = q.x; ly = q.y; }
       }
       if (Game.started && !Game.paused && !Game.shopOpen) e.preventDefault();
     }, { passive: false });
@@ -46,6 +47,8 @@ const TouchUI = {
       }
     };
     addEventListener('touchend', end); addEventListener('touchcancel', end);
+    // Har bosishda to'liq ekranni tiklash (foydalanuvchi chiqib ketgan bo'lsa)
+    addEventListener('touchend', () => { if (Game.started) goFullscreen(); }, { passive: true });
     // Mashinada: chap/o'ng tugmalari va pedallar — klaviatura strelkalari kabi ishlaydi
     root.querySelectorAll('[data-key]').forEach(btn => {
       const code = btn.dataset.key;
@@ -62,7 +65,7 @@ const TouchUI = {
       btn.addEventListener('touchcancel', up, { passive: false });
     });
     const note = document.getElementById('note');
-    if (note) note.textContent = 'Telefonda: chapdagi joystik — yurish, mashinada — chap/o\'ng tugmalari va gaz/tormoz pedallari, ekranni surish — kamera, «Kamera» — mashina ichidan ko\'rish. Telefonni yotqizib o\'ynang.';
+    if (note) note.textContent = 'Telefonda: chapdagi joystik — yurish, mashinada — chap/o\'ng tugmalari va gaz/tormoz pedallari, ekranni surish — kamera, «Kamera» — mashina ichidan ko\'rish. O\'yin doim albom (yotiq) rejimida ochiladi.';
   },
   press(act, down) {
     if (act === 'fire') { Input.mouseL = down; if (down) Input.clickL = true; }
