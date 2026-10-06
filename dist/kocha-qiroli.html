@@ -270,6 +270,21 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .sw:disabled { opacity: .35; cursor: default; }
 #radar { pointer-events: auto; cursor: pointer; }
 #panel, #mpPanel { z-index: 20; }
+/* Ma'lumot oynasi */
+.info { padding: 4px 8px 12px; display: flex; flex-direction: column; gap: 8px; }
+.info h3 { margin: 10px 0 0; font-family: var(--f-display); font-weight: 400; font-size: 19px; color: var(--sun); }
+.info p, .info li { margin: 0; font-size: 17px; line-height: 1.45; color: var(--ink); max-width: 62ch; }
+.info .info-lead { font-size: 19px; color: var(--muted); }
+.info ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.info a { color: var(--sun); text-underline-offset: 2px; }
+.info a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.info-credits li { font-size: 15px; color: var(--muted); }
+.info-founder { display: flex; align-items: center; gap: 14px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; }
+.info-founder > div:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.info-founder b { font-size: 20px; }
+.info-founder span { font-size: 15px; color: var(--muted); }
+.info-avatar { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); color: var(--night); font-family: var(--f-display); font-size: 26px; }
+.info-ver { font-size: 14px !important; color: var(--muted) !important; }
 /* Ko'p o'yinchi oynasi */
 .mp-card { width: min(720px, 100%); }
 .mp-row { display: flex; align-items: center; gap: 12px; padding: 10px 8px; font-size: 18px; }
@@ -472,6 +487,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
       <button class="ghost" id="btnMP" type="button">Ko'p o'yinchi</button>
       <button class="ghost" id="btnSettings" type="button">Sozlamalar</button>
       <button class="ghost" id="btnStats" type="button">Statistika</button>
+      <button class="ghost" id="btnInfo" type="button">Ma'lumot</button>
       <button class="ghost" id="btnSave" type="button">Saqlash</button>
       <button class="ghost danger" id="btnReset" type="button">Yangi o'yin</button>
     </div>
@@ -7406,7 +7422,8 @@ const Pad = {
 };
 addEventListener('gamepadconnected', () => { if (Game.started) HUD.help('Geympad ulandi', 3); });
 
-// ----- Menyudagi oyna: sozlamalar va statistika -----
+// ----- Menyudagi oyna: sozlamalar, statistika va ma'lumot -----
+const GAME_VERSION = '1.0';
 const Panel = {
   el: null,
   init() {
@@ -7414,6 +7431,7 @@ const Panel = {
     document.getElementById('panelClose').addEventListener('click', () => this.close());
     document.getElementById('btnSettings').addEventListener('click', () => this.settings());
     document.getElementById('btnStats').addEventListener('click', () => this.stats());
+    document.getElementById('btnInfo').addEventListener('click', () => this.info());
     const saveBtn = document.getElementById('btnSave'), resetBtn = document.getElementById('btnReset');
     saveBtn.addEventListener('click', () => { saveBtn.textContent = Save.write(true) ? 'Saqlandi' : 'Saqlab bo\'lmadi'; setTimeout(() => (saveBtn.textContent = 'Saqlash'), 1600); });
     resetBtn.addEventListener('click', () => {
@@ -7455,6 +7473,41 @@ const Panel = {
     bind('setSens', 'sens', x => (+x).toFixed(1) + '×');
     bind('setFov', 'fov', x => x + '°');
     document.getElementById('setInvert').addEventListener('change', e => { v.invertY = e.target.checked; Save.soon(); });
+  },
+  info() {
+    const li = a => a.map(t => `<li>${t}</li>`).join('');
+    this.open('Ma\'lumot', 'Ko\'cha Qiroli', `<div class="info">
+      <p class="info-lead">Toshkentdan ilhomlangan ochiq dunyo shahar o'yini. Brauzerda ishlaydi, internetsiz ham o'ynash mumkin va telefonga ilova kabi o'rnatiladi.</p>
+      <h3>O'yin haqida</h3>
+      <p>Siz katta shaharda erkin yurasiz: mashina haydaysiz, ish topasiz, pul ishlaysiz va politsiyadan qochasiz. Shahar kunduz va tunda, yomg'ir va qorda o'zgarib turadi, ko'chalarda odamlar, avtobuslar va svetoforlar bor.</p>
+      <h3>Imkoniyatlar</h3>
+      <ul>${li([
+        'Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxonali shahar',
+        'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Malibu, Spark, Matiz, Damas, Labo, Jiguli, shuningdek Mercedes, avtobus va mototsikl',
+        'Vazifalar, taksi ishi, garaj va tyuning, qurol va kiyim do\'konlari',
+        'Politsiya: 5 yulduzli qidiruv, yo\'l to\'siqlari va vertolyot',
+        'Ob-havo (yomg\'ir, qor, tuman), kun va tun, mashinada radio',
+        'Ko\'p o\'yinchi: xona kodi yoki QR-kod orqali, lokal tarmoqda',
+        'O\'yinni saqlash, statistika va 13 ta yutuq; telefon va geympad bilan boshqaruv',
+      ])}</ul>
+      <h3>Asoschi</h3>
+      <div class="info-founder">
+        <div class="info-avatar" aria-hidden="true">M</div>
+        <div><b>Muzaffarxon</b><span>O'yin g'oyasi muallifi va asoschisi</span>
+          <a href="https://github.com/Muzaffarxon04" target="_blank" rel="noopener">github.com/Muzaffarxon04</a></div>
+      </div>
+      <p>O'yin sahifasi: <a href="https://muzaffarxon04.github.io/gta-5/" target="_blank" rel="noopener">muzaffarxon04.github.io/gta-5</a> · Manba kodi: <a href="https://github.com/Muzaffarxon04/gta-5" target="_blank" rel="noopener">GitHub</a></p>
+      <h3>Mualliflar va litsenziyalar</h3>
+      <ul class="info-credits">${li([
+        '3D grafika: <b>Three.js</b> (MIT)',
+        'Shriftlar: <b>Bungee</b> va <b>Barlow Condensed</b> (SIL Open Font License 1.1)',
+        'QR-kod: <b>qrcode-generator</b> — Kazuhiko Arase (MIT), <b>jsQR</b> (Apache 2.0)',
+        'Xona kodi orqali ulanish: <b>ntfy.sh</b> xizmati',
+        '3D modellar: Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
+        'O\'yin <b>Claude</b> (Anthropic) sun\'iy intellekti yordamida yaratilgan',
+      ])}</ul>
+      <p class="info-ver">Versiya ${GAME_VERSION} · 2026</p>
+    </div>`);
   },
   stats() {
     const s = Stats.d, km = m => (m / 1000).toFixed(1) + ' km', mins = Math.floor(s.playTime / 60);

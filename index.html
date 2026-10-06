@@ -195,6 +195,21 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .sw:disabled { opacity: .35; cursor: default; }
 #radar { pointer-events: auto; cursor: pointer; }
 #panel, #mpPanel { z-index: 20; }
+/* Ma'lumot oynasi */
+.info { padding: 4px 8px 12px; display: flex; flex-direction: column; gap: 8px; }
+.info h3 { margin: 10px 0 0; font-family: var(--f-display); font-weight: 400; font-size: 19px; color: var(--sun); }
+.info p, .info li { margin: 0; font-size: 17px; line-height: 1.45; color: var(--ink); max-width: 62ch; }
+.info .info-lead { font-size: 19px; color: var(--muted); }
+.info ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.info a { color: var(--sun); text-underline-offset: 2px; }
+.info a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.info-credits li { font-size: 15px; color: var(--muted); }
+.info-founder { display: flex; align-items: center; gap: 14px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; }
+.info-founder > div:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.info-founder b { font-size: 20px; }
+.info-founder span { font-size: 15px; color: var(--muted); }
+.info-avatar { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); color: var(--night); font-family: var(--f-display); font-size: 26px; }
+.info-ver { font-size: 14px !important; color: var(--muted) !important; }
 /* Ko'p o'yinchi oynasi */
 .mp-card { width: min(720px, 100%); }
 .mp-row { display: flex; align-items: center; gap: 12px; padding: 10px 8px; font-size: 18px; }
@@ -397,6 +412,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
       <button class="ghost" id="btnMP" type="button">Ko'p o'yinchi</button>
       <button class="ghost" id="btnSettings" type="button">Sozlamalar</button>
       <button class="ghost" id="btnStats" type="button">Statistika</button>
+      <button class="ghost" id="btnInfo" type="button">Ma'lumot</button>
       <button class="ghost" id="btnSave" type="button">Saqlash</button>
       <button class="ghost danger" id="btnReset" type="button">Yangi o'yin</button>
     </div>

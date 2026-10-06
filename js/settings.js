@@ -56,7 +56,8 @@ const Pad = {
 };
 addEventListener('gamepadconnected', () => { if (Game.started) HUD.help('Geympad ulandi', 3); });
 
-// ----- Menyudagi oyna: sozlamalar va statistika -----
+// ----- Menyudagi oyna: sozlamalar, statistika va ma'lumot -----
+const GAME_VERSION = '1.0';
 const Panel = {
   el: null,
   init() {
@@ -64,6 +65,7 @@ const Panel = {
     document.getElementById('panelClose').addEventListener('click', () => this.close());
     document.getElementById('btnSettings').addEventListener('click', () => this.settings());
     document.getElementById('btnStats').addEventListener('click', () => this.stats());
+    document.getElementById('btnInfo').addEventListener('click', () => this.info());
     const saveBtn = document.getElementById('btnSave'), resetBtn = document.getElementById('btnReset');
     saveBtn.addEventListener('click', () => { saveBtn.textContent = Save.write(true) ? 'Saqlandi' : 'Saqlab bo\'lmadi'; setTimeout(() => (saveBtn.textContent = 'Saqlash'), 1600); });
     resetBtn.addEventListener('click', () => {
@@ -105,6 +107,41 @@ const Panel = {
     bind('setSens', 'sens', x => (+x).toFixed(1) + '×');
     bind('setFov', 'fov', x => x + '°');
     document.getElementById('setInvert').addEventListener('change', e => { v.invertY = e.target.checked; Save.soon(); });
+  },
+  info() {
+    const li = a => a.map(t => `<li>${t}</li>`).join('');
+    this.open('Ma\'lumot', 'Ko\'cha Qiroli', `<div class="info">
+      <p class="info-lead">Toshkentdan ilhomlangan ochiq dunyo shahar o'yini. Brauzerda ishlaydi, internetsiz ham o'ynash mumkin va telefonga ilova kabi o'rnatiladi.</p>
+      <h3>O'yin haqida</h3>
+      <p>Siz katta shaharda erkin yurasiz: mashina haydaysiz, ish topasiz, pul ishlaysiz va politsiyadan qochasiz. Shahar kunduz va tunda, yomg'ir va qorda o'zgarib turadi, ko'chalarda odamlar, avtobuslar va svetoforlar bor.</p>
+      <h3>Imkoniyatlar</h3>
+      <ul>${li([
+        'Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxonali shahar',
+        'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Malibu, Spark, Matiz, Damas, Labo, Jiguli, shuningdek Mercedes, avtobus va mototsikl',
+        'Vazifalar, taksi ishi, garaj va tyuning, qurol va kiyim do\'konlari',
+        'Politsiya: 5 yulduzli qidiruv, yo\'l to\'siqlari va vertolyot',
+        'Ob-havo (yomg\'ir, qor, tuman), kun va tun, mashinada radio',
+        'Ko\'p o\'yinchi: xona kodi yoki QR-kod orqali, lokal tarmoqda',
+        'O\'yinni saqlash, statistika va 13 ta yutuq; telefon va geympad bilan boshqaruv',
+      ])}</ul>
+      <h3>Asoschi</h3>
+      <div class="info-founder">
+        <div class="info-avatar" aria-hidden="true">M</div>
+        <div><b>Muzaffarxon</b><span>O'yin g'oyasi muallifi va asoschisi</span>
+          <a href="https://github.com/Muzaffarxon04" target="_blank" rel="noopener">github.com/Muzaffarxon04</a></div>
+      </div>
+      <p>O'yin sahifasi: <a href="https://muzaffarxon04.github.io/gta-5/" target="_blank" rel="noopener">muzaffarxon04.github.io/gta-5</a> · Manba kodi: <a href="https://github.com/Muzaffarxon04/gta-5" target="_blank" rel="noopener">GitHub</a></p>
+      <h3>Mualliflar va litsenziyalar</h3>
+      <ul class="info-credits">${li([
+        '3D grafika: <b>Three.js</b> (MIT)',
+        'Shriftlar: <b>Bungee</b> va <b>Barlow Condensed</b> (SIL Open Font License 1.1)',
+        'QR-kod: <b>qrcode-generator</b> — Kazuhiko Arase (MIT), <b>jsQR</b> (Apache 2.0)',
+        'Xona kodi orqali ulanish: <b>ntfy.sh</b> xizmati',
+        '3D modellar: Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
+        'O\'yin <b>Claude</b> (Anthropic) sun\'iy intellekti yordamida yaratilgan',
+      ])}</ul>
+      <p class="info-ver">Versiya ${GAME_VERSION} · 2026</p>
+    </div>`);
   },
   stats() {
     const s = Stats.d, km = m => (m / 1000).toFixed(1) + ' km', mins = Math.floor(s.playTime / 60);

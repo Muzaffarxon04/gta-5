@@ -30,7 +30,8 @@ html = html.replace(/<script src="([^"]+)"><\/script>/g, (_, src) => {
   if (/^https?:/.test(src)) throw new Error(`Tashqi skript qoldi: ${src}`);
   return `<script>\n${read(src).replace(/<\/script/gi, '<\\/script')}\n</script>`;
 });
-const external = html.match(/(?:src|href)="https?:\/\/[^"]+"/g);
+// Faqat yuklanadigan resurslar tekshiriladi (oddiy <a href> havolalari mumkin)
+const external = html.match(/<(?:script|link|img|source|iframe|video|audio)\b[^>]*\s(?:src|href)="https?:\/\/[^"]+"/g);
 if (external) throw new Error('Tashqi havolalar qoldi: ' + external.join(', '));
 
 html = '<!doctype html>\n<html lang="uz">\n' + html + '\n</html>\n';
