@@ -1,0 +1,289 @@
+'use strict';
+// ===== Mashinalar: model, fizika, sun'iy intellekt =====
+class Car {
+  constructor(type, x, z, h, role, color) {
+    const T = CAR_TYPES[type];
+    this.type = type; this.T = T; this.role = role;
+    this.color = color != null ? color : type === 'police' ? 0xf3f3f3 : type === 'taxi' ? 0xf2c200 : pick(T.palette || CAR_COLORS);
+    this.mesh = new THREE.Group(); this.mesh.rotation.order = 'YXZ';
+    this.body = new THREE.Mesh(carGeo(type, this.color), CAR_MAT); this.body.castShadow = true;
+    this.lights = new THREE.Mesh(lightGeo(type), LIGHT_MAT);
+    this.mesh.add(this.body, this.lights);
+    const gg = glassGeo(type);
+    if (gg) { this.glass = new THREE.Mesh(gg, GLASS_MAT); this.mesh.add(this.glass); }
+    this.driverHM = null; this.driverOutfit = null;
+    if (type === 'police') {
+      const g = new THREE.BoxGeometry(0.4, 0.12, 0.2);
+      this.bar = [new THREE.Mesh(g, BAR_RED), new THREE.Mesh(g, BAR_BLUE)];
+      this.bar[0].position.set(0.24, T.H + 0.12, T.roofZ); this.bar[1].position.set(-0.24, T.H + 0.12, T.roofZ);
+      this.mesh.add(...this.bar);
+    }
+    this.x = x; this.z = z; this.y = groundH(x, z); this.h = h; this.vx = 0; this.vz = 0;
+    this.hp = T.hp; this.driver = role === 'parked' ? null : role;
+    this.thr = 0; this.steer = 0; this.hand = false; this.drift = 0;
+    this.onFire = false; this.burnT = 0; this.dead = false;
+    this.ai = null; this.stuckT = 0; this.revT = 0; this.panic = 0; this.waitT = 0; this.shootT = rand(0.5, 2);
+    World.scene.add(this.mesh); this.sync(0);
+  }
+  get speed() { return Math.hypot(this.vx, this.vz); }
+  get fwd() { return this.vx * Math.sin(this.h) + this.vz * Math.cos(this.h); }
+
+  physics(dt) {
+    const T = this.T;
+    let fx = Math.sin(this.h), fz = Math.cos(this.h), rx = -fz, rz = fx;
+    let vF = this.vx * fx + this.vz * fz, vR = this.vx * rx + this.vz * rz;
+    const thr = this.dead || this.onFire && this.driver !== 'player' ? 0 : this.thr;
+    const maxS = T.max * (this.hp < 30 ? 0.6 : 1);
+    if (thr > 0) { if (vF < -0.5) vF += 30 * thr * dt; else if (vF < maxS) vF += T.acc * thr * dt * (1 - (vF / maxS) * 0.55); }
+    else if (thr < 0) { if (vF > 0.5) vF += 30 * thr * dt; else if (vF > -13) vF += T.acc * 0.7 * thr * dt; }
+    vF -= vF * (thr === 0 ? 0.55 : 0.1) * dt;
+    if (this.hand || !this.driver || this.dead) vF -= Math.sign(vF) * Math.min(Math.abs(vF), (this.hand ? 10 : 7) * dt);
+    this.vx = fx * vF + rx * vR; this.vz = fz * vF + rz * vR;
+    // Rul: tezlikka qarab burilish
+    const sp = Math.abs(vF), sf = clamp(sp / 5, 0, 1) * (1 - clamp(sp / (T.max * 1.6), 0, 0.55));
+    this.h += this.steer * 1.9 * sf * (vF < 0 ? -1 : 1) * dt * (this.hand ? 1.4 : 1);
+    // Yon sirpanish (drift) — qo'l tormozi ushlashni kamaytiradi
+    fx = Math.sin(this.h); fz = Math.cos(this.h); rx = -fz; rz = fx;
+    vF = this.vx * fx + this.vz * fz; vR = this.vx * rx + this.vz * rz;
+    vR *= Math.exp(-(this.hand ? 1.3 : T.grip) * dt);
+    this.drift = Math.abs(vR);
+    this.vx = fx * vF + rx * vR; this.vz = fz * vF + rz * vR;
+    this.x += this.vx * dt; this.z += this.vz * dt;
+    this.collideWorld();
+    this.y = lerp(this.y, groundH(this.x, this.z), 1 - Math.exp(-12 * dt));
+  }
+  collideWorld() {
+    const fx = Math.sin(this.h), fz = Math.cos(this.h), off = this.T.l / 2 - this.T.w / 2, r = this.T.w / 2 + 0.05;
+    for (const s of [off, -off, 0]) {
+      const o = { x: this.x + fx * s, z: this.z + fz * s };
+      const hit = pushOut(o, r, this.y + 0.5);
+      if (!hit) continue;
+      this.x = o.x - fx * s; this.z = o.z - fz * s;
+      const vn = this.vx * hit.nx + this.vz * hit.nz;
+      if (vn < 0) {
+        this.vx -= vn * hit.nx * 1.3; this.vz -= vn * hit.nz * 1.3;
+        this.vx *= 0.85; this.vz *= 0.85;
+        if (-vn > 6) { this.damage((-vn - 6) * 1.7); onCarImpact(this, -vn); }
+      }
+    }
+  }
+  damage(d) {
+    if (this.dead || d <= 0) return;
+    this.hp -= d;
+    if (this.hp <= 0 && !this.onFire) { this.hp = 0; this.onFire = true; this.burnT = rand(3.5, 5.5); }
+  }
+  sync(dt, time = 0) {
+    this.mesh.position.set(this.x, this.y, this.z);
+    this.mesh.rotation.y = this.h;
+    // Mototsikl burilishda yonboshga egiladi, to'xtab turganda tirgakka suyanadi
+    const lean = this.T.kind === 'moto'
+      ? (this.driver ? -this.steer * clamp(this.speed / 14, 0, 1) * 0.45 : 0.14)
+      : -this.steer * clamp(this.speed / 30, 0, 1) * 0.05;
+    this.mesh.rotation.z = lerp(this.mesh.rotation.z, lean, 0.1);
+    if (this.driverHM) this.driverHM.b.head.rotation.y = this.steer * 0.35;
+    if (this.bar) {
+      const on = !this.dead && (this.siren || this.driver === 'player');
+      const f = Math.floor(time * 6) % 2;
+      this.bar[0].visible = on ? f === 0 : true; this.bar[1].visible = on ? f === 1 : true;
+    }
+  }
+  wreck() {
+    this.dead = true; this.onFire = false; this.driver = null;
+    this.body.material = WRECK_MAT; this.lights.visible = false;
+    if (this.glass) this.glass.visible = false;
+    if (this.bar) this.bar.forEach(b => (b.visible = false));
+    if (this.driverHM && !this.driverHM.keep) this.setDriverModel(null);
+  }
+  // Ichida o'tirgan odam modeli (AI haydovchi)
+  setDriverModel(outfit) {
+    if (this.driverHM) {
+      this.mesh.remove(this.driverHM.g);
+      if (!this.driverHM.keep) this.driverHM.mesh.geometry.dispose();
+      this.driverHM = null;
+    }
+    this.driverOutfit = outfit;
+    if (outfit) this.seatHuman(makeHuman(outfit), false);
+  }
+  seatHuman(hm, keep) {
+    const S = this.T.seat;
+    hm.keep = keep;
+    hm.g.position.set(S.x, S.y - 0.95 * hm.mesh.scale.y, S.z);
+    hm.g.rotation.set(0, 0, 0);
+    this.mesh.add(hm.g);
+    this.driverHM = hm;
+    if (this.T.kind === 'moto') poseRider(hm); else poseSeated(hm);
+  }
+  unseat() {
+    const hm = this.driverHM;
+    if (hm) this.mesh.remove(hm.g);
+    this.driverHM = null;
+    return hm;
+  }
+  remove() {
+    if (this.driverHM && !this.driverHM.keep) this.driverHM.mesh.geometry.dispose();
+    World.scene.remove(this.mesh);
+  }
+}
+
+// Mashina koordinatalariga o'tkazish: f — oldinga, r — o'ngga
+function carLocal(car, x, z) {
+  const dx = x - car.x, dz = z - car.z, fx = Math.sin(car.h), fz = Math.cos(car.h);
+  return { f: dx * fx + dz * fz, r: -dx * fz + dz * fx };
+}
+function rayCar(car, ox, oy, oz, dx, dy, dz, maxT) {
+  const fx = Math.sin(car.h), fz = Math.cos(car.h), px = ox - car.x, pz = oz - car.z, T = car.T;
+  return rayBox(-px * fz + pz * fx, oy - car.y, px * fx + pz * fz, -dx * fz + dz * fx, dy, dx * fx + dz * fz,
+    -T.w / 2, 0.1, -T.l / 2, T.w / 2, T.H, T.l / 2, maxT);
+}
+
+// Mashinalar o'zaro to'qnashuvi
+function collideCars(cars) {
+  for (let i = 0; i < cars.length; i++) {
+    const A = cars[i];
+    for (let k = i + 1; k < cars.length; k++) {
+      const B = cars[k];
+      if (dist2(A.x, A.z, B.x, B.z) > 36) continue;
+      const oa = A.T.l / 2 - A.T.w / 2, ob = B.T.l / 2 - B.T.w / 2, ra = A.T.w / 2, rb = B.T.w / 2;
+      let done = false;
+      for (const sa of [oa, 0, -oa]) {
+        for (const sb of [ob, 0, -ob]) {
+          const ax = A.x + Math.sin(A.h) * sa, az = A.z + Math.cos(A.h) * sa, bx = B.x + Math.sin(B.h) * sb, bz = B.z + Math.cos(B.h) * sb;
+          const dx = bx - ax, dz = bz - az, d = Math.hypot(dx, dz), minD = ra + rb;
+          if (d >= minD || d < 1e-4) continue;
+          const nx = dx / d, nz = dz / d, pen = minD - d, ma = A.T.mass, mb = B.T.mass, tot = ma + mb;
+          A.x -= nx * pen * mb / tot; A.z -= nz * pen * mb / tot; B.x += nx * pen * ma / tot; B.z += nz * pen * ma / tot;
+          const rv = (B.vx - A.vx) * nx + (B.vz - A.vz) * nz;
+          if (rv < 0) {
+            const j = -1.3 * rv / (1 / ma + 1 / mb);
+            A.vx -= j * nx / ma; A.vz -= j * nz / ma; B.vx += j * nx / mb; B.vz += j * nz / mb;
+            if (-rv > 5) { A.damage((-rv - 5) * 2 * mb / tot); B.damage((-rv - 5) * 2 * ma / tot); onCarCrash(A, B, -rv); }
+          }
+          done = true; break;
+        }
+        if (done) break;
+      }
+    }
+  }
+}
+
+// ===== Yo'l tarmog'i bo'ylab haydash =====
+function neighbors(i, j) {
+  return [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]].filter(n => n[0] >= 0 && n[0] <= CITY.N && n[1] >= 0 && n[1] <= CITY.N);
+}
+function chooseNext(fi, fj, ti, tj, goal) {
+  const opts = neighbors(ti, tj).filter(n => !(n[0] === fi && n[1] === fj));
+  if (!opts.length) return [fi, fj];
+  if (goal) {
+    opts.sort((a, b) => dist2(roadPos(a[0]), roadPos(a[1]), goal.x, goal.z) - dist2(roadPos(b[0]), roadPos(b[1]), goal.x, goal.z));
+    return Math.random() < 0.85 ? opts[0] : pick(opts);
+  }
+  const straight = opts.find(n => n[0] - ti === ti - fi && n[1] - tj === tj - fj);
+  return straight && Math.random() < 0.55 ? straight : pick(opts);
+}
+function setRoute(car, fi, fj, ti, tj, lane, goal) {
+  car.ai = { fi, fj, ti, tj, lane, ni: 0, nj: 0 };
+  [car.ai.ni, car.ai.nj] = chooseNext(fi, fj, ti, tj, goal);
+}
+// Mashinani eng yaqin yo'l bo'lagiga "bog'lash" (masalan, ta'qibdan keyin)
+function anchorToRoad(car, lane, goal) {
+  const N = CITY.N, kx = clamp(Math.round((car.x - CITY.OFF) / CITY.CELL), 0, N), kz = clamp(Math.round((car.z - CITY.OFF) / CITY.CELL), 0, N);
+  if (Math.abs(car.x - roadPos(kx)) < Math.abs(car.z - roadPos(kz))) {
+    const j = clamp(Math.floor((car.z - CITY.OFF) / CITY.CELL), 0, N - 1);
+    if (Math.cos(car.h) >= 0) setRoute(car, kx, j, kx, j + 1, lane, goal); else setRoute(car, kx, j + 1, kx, j, lane, goal);
+  } else {
+    const i = clamp(Math.floor((car.x - CITY.OFF) / CITY.CELL), 0, N - 1);
+    if (Math.sin(car.h) >= 0) setRoute(car, i, kz, i + 1, kz, lane, goal); else setRoute(car, i + 1, kz, i, kz, lane, goal);
+  }
+}
+// Yo'l bo'ylab nishon nuqtasini hisoblab, rul va gazni o'rnatadi
+function aiFollowRoad(car, cruise, goal, reanchored) {
+  const a = car.ai, L = CITY.CELL;
+  let ax = roadPos(a.fi), az = roadPos(a.fj), bx = roadPos(a.ti), bz = roadPos(a.tj);
+  let dx = Math.sign(bx - ax), dz = Math.sign(bz - az);
+  const lat = (car.x - ax) * -dz + (car.z - az) * dx - a.lane;
+  if (Math.abs(lat) > 12 && !reanchored) { anchorToRoad(car, a.lane, goal); return aiFollowRoad(car, cruise, goal, true); }
+  let nx = Math.sign(roadPos(a.ni) - bx), nz = Math.sign(roadPos(a.nj) - bz);
+  let sgn = nx * -dz + nz * dx; // +1 o'ngga, -1 chapga, 0 to'g'ri
+  let s = (car.x - ax) * dx + (car.z - az) * dz, corner = L - sgn * a.lane;
+  if (s > corner) {
+    a.fi = a.ti; a.fj = a.tj; a.ti = a.ni; a.tj = a.nj;
+    [a.ni, a.nj] = chooseNext(a.fi, a.fj, a.ti, a.tj, goal);
+    ax = bx; az = bz; bx = roadPos(a.ti); bz = roadPos(a.tj); dx = nx; dz = nz;
+    nx = Math.sign(roadPos(a.ni) - bx); nz = Math.sign(roadPos(a.nj) - bz);
+    sgn = nx * -dz + nz * dx; s = (car.x - ax) * dx + (car.z - az) * dz; corner = L - sgn * a.lane;
+  }
+  const look = 7 + Math.abs(car.fwd) * 0.35, st = s + look;
+  let tx, tz;
+  if (st <= corner) { tx = ax + dx * st - dz * a.lane; tz = az + dz * st + dx * a.lane; }
+  else { const s2 = sgn * a.lane + (st - corner); tx = bx + nx * s2 - nz * a.lane; tz = bz + nz * s2 + nx * a.lane; }
+  if (sgn !== 0 && corner - s < 24) cruise = Math.min(cruise, 8 + (car.role === 'police' ? 6 : 0));
+  steerTo(car, tx, tz, cruise);
+}
+function steerTo(car, tx, tz, cruise) {
+  const err = wrapAng(Math.atan2(tx - car.x, tz - car.z) - car.h);
+  car.steer = clamp(err * 2.4, -1, 1);
+  if (Math.abs(err) > 1.2) cruise = Math.min(cruise, 7);
+  car.thr = cruise <= 0.1 ? (car.fwd > 0.3 ? -1 : 0) : clamp((cruise - car.fwd) * 0.45, -1, 1);
+}
+// Oldinda to'siq bormi (mashina yoki piyoda o'yinchi)
+function aiObstacle(car, range, cars, player) {
+  let best = range;
+  const fx = Math.sin(car.h), fz = Math.cos(car.h);
+  const test = (x, z, w) => {
+    const rx = x - car.x, rz = z - car.z, al = rx * fx + rz * fz;
+    if (al > 0 && al < best && Math.abs(rx * fz - rz * fx) < w) best = al;
+  };
+  for (const o of cars) if (o !== car) test(o.x, o.z, 2.3);
+  if (player && !player.inCar && !player.dead) test(player.x, player.z, 1.6);
+  return best;
+}
+// Oddiy yo'l harakati
+function updateTrafficAI(car, dt, cars, player) {
+  if (car.revT > 0) { car.revT -= dt; car.thr = -0.8; car.steer = -car.steer || 0.6; return; }
+  let cruise = car.panic > 0 ? 22 : 12;
+  car.panic = Math.max(0, car.panic - dt);
+  const obst = aiObstacle(car, 16, cars, player);
+  let blocked = false;
+  if (obst < 16 && car.panic <= 0) { cruise = Math.min(cruise, Math.max(0, (obst - 6.5) * 0.9)); blocked = cruise < 0.5; }
+  if (car.panic <= 0) cruise = signalCruise(car, cruise);
+  aiFollowRoad(car, cruise, null);
+  // Svetoforda emas, faqat yo'l to'silganda signal chaladi
+  if (blocked) { car.waitT += dt; if (car.waitT > 3 && Math.random() < dt * 0.5) honk(car); } else car.waitT = 0;
+  trackStuck(car, dt);
+}
+// Svetofor: qizil yoki sariqda to'xtash chizig'i oldida to'xtaydi
+function signalCruise(car, cruise) {
+  const a = car.ai;
+  if (!a) return cruise;
+  const ax = roadPos(a.fi), az = roadPos(a.fj), dx = Math.sign(roadPos(a.ti) - ax), dz = Math.sign(roadPos(a.tj) - az);
+  const s = (car.x - ax) * dx + (car.z - az) * dz;
+  const dist = CITY.CELL - CITY.R / 2 - 3.2 - car.T.l / 2 - s;
+  if (dist < -0.5 || dist > 35) return cruise;
+  const st = signalFor(a.ti, a.tj, dx !== 0);
+  if (st === 'G' || (st === 'Y' && dist < 7)) return cruise;
+  return Math.min(cruise, Math.max(0, dist - 0.3) * 0.7);
+}
+function trackStuck(car, dt) {
+  if (car.thr > 0.3 && Math.abs(car.fwd) < 0.7) car.stuckT += dt; else car.stuckT = Math.max(0, car.stuckT - dt);
+  if (car.stuckT > 1.8) { car.stuckT = 0; car.revT = 1.3; }
+}
+// Politsiya: ko'rsa — to'g'ridan ta'qib, ko'rmasa — yo'llar orqali yaqinlashadi
+function updatePoliceAI(car, dt, cars, player, wanted) {
+  car.siren = wanted > 0;
+  if (wanted === 0) { car.direct = false; return updateTrafficAI(car, dt, cars, player); }
+  if (car.revT > 0) { car.revT -= dt; car.thr = -1; car.steer = -car.steer || 0.8; return; }
+  const P = player.inCar || player, d = Math.hypot(P.x - car.x, P.z - car.z);
+  const see = d < 55 && lineOfSight(car.x, 1.2, car.z, P.x, 1.2, P.z);
+  car.sees = see;
+  if (see) {
+    car.direct = true;
+    const lead = clamp(d / 25, 0, 1);
+    const tx = P.x + (P.vx || 0) * lead, tz = P.z + (P.vz || 0) * lead;
+    const cruise = !player.inCar && d < 10 ? 0 : car.T.max;
+    steerTo(car, tx, tz, cruise);
+  } else {
+    if (car.direct) { car.direct = false; anchorToRoad(car, 2.5, P); }
+    aiFollowRoad(car, car.T.max * 0.8, P);
+  }
+  trackStuck(car, dt);
+}
