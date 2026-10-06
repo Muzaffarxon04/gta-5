@@ -126,9 +126,14 @@ const Panel = {
       ])}</ul>
       <h3>Asoschi</h3>
       <div class="info-founder">
-        <div class="info-avatar" aria-hidden="true">M</div>
-        <div><b>Muzaffarxon</b><span>O'yin g'oyasi muallifi va asoschisi</span>
-          <a href="https://github.com/Muzaffarxon04" target="_blank" rel="noopener">github.com/Muzaffarxon04</a></div>
+        <div class="info-avatar" aria-hidden="true">MA</div>
+        <div><b>Muzaffarxon Abdusalomov</b><span>O'yin g'oyasi muallifi va asoschisi</span>
+          <div class="info-social">
+            <a href="https://t.me/maxdevblog" target="_blank" rel="noopener"><span class="soc tg" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M2.5 11.2 20.6 4.2c.8-.3 1.6.4 1.4 1.3l-3 14.1c-.2.9-1.2 1.3-2 .8l-4.6-3.4-2.3 2.2c-.4.4-1 .2-1-.4l.2-3.4 8.3-7.5-10.2 6.4-3.9-1.2c-.9-.3-.9-1.5 0-1.9z"/></svg></span>@maxdevblog</a>
+            <a href="https://instagram.com/muzaffarxon_abduslomov" target="_blank" rel="noopener"><span class="soc ig" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.2" cy="6.8" r="1.2" fill="currentColor"/></svg></span>muzaffarxon_abduslomov</a>
+            <a href="https://github.com/Muzaffarxon04" target="_blank" rel="noopener"><span class="soc gh" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 7 3 12l5 5M16 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Muzaffarxon04</a>
+          </div>
+        </div>
       </div>
       <p>O'yin sahifasi: <a href="https://muzaffarxon04.github.io/gta-5/" target="_blank" rel="noopener">muzaffarxon04.github.io/gta-5</a> · Manba kodi: <a href="https://github.com/Muzaffarxon04/gta-5" target="_blank" rel="noopener">GitHub</a></p>
       <h3>Mualliflar va litsenziyalar</h3>

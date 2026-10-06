@@ -208,7 +208,16 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .info-founder > div:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .info-founder b { font-size: 20px; }
 .info-founder span { font-size: 15px; color: var(--muted); }
-.info-avatar { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); color: var(--night); font-family: var(--f-display); font-size: 26px; }
+.info-avatar { flex: none; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); color: var(--night); font-family: var(--f-display); font-size: 20px; }
+.info-founder { align-items: flex-start; }
+.info-social { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.info .info-social a { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16); color: var(--ink); text-decoration: none; font-weight: 600; font-size: 16px; }
+.info .info-social a:hover { background: rgba(255,255,255,.12); }
+.soc { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.soc svg { width: 17px; height: 17px; }
+.soc.tg { background: #2aabee; }
+.soc.ig { background: linear-gradient(45deg, #f9a825, #e1306c 55%, #833ab4); border-radius: 9px; }
+.soc.gh { background: #3a3f47; }
 .info-ver { font-size: 14px !important; color: var(--muted) !important; }
 /* Ko'p o'yinchi oynasi */
 .mp-card { width: min(720px, 100%); }
