@@ -353,10 +353,22 @@ const MPUI = {
     this.status('Xona ochildi. Do\'stlaringiz «Qo\'shilish» bo\'limida shu kodni kiritsin (internet kerak).');
     this.refresh();
   },
+  // Kameraga ruxsat berilgan sahifaga brauzer telefonning haqiqiy lokal manzilini ochadi —
+  // shunda hotspot va oddiy Wi-Fi'da telefonlar bir-birini ishonchliroq topadi
+  async warmCamera() {
+    if (this.camOk || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    this.status('Kameraga ruxsat bering — ulanish ishonchliroq bo\'ladi.');
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true });
+      s.getTracks().forEach(t => t.stop());
+      this.camOk = true;
+    } catch (e) { /* ruxsat berilmadi — baribir urinib ko'ramiz */ }
+  },
   async qrHost() {
     if (Net.role === 'guest') MP.stop();
     this.myName(); MP.start();
     if (!Net.role) Net.role = 'host';
+    await this.warmCamera();
     this.status('QR-kod tayyorlanmoqda…');
     const str = await Net.qrHostOffer();
     this.showQR(str, '1) O\'yinchi «QR orqali qo\'shilish» ni bosib, shu kodni skanerlasin. 2) Keyin uning telefonidagi javob QR-kodini «Skanerlash» bilan o\'qing.', 'host');

@@ -399,7 +399,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
         </div>
         <h3 class="mp-h">O'yinchilar</h3>
         <ul class="mp-list" id="mpList"></ul>
-        <p class="set-note">Hammangiz bir Wi-Fi tarmog'ida bo'lsangiz, o'yin ma'lumotlari to'g'ridan-to'g'ri lokal tarmoq orqali yuradi. Xona kodi faqat ulanish uchun internetdan foydalanadi; QR-kod usuli internetsiz ishlaydi.</p>
+        <p class="set-note">Hammangiz bir Wi-Fi tarmog'ida bo'lsangiz, o'yin ma'lumotlari to'g'ridan-to'g'ri lokal tarmoq orqali yuradi. Xona kodi faqat ulanish uchun internetdan foydalanadi; QR-kod usuli internetsiz ishlaydi va kameraga ruxsat so'raydi — bu ulanishni ishonchliroq qiladi.</p>
+        <p class="set-note">Ulanmasa: o'ynamaydigan uchinchi telefonda hotspot yoqing yoki oddiy Wi-Fi router ishlating — shunda barcha o'yinchilar teng sharoitda ulanadi.</p>
       </div>
     </div>
     <div class="shop-foot"><span class="mp-status" id="mpStatus" aria-live="polite"></span>
@@ -20938,10 +20939,22 @@ const MPUI = {
     this.status('Xona ochildi. Do\'stlaringiz «Qo\'shilish» bo\'limida shu kodni kiritsin (internet kerak).');
     this.refresh();
   },
+  // Kameraga ruxsat berilgan sahifaga brauzer telefonning haqiqiy lokal manzilini ochadi —
+  // shunda hotspot va oddiy Wi-Fi'da telefonlar bir-birini ishonchliroq topadi
+  async warmCamera() {
+    if (this.camOk || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    this.status('Kameraga ruxsat bering — ulanish ishonchliroq bo\'ladi.');
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true });
+      s.getTracks().forEach(t => t.stop());
+      this.camOk = true;
+    } catch (e) { /* ruxsat berilmadi — baribir urinib ko'ramiz */ }
+  },
   async qrHost() {
     if (Net.role === 'guest') MP.stop();
     this.myName(); MP.start();
     if (!Net.role) Net.role = 'host';
+    await this.warmCamera();
     this.status('QR-kod tayyorlanmoqda…');
     const str = await Net.qrHostOffer();
     this.showQR(str, '1) O\'yinchi «QR orqali qo\'shilish» ni bosib, shu kodni skanerlasin. 2) Keyin uning telefonidagi javob QR-kodini «Skanerlash» bilan o\'qing.', 'host');
