@@ -204,7 +204,7 @@ function poseHuman(hm, phase, amp, run) {
   b.shR.rotation.x = (Math.max(0, -c) * (0.9 + run * 0.7) + 0.05) * amp * hm.stride;
   const sw = amp * (0.45 + run * 0.4);
   b.uaL.rotation.set(s * sw, 0, 0.07); b.uaR.rotation.set(-s * sw, 0, -0.07);
-  b.faL.rotation.x = b.faR.rotation.x = -(0.12 + amp * (0.15 + run * 1.0));
+  { const f = -(0.12 + amp * (0.15 + run * 1.0)); b.faL.rotation.set(f, 0, 0); b.faR.rotation.set(f, 0, 0); }
   b.spine.rotation.set(run * 0.14 * amp, s * 0.09 * amp, 0);
   b.head.rotation.set(0, -s * 0.05 * amp, 0);
   b.hips.position.y = hm.hipsY + Math.abs(c) * 0.03 * amp * (1 + run);
@@ -212,7 +212,7 @@ function poseHuman(hm, phase, amp, run) {
 function poseDead(hm) {
   const b = hm.b;
   b.uaL.rotation.set(0, 0, 1.25); b.uaR.rotation.set(0, 0, -1.25);
-  b.faL.rotation.x = b.faR.rotation.x = -0.3;
+  b.faL.rotation.set(-0.3, 0, 0); b.faR.rotation.set(-0.3, 0, 0);
   b.thL.rotation.set(0, 0, 0.18); b.thR.rotation.set(0, 0, -0.18);
   b.shL.rotation.x = b.shR.rotation.x = 0.1;
   b.spine.rotation.set(0, 0, 0); b.head.rotation.set(0, 0.4, 0);
@@ -228,16 +228,62 @@ function poseSeated(hm) {
   b.thL.rotation.set(-1.45, 0, 0.06); b.thR.rotation.set(-1.45, 0, -0.06);
   b.shL.rotation.x = b.shR.rotation.x = 0.6;
   b.uaL.rotation.set(-0.85, 0, -0.15); b.uaR.rotation.set(-0.85, 0, 0.15);
-  b.faL.rotation.x = b.faR.rotation.x = -0.55;
+  b.faL.rotation.set(-0.55, 0, 0); b.faR.rotation.set(-0.55, 0, 0);
+}
+// Qo'llar rulda: ikki bo'g'inli IK (yelka → tirsak → kaft), odam modeli fazosida hisoblanadi.
+// Rul aylanganda kaftlar gardish bilan birga suriladi (±75° gacha, keyin gardish ustida sirpanadi).
+const STEER_TURN = 2.4; // rulning eng katta burilishi (radian)
+const _hw = { m: new THREE.Matrix4(), inv: new THREE.Matrix4(), s: new THREE.Vector3(), t: new THREE.Vector3(), e: new THREE.Vector3(),
+  d: new THREE.Vector3(), p: new THREE.Vector3(), v: new THREE.Vector3(), r1: new THREE.Vector3(), q: new THREE.Quaternion(), qa: new THREE.Quaternion(),
+  qf: new THREE.Quaternion(), DOWN: new THREE.Vector3(0, -1, 0) };
+function reachArm(hm, side, T) {
+  const b = hm.b, ua = side > 0 ? b.uaL : b.uaR, fa = side > 0 ? b.faL : b.faR, H = _hw;
+  b.hips.updateMatrix(); b.spine.updateMatrix();
+  const S = H.s.copy(ua.position).applyMatrix4(H.m.multiplyMatrices(b.hips.matrix, b.spine.matrix));
+  const qp = H.q.copy(b.hips.quaternion).multiply(b.spine.quaternion);
+  const L1 = fa.position.length(), L2 = 0.3, d = H.d.subVectors(T, S);
+  let D = d.length();
+  d.multiplyScalar(1 / (D || 1));
+  D = clamp(D, Math.abs(L1 - L2) + 0.02, L1 + L2 - 0.01);
+  const a = (L1 * L1 - L2 * L2 + D * D) / (2 * D), h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+  // Tirsak pastga va biroz tashqariga
+  const p = H.p.set(side * 0.6, -1, -0.15); p.addScaledVector(d, -p.dot(d)).normalize();
+  const E = H.e.copy(S).addScaledVector(d, a).addScaledVector(p, h);
+  const Wua = H.qa.setFromUnitVectors(H.r1.copy(fa.position).normalize(), H.v.subVectors(E, S).normalize());
+  ua.quaternion.copy(qp).invert().multiply(Wua);
+  const hand = H.t.copy(S).addScaledVector(d, D).sub(E).normalize();
+  fa.quaternion.copy(Wua).invert().multiply(H.qf.setFromUnitVectors(H.DOWN, hand));
+}
+const _hwP = new THREE.Vector3(), _hwM = new THREE.Matrix4();
+function holdWheel(hm, car) {
+  const pv = car.steerPivot, r = pv.userData.r * 0.97, turn = clamp(car.steer * STEER_TURN, -1.3, 1.3);
+  // Rul fazosi (aylanmagan) → mashina fazosi
+  const m = _hwM.compose(pv.position, steerQ0(pv), _hwP.set(1, 1, 1));
+  for (let o = pv.parent; o && o !== car.mesh; o = o.parent) { o.updateMatrix(); m.premultiply(o.matrix); }
+  hm.g.updateMatrix(); hm.mesh.updateMatrix();
+  const inv = _hw.inv.multiplyMatrices(hm.g.matrix, hm.mesh.matrix).invert();
+  for (const side of [1, -1]) {
+    const a = (side > 0 ? 2.8 : 0.34) + turn;
+    _hwP.set(r * Math.cos(a), r * Math.sin(a), 0.035).applyMatrix4(m).applyMatrix4(inv);
+    reachArm(hm, side, _hwP);
+  }
+}
+// Mototsiklda qo'llar rul dastaklarida (T.grips — mashina fazosida, chap dastak +x)
+function holdGrips(hm, car) {
+  const G = car.T.grips;
+  hm.g.updateMatrix(); hm.mesh.updateMatrix();
+  const inv = _hw.inv.multiplyMatrices(hm.g.matrix, hm.mesh.matrix).invert();
+  for (const side of [1, -1]) reachArm(hm, side, _hwP.set(side * G.x, G.y, G.z + side * car.steer * 0.05).applyMatrix4(inv));
 }
 function poseRider(hm) {
   const b = hm.b;
   b.hips.position.y = hm.hipsY;
-  b.spine.rotation.set(0.35, 0, 0); b.head.rotation.set(-0.25, 0, 0);
-  b.thL.rotation.set(-1.15, 0, 0.28); b.thR.rotation.set(-1.15, 0, -0.28);
-  b.shL.rotation.x = b.shR.rotation.x = 1.1;
+  // Sport mototsikl: tana oldinga egilgan, tizzalar bakni qisadi, oyoqlar orqadagi tayanchda
+  b.spine.rotation.set(0.68, 0, 0); b.head.rotation.set(-0.6, 0, 0);
+  b.thL.rotation.set(-1.0, 0, 0.16); b.thR.rotation.set(-1.0, 0, -0.16);
+  b.shL.rotation.x = b.shR.rotation.x = 1.75;
   b.uaL.rotation.set(-1.05, 0, -0.12); b.uaR.rotation.set(-1.05, 0, 0.12);
-  b.faL.rotation.x = b.faR.rotation.x = -0.35;
+  b.faL.rotation.set(-0.35, 0, 0); b.faR.rotation.set(-0.35, 0, 0);
 }
 
 // Piyodalar kvartal atrofidagi yo'lak (halqa) bo'ylab yuradi
@@ -310,7 +356,7 @@ class Ped {
     } else if (this.state === 'hail') {
       // Taksi chaqirmoqda: qo'lini ko'tarib, mashinaga qarab turadi
       poseHuman(hm, 0, 0, 0);
-      hm.b.uaR.rotation.set(-2.7, 0, 0.25); hm.b.faR.rotation.x = -0.25;
+      hm.b.uaR.rotation.set(-2.7, 0, 0.25); hm.b.faR.rotation.set(-0.25, 0, 0);
       this.h += wrapAng(Math.atan2(Player.x - this.x, Player.z - this.z) - this.h) * Math.min(1, dt * 3);
     } else if (this.state === 'wait') {
       // Svetofor oldida kutish: mashinalar uchun qizil yonsa — o'tadi
@@ -356,7 +402,7 @@ class Ped {
     // Yomg'irda soyabon
     const umb = this.umb && this.alive && this.state !== 'flee' && Weather.rain > 0.35;
     this.umbrella(umb);
-    if (umb) { hm.b.uaL.rotation.set(-0.45, 0, -0.3); hm.b.faL.rotation.x = -1.45; }
+    if (umb) { hm.b.uaL.rotation.set(-0.45, 0, -0.3); hm.b.faL.rotation.set(-1.45, 0, 0); }
     if (this.state !== 'dead') this.y = lerp(this.y, groundH(this.x, this.z), 0.3);
     hm.g.position.set(this.x, this.y, this.z);
     hm.g.rotation.y = this.h;
@@ -457,10 +503,10 @@ function updatePlayerFoot(dt, yaw, cars) {
   if (P.punchT > 0) {
     P.punchT -= dt;
     const k2 = Math.sin(clamp(P.punchT / 0.3, 0, 1) * Math.PI);
-    b.uaR.rotation.set(-1.5 * k2, 0, -0.07); b.faR.rotation.x = -0.15; b.spine.rotation.y = 0.3 * k2;
+    b.uaR.rotation.set(-1.5 * k2, 0, -0.07); b.faR.rotation.set(-0.15, 0, 0); b.spine.rotation.y = 0.3 * k2;
   } else if (aiming) {
-    b.uaR.rotation.set(-Math.PI / 2 + Game.camPitch * 0.8, 0, 0); b.faR.rotation.x = 0;
-    b.uaL.rotation.set(-1.2, 0, -0.5); b.faL.rotation.x = -0.4;
+    b.uaR.rotation.set(-Math.PI / 2 + Game.camPitch * 0.8, 0, 0); b.faR.rotation.set(0, 0, 0);
+    b.uaL.rotation.set(-1.2, 0, -0.5); b.faL.rotation.set(-0.4, 0, 0);
   }
   P.aimT = Math.max(0, P.aimT - dt);
   hm.g.position.set(P.x, P.y, P.z);

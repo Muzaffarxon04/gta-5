@@ -33,6 +33,22 @@ function loadModels(done) {
   }
 }
 
+// Siqilgan (kvantlangan) uch ma'lumotini oddiy float'ga o'tkazish — geometriyani o'zgartirish uchun
+function toFloatAttrs(geo) {
+  for (const k of Object.keys(geo.attributes)) {
+    const a = geo.attributes[k], il = a.isInterleavedBufferAttribute;
+    const src = il ? a.data.array : a.array, stride = il ? a.data.stride : a.itemSize, off = il ? a.offset : 0;
+    if (!il && src instanceof Float32Array) continue;
+    const div = !a.normalized ? 1 : src instanceof Int8Array ? 127 : src instanceof Uint8Array ? 255 : src instanceof Int16Array ? 32767 : src instanceof Uint16Array ? 65535 : 1;
+    const out = new Float32Array(a.count * a.itemSize);
+    for (let i = 0; i < a.count; i++) for (let j = 0; j < a.itemSize; j++) {
+      const v = src[i * stride + off + j];
+      out[i * a.itemSize + j] = a.normalized ? Math.max(-1, v / div) : v;
+    }
+    geo.setAttribute(k, new THREE.BufferAttribute(out, a.itemSize));
+  }
+}
+
 function prepModel(name, scene) {
   // Qismlarga bo'lingan modelda "paint" (bo'yoq) bor — rangini garajda ham o'zgartirsa bo'ladi
   const M = { scene, paint: !!scene.getObjectByName('paint') };
@@ -50,11 +66,29 @@ function prepModel(name, scene) {
       else if (part === 'red') mat = MODEL_RED;
       else if (part === 'chrome') mat = MODEL_CHROME;
       else mat = MODEL_DARK;
-    } else if (name === 'person') mat = new THREE.MeshLambertMaterial({ map: src.map, emissive: 0xffffff, emissiveMap: src.map, emissiveIntensity: 0.3 }); // skanerda yorug'lik bor
+    } else if (name === 'person' || name === 'timur') mat = new THREE.MeshLambertMaterial({ map: src.map, emissive: 0xffffff, emissiveMap: src.map, emissiveIntensity: 0.3 }); // skanerda yorug'lik bor
     else mat = new THREE.MeshPhongMaterial({ map: src.map, shininess: 40, specular: 0x333333, side: src.side });
     if (mat) o.material = mat;
     o.castShadow = !o.userData.glass;
+    if (name === 'timur') o.receiveShadow = true;
   });
+  // Rul: aylanish markazi va o'qi (tools/prep-cars.mjs hisoblagan) — mashina ichidan ko'rinishda buriladi
+  const st = scene.getObjectByName('steer');
+  if (st && st.userData.steer) {
+    const S = st.userData.steer, z = new THREE.Vector3(...S.a).normalize();
+    const x = new THREE.Vector3(0, 1, 0).cross(z).normalize(), y = z.clone().cross(x);
+    const basis = new THREE.Matrix4().makeBasis(x, y, z).setPosition(...S.c);
+    st.updateMatrix();
+    toFloatAttrs(st.geometry);
+    st.geometry.applyMatrix4(new THREE.Matrix4().copy(basis).invert().multiply(st.matrix));
+    st.position.set(0, 0, 0); st.quaternion.identity(); st.scale.set(1, 1, 1);
+    const pivot = new THREE.Group();
+    pivot.name = 'steerPivot';
+    pivot.position.set(...S.c); pivot.quaternion.setFromRotationMatrix(basis);
+    pivot.userData.q0 = pivot.quaternion.toArray(); pivot.userData.r = S.r; // userData nusxalanganda JSON bo'ladi
+    st.parent.add(pivot); pivot.add(st);
+    M.steer = S;
+  }
   // Uzoqdagi mashinalarda yengil nusxa ko'rinadi (ko'chada 20+ mashina bo'ladi)
   const near = scene.getObjectByName('lod0'), far = scene.getObjectByName('lod1');
   if (near && far) {

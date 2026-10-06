@@ -109,7 +109,7 @@ class RemotePlayer {
     else {
       this.phase += dt * b.sp * 2.1;
       poseHuman(this.hm, this.phase, clamp(b.sp / 3.4, 0, 1), clamp((b.sp - 3.6) / 3.5, 0, 1));
-      if (b.w !== 'fist' && b.aim) { this.hm.b.uaR.rotation.set(-Math.PI / 2, 0, 0); this.hm.b.faR.rotation.x = 0; }
+      if (b.w !== 'fist' && b.aim) { this.hm.b.uaR.rotation.set(-Math.PI / 2, 0, 0); this.hm.b.faR.rotation.set(0, 0, 0); }
     }
     if (b.w !== this.weapon) {
       this.weapon = b.w;

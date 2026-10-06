@@ -37,15 +37,16 @@ function buildLandmark(b, scene, trees) {
 // ----- Amir Temur xiyoboni: dumaloq maydon, gulzor, otliq haykal -----
 function buildAmirTemur(b, scene, trees) {
   const { cx, cz } = b, granite = 0x6b3a2e, path = 0xc9b99a;
-  addMerged(scene, [
-    [56, 0.06, 4, cx, 0.19, cz, path], [4, 0.06, 56, cx, 0.19, cz, path],
+  // Maydonga olib boruvchi yo'laklar (maydon atrofida qoladi)
+  addMerged(scene, [-1, 1].flatMap(s => [[14, 0.06, 4, cx + s * 21, 0.19, cz, path], [4, 0.06, 14, cx, 0.19, cz + s * 21, path]]));
+  const plaza = addMerged(scene, [
     { geo: new THREE.CylinderGeometry(15, 15, 0.12, 40).translate(cx, 0.22, cz), color: 0xc9c1b4 },
     { geo: new THREE.CylinderGeometry(10, 10, 0.3, 40).translate(cx, 0.3, cz), color: 0x4f8f3a },
     { geo: new THREE.TorusGeometry(9.2, 0.45, 6, 48).rotateX(Math.PI / 2).translate(cx, 0.45, cz), color: 0xc62828 },
     { geo: new THREE.TorusGeometry(7.6, 0.4, 6, 48).rotateX(Math.PI / 2).translate(cx, 0.45, cz), color: 0xf9a825 },
     [6, 1.0, 8, cx, 0.65, cz, granite], [4.2, 3.4, 6.2, cx, 2.8, cz, 0x7a4636], [4.8, 0.35, 6.8, cx, 4.65, cz, granite],
   ]);
-  addCollider(cx - 3, cz - 4, cx + 3, cz + 4, 9, 'building');
+  const col = addCollider(cx - 3, cz - 4, cx + 3, cz + 4, 9, 'building');
   // Ot (bronza), old chap oyog'i ko'tarilgan — haqiqiy nisbatlarda
   const P = [
     { geo: new THREE.SphereGeometry(1, 16, 12).scale(0.55, 0.6, 1.25).translate(0, 1.55, 0) },
@@ -76,6 +77,8 @@ function buildAmirTemur(b, scene, trees) {
   scene.add(statue);
   const sign = signMesh('AMIR TEMUR', 3.6, 0.7, '#6b3a2e', '#e8d9a8');
   sign.position.set(cx - 2.13, 2.9, cz); sign.rotation.y = -Math.PI / 2; scene.add(sign);
+  // Skanerlangan haqiqiy haykal yuklansa, shu qismlar uning o'rniga almashadi (useTemurModel)
+  Landmarks.temur = { cx, cz, code: [plaza, statue, sign], col };
   for (let k = 0; k < 24; k++) {
     const a = (k + 0.5) / 24 * TAU, r = k % 2 ? 19 : 23.5;
     if (Math.abs(Math.sin(a * 2)) < 0.25) continue;
@@ -83,6 +86,24 @@ function buildAmirTemur(b, scene, trees) {
   }
   Landmarks.areas.push({ b, name: 'Amir Temur xiyoboni' });
 }
+
+// Amir Temur xiyoboni: skanerlangan maydon va otliq haykal (models/timur.js). Zinali maydon ustida yurish mumkin.
+Landmarks.useTemurModel = function () {
+  const M = MODELS.timur, T = this.temur;
+  if (!M || !T) return;
+  const node = M.scene.getObjectByName('timur'), meta = node && node.userData;
+  if (!meta || !meta.zone) return;
+  for (const o of T.code) o.visible = false;
+  const g = M.scene;
+  g.position.set(T.cx, 0.15, T.cz);
+  g.rotation.y = Math.PI; // haykal yuzi g'arbga (−x), yozuvli tomoni ham o'sha yoqda
+  World.scene.add(g);
+  HEIGHT_ZONES.push({ x: T.cx, z: T.cz, r: meta.zone.r, step: meta.zone.step, prof: meta.zone.prof, base: 0.15 });
+  // Poydevor: modeldagi izi (π ga burilgan)
+  const [x0, z0, x1, z1, top] = meta.pedestal;
+  removeCollider(T.col);
+  T.col = addCollider(T.cx - x1, T.cz - z1, T.cx - x0, T.cz - z0, 0.15 + top, 'building');
+};
 
 // ----- Toshkent teleminorasi: uch oyoqli, kuzatuv maydonchasi, qizil-oq antenna -----
 function buildTvTower(b, scene, trees) {

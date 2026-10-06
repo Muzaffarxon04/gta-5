@@ -31,6 +31,7 @@ function init(data) {
   });
 }
 function finishInit(data) {
+  Landmarks.useTemurModel();
   Player.money = Number.isFinite(data.money) ? data.money : 500;
   if (Number.isFinite(data.x) && Number.isFinite(data.z)) { Player.x = data.x; Player.z = data.z; Player.y = groundH(data.x, data.z); }
   if (Number.isFinite(data.dayT)) World.dayT = data.dayT;
@@ -138,7 +139,8 @@ function step(raw) {
   PoliceAir.update(dt); Roadblocks.update(dt); deployCops(dt);
   Stats.tick(dt); Save.update(raw);
   TouchUI.update();
-  updateCamera(raw);
+  Cockpit.update(raw);
+  if (Cockpit.active()) Cockpit.camera(raw); else updateCamera(raw);
   updateAudio(raw);
   updateHeadlight();
   prompts();
@@ -158,6 +160,7 @@ function handleActions() {
   if (P.inCar && (kp('KeyH') || (Input.touch && Input.clickL))) SFX.horn();
   if (P.inCar && kp('KeyR')) Radio.cycle();
   if (kp('KeyT')) Taxi.toggle();
+  if (kp('KeyV')) Cockpit.toggle();
   if (kp('KeyO')) Weather.cycle();
   if (P.inCar && P.inCar.type === 'police' && kp('KeyG')) {
     P.inCar.siren = !P.inCar.siren;
@@ -294,6 +297,7 @@ function updateCamera(dt) {
     fov = aiming ? Settings.v.fov - 10 : Settings.v.fov;
   }
   Game.camDist = lerp(Game.camDist || dist, dist, Math.min(1, dt * 8));
+  camera.near = 0.1;
   camera.fov = lerp(camera.fov, fov, Math.min(1, dt * 4));
   camera.updateProjectionMatrix();
   const cp = Math.cos(Game.camPitch), dx = Math.sin(Game.camYaw) * cp, dy = -Math.sin(Game.camPitch), dz = Math.cos(Game.camYaw) * cp;

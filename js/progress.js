@@ -81,8 +81,9 @@ const Save = {
     Missions.done = d.missionsDone || 0;
     Object.assign(Stats.d, d.stats || {}); Stats.d.visited = Object.assign({}, (d.stats || {}).visited);
     Stats.ach = d.ach || {};
-    // Eski saqlashlardagi Jiguli o'rniga endi Lacetti
-    Garage.slots = (d.garage || []).map(s => s.type === 'jiguli' ? { ...s, type: 'lacetti' } : s).filter(s => CAR_TYPES[s.type]);
+    // Eski saqlashlardagi o'yindan olingan mashinalar: Jiguli → Lacetti, Matiz → Spark, Labo → Damas
+    const OLD = { jiguli: 'lacetti', matiz: 'spark', labo: 'damas' };
+    Garage.slots = (d.garage || []).map(s => OLD[s.type] ? { ...s, type: OLD[s.type] } : s).filter(s => CAR_TYPES[s.type]);
     if (d.settings) Object.assign(Settings.v, d.settings);
     if (Number.isFinite(d.dayT)) World.dayT = d.dayT;
     if (d.pos && Number.isFinite(d.pos.x) && Math.abs(d.pos.x) < CITY.LIMIT && Math.abs(d.pos.z) < CITY.LIMIT) {

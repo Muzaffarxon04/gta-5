@@ -26,7 +26,7 @@ class Cop extends Ped {
     this.phase += dt * sp * 2.2;
     poseHuman(hm, this.phase, clamp(sp / 4, 0, 1), sp > 4 ? 1 : 0);
     if (Game.wanted >= 2 && see && d < 35 && !P.dead) {
-      hm.b.uaR.rotation.set(-Math.PI / 2, 0, 0); hm.b.faR.rotation.x = 0;
+      hm.b.uaR.rotation.set(-Math.PI / 2, 0, 0); hm.b.faR.rotation.set(0, 0, 0);
       if ((this.shootT -= dt) <= 0) {
         this.shootT = rand(0.9, 1.6) / (Game.wanted >= 4 ? 1.4 : 1);
         const hit = Math.random() < clamp(0.42 - d / 90 - Math.hypot(T.vx || 0, T.vz || 0) / 60, 0.06, 0.42), o = hit ? 0.3 : 2;

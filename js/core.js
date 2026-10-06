@@ -28,7 +28,19 @@ function blockAt(x, z) {
   if (lx < h || lx > CITY.CELL - h || lz < h || lz > CITY.CELL - h) return null;
   return World.blocks[i][j];
 }
-const groundH = (x, z) => (blockAt(x, z) ? 0.15 : 0);
+// Balandlik zonalari: doiraviy maydon, balandligi markazdan masofaga qarab (Amir Temur xiyobonidagi zinali maydon)
+const HEIGHT_ZONES = [];
+function groundH(x, z) {
+  for (const Z of HEIGHT_ZONES) {
+    const dx = x - Z.x, dz = z - Z.z;
+    if (dx > Z.r || dx < -Z.r || dz > Z.r || dz < -Z.r) continue;
+    const r = Math.hypot(dx, dz);
+    if (r >= Z.r) continue;
+    const P = Z.prof, f = r / Z.step, i = Math.min(Math.floor(f), P.length - 2);
+    return Z.base + P[i] + (P[i + 1] - P[i]) * Math.min(1, f - i);
+  }
+  return blockAt(x, z) ? 0.15 : 0;
+}
 
 // ===== To'qnashuv (binolar, daraxtlar) =====
 const GRID = 24;
@@ -45,6 +57,11 @@ function addCollider(x0, z0, x1, z1, h, tag) {
       cgrid.get(k).push(c);
     }
   return c;
+}
+function removeCollider(c) {
+  const i = colliders.indexOf(c);
+  if (i >= 0) colliders.splice(i, 1);
+  for (const list of cgrid.values()) { const k = list.indexOf(c); if (k >= 0) list.splice(k, 1); }
 }
 function nearColliders(x, z, r) {
   const out = []; queryId++;
@@ -174,7 +191,7 @@ function engineProfile(car) {
   if (car.T.kind === 'moto') return ENGINE_PROFILES.moto;
   if (car.T.kind === 'bus') return ENGINE_PROFILES.truck;
   if (['gls', 'charger', 'malibu', 'police'].includes(car.type)) return ENGINE_PROFILES.v8;
-  if (['damas', 'labo', 'matiz', 'spark'].includes(car.type)) return ENGINE_PROFILES.small;
+  if (['damas', 'spark'].includes(car.type)) return ENGINE_PROFILES.small;
   return ENGINE_PROFILES.car;
 }
 const SHOT_PROFILES = {

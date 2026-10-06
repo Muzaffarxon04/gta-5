@@ -28,7 +28,7 @@ const Settings = {
 
 // ----- Geympad (Xbox/PlayStation standart sxemasi) -----
 const PAD_HOLD = { 0: 'Space', 2: 'ShiftLeft', 1: 'KeyN' };
-const PAD_PRESS = { 3: 'KeyF', 10: 'KeyH', 11: 'KeyG', 12: 'KeyR', 13: 'KeyO', 14: 'KeyT' };
+const PAD_PRESS = { 3: 'KeyF', 10: 'KeyH', 11: 'KeyG', 12: 'KeyR', 13: 'KeyO', 14: 'KeyT', 15: 'KeyV' };
 const Pad = {
   connected: false, prev: [],
   poll() {
@@ -66,6 +66,7 @@ const Panel = {
     document.getElementById('btnSettings').addEventListener('click', () => this.settings());
     document.getElementById('btnStats').addEventListener('click', () => this.stats());
     document.getElementById('btnInfo').addEventListener('click', () => this.info());
+    document.getElementById('btnGuide').addEventListener('click', () => this.guide());
     const saveBtn = document.getElementById('btnSave'), resetBtn = document.getElementById('btnReset');
     saveBtn.addEventListener('click', () => { saveBtn.textContent = Save.write(true) ? 'Saqlandi' : 'Saqlab bo\'lmadi'; setTimeout(() => (saveBtn.textContent = 'Saqlash'), 1600); });
     resetBtn.addEventListener('click', () => {
@@ -108,6 +109,27 @@ const Panel = {
     bind('setFov', 'fov', x => x + '°');
     document.getElementById('setInvert').addEventListener('change', e => { v.invertY = e.target.checked; Save.soon(); });
   },
+  // Yo'riqnoma: klaviatura, telefon va geympad boshqaruvi
+  guide() {
+    const li = a => a.map(t => `<li>${t}</li>`).join('');
+    this.open('O\'yin', 'Yo\'riqnoma', `<div class="info guide">
+      <h3>Klaviatura va sichqoncha</h3>
+      ${document.getElementById('guideKeys').innerHTML}
+      <h3>Telefonda</h3>
+      <ul>${li([
+        'Piyoda: chapdagi joystik — yurish, ekranni surish — kamerani burish, o\'ngdagi tugmalar — otish, sakrash, qurol',
+        'Mashina va mototsiklda: chapda ◀ ▶ — rulni burish, o\'ngda <b>GAZ</b> va <b>TORMOZ</b> pedallari (to\'xtaganda tormoz — orqaga yurish)',
+        '«Qo\'l tormoz» — drift, «Kamera» — mashina ichidan ko\'rish, «Tushish» — mashinadan chiqish',
+        'Telefonni yotqizib (gorizontal) o\'ynang',
+      ])}</ul>
+      <h3>Geympad</h3>
+      <ul>${li([
+        'Chap tayoq — yurish va rul, o\'ng tayoq — kamera',
+        'RT — otish / gaz, LT — nishon / tormoz, A — sakrash / qo\'l tormozi, B — nitro, Y — mashinaga o\'tirish',
+        'D-pad o\'ng — mashina ichidan ko\'rish, Back — xarita, Start — pauza',
+      ])}</ul>
+    </div>`);
+  },
   info() {
     const li = a => a.map(t => `<li>${t}</li>`).join('');
     this.open('Ma\'lumot', 'Ko\'cha Qiroli', `<div class="info">
@@ -117,7 +139,7 @@ const Panel = {
       <h3>Imkoniyatlar</h3>
       <ul>${li([
         'Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxonali shahar',
-        'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Malibu, Spark, Matiz, Damas, Labo, Lacetti, shuningdek Mercedes, avtobus va mototsikl',
+        'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Lacetti, Malibu, Spark, Damas, shuningdek Mercedes, SamAuto avtobusi va mototsikl',
         'Vazifalar, taksi ishi, garaj va tyuning, qurol va kiyim do\'konlari',
         'Politsiya: 5 yulduzli qidiruv, yo\'l to\'siqlari va vertolyot',
         'Ob-havo (yomg\'ir, qor, tuman), kun va tun, mashinada radio',
@@ -142,7 +164,8 @@ const Panel = {
         'Shriftlar: <b>Bungee</b> va <b>Barlow Condensed</b> (SIL Open Font License 1.1)',
         'QR-kod: <b>qrcode-generator</b> — Kazuhiko Arase (MIT), <b>jsQR</b> (Apache 2.0); modellarni ochish: <b>meshoptimizer</b> (MIT)',
         'Xona kodi orqali ulanish: <b>ntfy.sh</b> xizmati',
-        '3D modellar: Nexia, Cobalt, Gentra, Spark va Lacetti — <a href="https://sketchfab.com/uzbek_supra" target="_blank" rel="noopener"><i>uzb_rx7</i></a> (Sketchfab, CC BY 4.0, o\'yin uchun soddalashtirilgan); Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
+        '3D modellar (Sketchfab, o\'yin uchun soddalashtirilgan): Nexia, Cobalt, Gentra, Spark va Lacetti — <a href="https://sketchfab.com/uzbek_supra" target="_blank" rel="noopener"><i>uzb_rx7</i></a> (CC BY 4.0); Malibu — <i>Ddiaz Design</i> (CC BY 4.0); Damas — <i>own.guest</i> (CC BY 4.0); SamAuto avtobusi — <i>ItsDiyor</i> (CC BY 4.0); BMW S1000RR mototsikli — <i>VTX</i> (CC BY-NC-SA 4.0); Amir Temur haykali skani — <i>Global Digital Heritage</i> (CC BY-NC 4.0)',
+        'Boshqa 3D modellar: Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
       ])}</ul>
       <p class="info-ver">Versiya ${GAME_VERSION} · 2026</p>
     </div>`);

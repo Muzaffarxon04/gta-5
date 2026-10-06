@@ -1,5 +1,8 @@
 'use strict';
 // ===== Mashinalar: model, fizika, sun'iy intellekt =====
+const _steerQ = new THREE.Quaternion(), _Z_AXIS = new THREE.Vector3(0, 0, 1);
+// Rulning tinch holatdagi yo'nalishi (har nusxa uchun bir marta)
+const steerQ0 = pv => pv._q0 || (pv._q0 = new THREE.Quaternion().fromArray(pv.userData.q0));
 class Car {
   constructor(type, x, z, h, role, color) {
     const T = CAR_TYPES[type];
@@ -12,6 +15,7 @@ class Car {
       this.body = M.scene.clone(true);
       this.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(this.color); });
       if (type === 'taxi' && T.roof) this.body.add(new THREE.Mesh(taxiSignGeo(T), CAR_MAT));
+      this.steerPivot = this.body.getObjectByName('steerPivot') || null;
       this.lights = new THREE.Object3D();
     } else {
       this.body = new THREE.Mesh(carGeo(type, this.color), CAR_MAT); this.body.castShadow = true;
@@ -96,6 +100,12 @@ class Car {
       : -this.steer * clamp(this.speed / 30, 0, 1) * 0.05;
     this.mesh.rotation.z = lerp(this.mesh.rotation.z, lean, 0.1);
     if (this.driverHM) this.driverHM.b.head.rotation.y = this.steer * 0.35;
+    // Rul aylanadi, haydovchining qo'llari unga ergashadi (yaqindagi mashinalarda)
+    const pv = this.steerPivot;
+    if (pv) {
+      pv.quaternion.copy(steerQ0(pv)).multiply(_steerQ.setFromAxisAngle(_Z_AXIS, this.steer * STEER_TURN));
+      if (this.driverHM && (this.driver === 'player' || this.body.getCurrentLevel() === 0)) holdWheel(this.driverHM, this);
+    } else if (this.T.grips && this.driverHM && this.body.isLOD && (this.driver === 'player' || this.body.getCurrentLevel() === 0)) holdGrips(this.driverHM, this);
     if (this.bar) {
       const on = !this.dead && this.siren;
       const f = Math.floor(time * 6) % 2;

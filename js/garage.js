@@ -4,6 +4,7 @@ const PAINTS = [0xf3f3f0, 0x1b1c1f, 0xb9bcc0, 0x8a1c26, 0xc62828, 0x1565c0, 0x27
 function carMods(c) { return c.mods || (c.mods = { eng: 0, grip: 0, armor: false, nitro: false }); }
 function paintable(c) { const M = c.T.model && MODELS[c.T.model]; return !M || M.paint; }
 function paintCar(c, col) {
+  if (Cockpit.car === c) Cockpit.detach(); // ichki ko'rinish materiallarini avval qaytaramiz
   c.color = col;
   if (c.T.model && MODELS[c.T.model]) c.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(col); });
   else c.body.geometry = carGeo(c.type, col);

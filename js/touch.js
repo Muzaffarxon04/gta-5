@@ -46,6 +46,14 @@ const TouchUI = {
       }
     };
     addEventListener('touchend', end); addEventListener('touchcancel', end);
+    // Mashinada: chap/o'ng tugmalari va pedallar — klaviatura strelkalari kabi ishlaydi
+    root.querySelectorAll('[data-key]').forEach(btn => {
+      const code = btn.dataset.key;
+      btn.addEventListener('touchstart', e => { e.preventDefault(); btn.classList.add('on'); Input.keys[code] = true; }, { passive: false });
+      const up = e => { e.preventDefault(); btn.classList.remove('on'); Input.keys[code] = false; };
+      btn.addEventListener('touchend', up, { passive: false });
+      btn.addEventListener('touchcancel', up, { passive: false });
+    });
     root.querySelectorAll('[data-act]').forEach(btn => {
       const act = btn.dataset.act;
       btn.addEventListener('touchstart', e => { e.preventDefault(); btn.classList.add('on'); this.press(act, true); }, { passive: false });
@@ -54,7 +62,7 @@ const TouchUI = {
       btn.addEventListener('touchcancel', up, { passive: false });
     });
     const note = document.getElementById('note');
-    if (note) note.textContent = 'Telefonda: chapdagi joystik — yurish va haydash, ekranni surish — kamera, o\'ngdagi tugmalar — harakatlar. Telefonni yotqizib o\'ynang.';
+    if (note) note.textContent = 'Telefonda: chapdagi joystik — yurish, mashinada — chap/o\'ng tugmalari va gaz/tormoz pedallari, ekranni surish — kamera, «Kamera» — mashina ichidan ko\'rish. Telefonni yotqizib o\'ynang.';
   },
   press(act, down) {
     if (act === 'fire') { Input.mouseL = down; if (down) Input.clickL = true; }
@@ -68,20 +76,30 @@ const TouchUI = {
     else if (act === 'radio') { if (down) Input.pressed.KeyR = true; }
     else if (act === 'taxi') { if (down) Input.pressed.KeyT = true; }
     else if (act === 'nitro') Input.keys.KeyN = down;
+    else if (act === 'view') { if (down) Input.pressed.KeyV = true; }
   },
   btn(act) { return this.root.querySelector(`[data-act="${act}"]`); },
   show(v) { if (this.root) this.root.hidden = !v || !Game.started || Game.paused || Game.shopOpen; },
   update() {
     if (!this.root || this.root.hidden) return;
     const c = Player.inCar, car = !!c, pol = car && c.type === 'police', taxi = car && c.type === 'taxi', nitro = !!(car && c.mods && c.mods.nitro);
-    const key = [car, pol, taxi, nitro].join('|');
+    const driving = car && !Player.passenger;
+    const key = [car, pol, taxi, nitro, driving].join('|');
     if (key === this._car) return;
     this._car = key;
+    // Haydaganda joystik o'rniga chap/o'ng tugmalari va gaz/tormoz pedallari
+    this.root.classList.toggle('driving', driving);
+    if (!driving) {
+      for (const code of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']) Input.keys[code] = false;
+      this.root.querySelectorAll('[data-key].on').forEach(b => b.classList.remove('on'));
+    }
+    if (driving) { Input.joy.active = false; Input.joy.x = Input.joy.y = 0; }
+    this.btn('view').hidden = !car;
     this.btn('siren').hidden = !pol;
     this.btn('radio').hidden = !car;
     this.btn('taxi').hidden = !taxi;
     this.btn('nitro').hidden = !nitro;
-    this.btn('jump').textContent = car ? 'Tormoz' : 'Sakrash';
+    this.btn('jump').innerHTML = car ? 'Qo\'l<br>tormoz' : 'Sakrash';
     this.btn('enter').textContent = car ? 'Tushish' : 'Minish';
     this.btn('fire').textContent = car ? 'Signal' : 'Otish';
     for (const a of ['aim', 'run', 'weapon']) this.btn(a).hidden = car;
