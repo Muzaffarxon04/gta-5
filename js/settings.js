@@ -143,7 +143,6 @@ const Panel = {
         'QR-kod: <b>qrcode-generator</b> — Kazuhiko Arase (MIT), <b>jsQR</b> (Apache 2.0)',
         'Xona kodi orqali ulanish: <b>ntfy.sh</b> xizmati',
         '3D modellar: Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
-        'O\'yin <b>Claude</b> (Anthropic) sun\'iy intellekti yordamida yaratilgan',
       ])}</ul>
       <p class="info-ver">Versiya ${GAME_VERSION} · 2026</p>
     </div>`);

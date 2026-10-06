@@ -1,6 +1,6 @@
 // Ko'cha Qiroli — saytdan (masalan, GitHub Pages) bir marta ochilgandan keyin internetsiz ishlashi uchun kesh.
 // Fayllar ro'yxatini tools/build-offline.mjs yangilaydi.
-const CACHE = 'kocha-qiroli-f6f9ed70';
+const CACHE = 'kocha-qiroli-3b713a92';
 const FILES = ["./","index.html","manifest.webmanifest","icons/icon-180.png","icons/icon-192.png","icons/icon-512.png","lib/fonts.css","lib/three.min.js","lib/GLTFLoader.js","models/gls.js","models/charger.js","models/police.js","models/person.js","js/core.js","js/world.js","js/landmarks.js","js/weather.js","js/radio.js","js/cars.js","js/models.js","js/vehicles.js","js/people.js","js/fx.js","js/hud.js","js/missions.js","js/shop.js","js/touch.js","js/progress.js","js/settings.js","js/mapui.js","js/taxi.js","js/garage.js","js/police.js","lib/qrcode.js","lib/jsQR.js","js/net.js","js/multiplayer.js","js/game.js","js/loop.js"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
