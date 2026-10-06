@@ -56,9 +56,11 @@ class RemotePlayer {
     return { a, b, k: b.rt > a.rt ? clamp((t - a.rt) / (b.rt - a.rt), 0, 1) : 1 };
   }
   ensureCar(cs) {
-    if (this.car && this.car.type === cs.ty && !this.car.dead) return this.car;
+    // Eski versiyadagi o'yinchi bizda yo'q mashina turini yuborishi mumkin (masalan, Jiguli)
+    const ty = CAR_TYPES[cs.ty] ? cs.ty : 'nexia';
+    if (this.car && this.car.type === ty && !this.car.dead) return this.car;
     this.leaveCar();
-    const c = new Car(cs.ty, cs.x, cs.z, cs.h, 'parked', cs.co);
+    const c = new Car(ty, cs.x, cs.z, cs.h, 'parked', cs.co);
     c.driver = 'remote'; c.remote = this;
     Game.cars.push(c);
     this.unseatPass();

@@ -117,7 +117,7 @@ const Panel = {
       <h3>Imkoniyatlar</h3>
       <ul>${li([
         'Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxonali shahar',
-        'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Malibu, Spark, Matiz, Damas, Labo, Jiguli, shuningdek Mercedes, avtobus va mototsikl',
+        'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Malibu, Spark, Matiz, Damas, Labo, Lacetti, shuningdek Mercedes, avtobus va mototsikl',
         'Vazifalar, taksi ishi, garaj va tyuning, qurol va kiyim do\'konlari',
         'Politsiya: 5 yulduzli qidiruv, yo\'l to\'siqlari va vertolyot',
         'Ob-havo (yomg\'ir, qor, tuman), kun va tun, mashinada radio',
@@ -140,9 +140,9 @@ const Panel = {
       <ul class="info-credits">${li([
         '3D grafika: <b>Three.js</b> (MIT)',
         'Shriftlar: <b>Bungee</b> va <b>Barlow Condensed</b> (SIL Open Font License 1.1)',
-        'QR-kod: <b>qrcode-generator</b> — Kazuhiko Arase (MIT), <b>jsQR</b> (Apache 2.0)',
+        'QR-kod: <b>qrcode-generator</b> — Kazuhiko Arase (MIT), <b>jsQR</b> (Apache 2.0); modellarni ochish: <b>meshoptimizer</b> (MIT)',
         'Xona kodi orqali ulanish: <b>ntfy.sh</b> xizmati',
-        '3D modellar: Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
+        '3D modellar: Nexia, Cobalt, Gentra, Spark va Lacetti — <a href="https://sketchfab.com/uzbek_supra" target="_blank" rel="noopener"><i>uzb_rx7</i></a> (Sketchfab, CC BY 4.0, o\'yin uchun soddalashtirilgan); Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
       ])}</ul>
       <p class="info-ver">Versiya ${GAME_VERSION} · 2026</p>
     </div>`);

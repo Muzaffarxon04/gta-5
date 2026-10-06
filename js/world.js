@@ -331,6 +331,8 @@ function updateSky(dt, px, pz) {
   const night = 1 - day;
   for (const m of World.bMats) m.emissiveIntensity = night * 0.95;
   World.lampHeadMat.color.setRGB(lerp(0.47, 1, night), lerp(0.47, 0.85, night), lerp(0.47, 0.55, night));
+  // Modelli mashinalarning faralari kechasi yonadi
+  MODEL_LENS.emissive.setRGB(night * 0.95, night * 0.9, night * 0.75);
 }
 function clockText() {
   const mins = Math.floor(World.dayT * 24 * 60);

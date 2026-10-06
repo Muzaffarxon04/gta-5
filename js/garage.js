@@ -2,10 +2,10 @@
 // ===== Garaj va tyuning: mashinani saqlash, bo'yash, dvigatel, shinalar, zirh, nitro =====
 const PAINTS = [0xf3f3f0, 0x1b1c1f, 0xb9bcc0, 0x8a1c26, 0xc62828, 0x1565c0, 0x274a7a, 0x2e7d32, 0xf9a825, 0xff6f00, 0x6a1b9a, 0xec407a];
 function carMods(c) { return c.mods || (c.mods = { eng: 0, grip: 0, armor: false, nitro: false }); }
-function paintable(c) { return !c.T.model || c.type === 'gls'; }
+function paintable(c) { const M = c.T.model && MODELS[c.T.model]; return !M || M.paint; }
 function paintCar(c, col) {
   c.color = col;
-  if (c.T.model) c.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(col); });
+  if (c.T.model && MODELS[c.T.model]) c.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(col); });
   else c.body.geometry = carGeo(c.type, col);
 }
 function applyMods(c, mods) {

@@ -11,6 +11,7 @@ class Car {
       // Tashqi 3D model: geometriya umumiy, faqat bo'yoq rangi har mashinada o'zgacha
       this.body = M.scene.clone(true);
       this.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(this.color); });
+      if (type === 'taxi' && T.roof) this.body.add(new THREE.Mesh(taxiSignGeo(T), CAR_MAT));
       this.lights = new THREE.Object3D();
     } else {
       this.body = new THREE.Mesh(carGeo(type, this.color), CAR_MAT); this.body.castShadow = true;

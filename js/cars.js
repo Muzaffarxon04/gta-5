@@ -3,22 +3,27 @@
 // Har bir model yon profili (u — uzunlik bo'ylab, v — balandlik) bo'yicha yasaladi.
 // uA — old oyna asosi, uB — tom boshi, uC — tom oxiri, uD — orqa oyna asosi, fa/ra — old/orqa o'q.
 const CAR_TYPES = {
-  nexia:  { name: 'Nexia',  kind: 'sedan',  l: 4.48, w: 1.66, H: 1.39, belt: 0.86, hoodF: 0.78, nose: 0.6,  tail: 0.88, uA: 1.1,  uB: 0.35, uC: -0.7,  uD: -1.28, fa: 1.4,  ra: -1.12, wr: 0.3,  max: 40, acc: 12, grip: 7,   mass: 1.0,  hp: 100 },
-  cobalt: { name: 'Cobalt', kind: 'sedan',  l: 4.48, w: 1.73, H: 1.51, belt: 0.93, hoodF: 0.85, nose: 0.62, tail: 0.98, uA: 1.0,  uB: 0.3,  uC: -0.85, uD: -1.3,  fa: 1.38, ra: -1.24, wr: 0.31, max: 44, acc: 13, grip: 7.2, mass: 1.05, hp: 105 },
-  gentra: { name: 'Gentra', kind: 'sedan',  l: 4.52, w: 1.73, H: 1.45, belt: 0.9,  hoodF: 0.82, nose: 0.6,  tail: 0.94, uA: 1.05, uB: 0.28, uC: -0.8,  uD: -1.32, fa: 1.4,  ra: -1.2,  wr: 0.31, max: 46, acc: 14, grip: 7.4, mass: 1.05, hp: 105 },
+  nexia:  { name: 'Nexia',  kind: 'sedan',  l: 4.48, w: 1.66, H: 1.39, belt: 0.86, hoodF: 0.78, nose: 0.6,  tail: 0.88, uA: 1.1,  uB: 0.35, uC: -0.7,  uD: -1.28, fa: 1.4,  ra: -1.12, wr: 0.3,  max: 40, acc: 12, grip: 7,   mass: 1.0,  hp: 100, model: 'nexia',
+    seat: { x: 0.37, y: 0.58, z: -0.1 } },
+  cobalt: { name: 'Cobalt', kind: 'sedan',  l: 4.48, w: 1.73, H: 1.51, belt: 0.93, hoodF: 0.85, nose: 0.62, tail: 0.98, uA: 1.0,  uB: 0.3,  uC: -0.85, uD: -1.3,  fa: 1.38, ra: -1.24, wr: 0.31, max: 44, acc: 13, grip: 7.2, mass: 1.05, hp: 105, model: 'cobalt',
+    seat: { x: 0.38, y: 0.6, z: 0 }, roof: [1.43, -0.39] },
+  gentra: { name: 'Gentra', kind: 'sedan',  l: 4.52, w: 1.73, H: 1.45, belt: 0.9,  hoodF: 0.82, nose: 0.6,  tail: 0.94, uA: 1.05, uB: 0.28, uC: -0.8,  uD: -1.32, fa: 1.4,  ra: -1.2,  wr: 0.31, max: 46, acc: 14, grip: 7.4, mass: 1.05, hp: 105, model: 'gentra',
+    seat: { x: 0.38, y: 0.58, z: -0.05 } },
   malibu: { name: 'Malibu', kind: 'sedan',  l: 4.92, w: 1.85, H: 1.46, belt: 0.92, hoodF: 0.85, nose: 0.62, tail: 0.95, uA: 1.08, uB: 0.2,  uC: -0.95, uD: -1.6,  fa: 1.5,  ra: -1.33, wr: 0.33, max: 55, acc: 19, grip: 8.4, mass: 1.2,  hp: 120 },
-  spark:  { name: 'Spark',  kind: 'hatch',  l: 3.64, w: 1.6,  H: 1.52, belt: 0.95, hoodF: 0.85, nose: 0.6,  tail: 0.95, uA: 1.15, uB: 0.5,  uC: -1.55, uD: -1.72, fa: 1.15, ra: -1.2,  wr: 0.28, max: 38, acc: 13, grip: 7.5, mass: 0.75, hp: 80 },
+  spark:  { name: 'Spark',  kind: 'hatch',  l: 3.64, w: 1.6,  H: 1.52, belt: 0.95, hoodF: 0.85, nose: 0.6,  tail: 0.95, uA: 1.15, uB: 0.5,  uC: -1.55, uD: -1.72, fa: 1.15, ra: -1.2,  wr: 0.28, max: 38, acc: 13, grip: 7.5, mass: 0.75, hp: 80, model: 'spark',
+    seat: { x: 0.36, y: 0.64, z: -0.1 } },
   matiz:  { name: 'Matiz',  kind: 'hatch',  l: 3.5,  w: 1.5,  H: 1.5,  belt: 0.92, hoodF: 0.82, nose: 0.55, tail: 0.92, uA: 1.2,  uB: 0.55, uC: -1.5,  uD: -1.66, fa: 1.12, ra: -1.22, wr: 0.27, max: 35, acc: 11, grip: 7,   mass: 0.7,  hp: 75 },
   damas:  { name: 'Damas',  kind: 'van',    l: 3.23, w: 1.4,  H: 1.9,  belt: 1.0,  hoodF: 0.95, nose: 0.5,  tail: 1.0,  uA: 1.2,  uB: 0.98, uC: -1.53, uD: -1.58, fa: 1.0,  ra: -0.85, wr: 0.27, max: 30, acc: 9,  grip: 6,   mass: 0.95, hp: 90 },
   labo:   { name: 'Labo',   kind: 'pickup', l: 3.3,  w: 1.4,  H: 1.85, belt: 1.0,  hoodF: 0.95, nose: 0.5,  tail: 0.95, uA: 1.23, uB: 1.0,  uC: 0.35,  uD: 0.3,   fa: 1.0,  ra: -0.9,  wr: 0.27, max: 30, acc: 9,  grip: 6,   mass: 1.0,  hp: 95 },
-  jiguli: { name: 'Jiguli', kind: 'sedan',  l: 4.17, w: 1.61, H: 1.44, belt: 0.88, hoodF: 0.86, nose: 0.62, tail: 0.88, uA: 0.98, uB: 0.55, uC: -0.72, uD: -1.08, fa: 1.25, ra: -1.17, wr: 0.3,  max: 38, acc: 10, grip: 6.5, mass: 1.05, hp: 110, chrome: true,
-    palette: [0xe8e2d0, 0x9c2a22, 0x2c5d8a, 0x6b8f4a, 0xd9b44a, 0xf3f3f0] },
 };
+// Lacetti — Gentra bilan bir kuzov (model bo'lmasa Gentra shakli chiziladi)
+CAR_TYPES.lacetti = { ...CAR_TYPES.gentra, name: 'Lacetti', model: 'lacetti', max: 45, acc: 13.5, hp: 110, seat: { x: 0.38, y: 0.54, z: -0.05 } };
 CAR_TYPES.taxi = { ...CAR_TYPES.cobalt, name: 'Taksi (Cobalt)' };
 CAR_TYPES.police = { ...CAR_TYPES.malibu, name: 'Politsiya (Malibu)', max: 52, acc: 18, mass: 1.3, hp: 140 };
 CAR_TYPES.moto = { name: 'Mototsikl', kind: 'moto', l: 2.1, w: 0.8, H: 1.2, wr: 0.32, fa: 0.72, ra: -0.72, max: 52, acc: 21, grip: 9.5, mass: 0.45, hp: 60,
   palette: [0xc62828, 0x1b1c1f, 0x1565c0, 0xf3f3f0, 0x2e7d32, 0xff8f00] };
-// Tashqi 3D modeldan olinadigan mashinalar (js/models.js yuklaydi)
+// Faqat tashqi 3D modeldan iborat mashinalar (js/models.js yuklaydi). Yuqoridagilarda ham model bor,
+// lekin u yuklanmasa kod bilan yasalgan shakl chiqadi.
 CAR_TYPES.gls = { name: 'Mercedes-Benz GLS 580', kind: 'model', model: 'gls', l: 5.21, w: 1.98, H: 1.82, wr: 0.38, max: 60, acc: 20, grip: 8.2, mass: 1.7, hp: 160,
   palette: [0x111214, 0x111214, 0xf2f2f0, 0xb9bcc0, 0x1d2a44, 0x5a5e63], seat: { x: 0.42, y: 0.75, z: 0.15 } };
 CAR_TYPES.charger = { name: 'Fast Charger', kind: 'model', model: 'charger', l: 4.95, w: 2.1, H: 1.68, wr: 0.4, max: 64, acc: 25, grip: 8.8, mass: 1.15, hp: 110,
@@ -35,10 +40,10 @@ for (const T of Object.values(CAR_TYPES)) {
 // Toshkent ko'chalaridagidek: oq rang ko'pchilik, keyin kumush va qora
 const CAR_COLORS = [0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xb9bcc0, 0xb9bcc0, 0x1b1c1f, 0x1b1c1f,
   0x6c7178, 0xd6c9a8, 0x8a1c26, 0x274a7a, 0x2f5a3c];
-const CAR_MIX = [['nexia', 16], ['cobalt', 18], ['gentra', 13], ['spark', 13], ['matiz', 8], ['damas', 9], ['labo', 5], ['jiguli', 7], ['malibu', 5], ['taxi', 6], ['moto', 7], ['gls', 4], ['charger', 3]];
+const CAR_MIX = [['nexia', 16], ['cobalt', 18], ['gentra', 13], ['spark', 13], ['matiz', 8], ['damas', 9], ['labo', 5], ['lacetti', 7], ['malibu', 5], ['taxi', 6], ['moto', 7], ['gls', 4], ['charger', 3]];
 function randomCarType() {
-  // Model yuklanmagan bo'lsa (masalan, internet yo'q), u mashina chiqmaydi
-  const mix = CAR_MIX.filter(([t]) => !CAR_TYPES[t].model || MODELS[CAR_TYPES[t].model]);
+  // Faqat modeldan iborat mashina modeli yuklanmagan bo'lsa, u chiqmaydi
+  const mix = CAR_MIX.filter(([t]) => CAR_TYPES[t].kind !== 'model' || MODELS[CAR_TYPES[t].model]);
   let r = Math.random() * mix.reduce((s, m) => s + m[1], 0);
   for (const [t, w] of mix) if ((r -= w) <= 0) return t;
   return 'nexia';
@@ -149,6 +154,10 @@ function carGeo(type, color) {
     P.push([0.95, 0.06, 0.24, 0, T.H + 0.03, T.roofZ, 0x222222]);
   }
   return (_geo[key] = mergeParts(P));
+}
+// Tashqi modelli taksi tomidagi "TAKSI" qutisi (T.roof — tom balandligi va o'rtasi)
+function taxiSignGeo(T) {
+  return _geo.taxiSign || (_geo.taxiSign = mergeParts([[0.56, 0.06, 0.24, 0, T.roof[0] + 0.03, T.roof[1], 0x111111], [0.52, 0.15, 0.2, 0, T.roof[0] + 0.13, T.roof[1], 0xffd21f]]));
 }
 function glassGeo(type) {
   const T = CAR_TYPES[type], key = 'G' + type;

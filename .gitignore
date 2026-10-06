@@ -4,3 +4,6 @@ models/*.glb
 models/*.fbx
 models/*.obj
 models/*.blend
+
+# Model tayyorlash vositasi paketlari
+tools/node_modules/

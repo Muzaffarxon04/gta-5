@@ -223,9 +223,10 @@ function poseDead(hm) {
 function poseSeated(hm) {
   const b = hm.b;
   b.hips.position.y = hm.hipsY;
-  b.spine.rotation.set(-0.12, 0, 0); b.head.rotation.set(0.1, 0, 0);
+  // Mashinadagidek: biroz suyanib, oyoqlar oldinga cho'zilgan (tom va pol ichida qolsin)
+  b.spine.rotation.set(-0.38, 0, 0); b.head.rotation.set(0.3, 0, 0);
   b.thL.rotation.set(-1.45, 0, 0.06); b.thR.rotation.set(-1.45, 0, -0.06);
-  b.shL.rotation.x = b.shR.rotation.x = 1.35;
+  b.shL.rotation.x = b.shR.rotation.x = 0.6;
   b.uaL.rotation.set(-0.85, 0, -0.15); b.uaR.rotation.set(-0.85, 0, 0.15);
   b.faL.rotation.x = b.faR.rotation.x = -0.55;
 }
