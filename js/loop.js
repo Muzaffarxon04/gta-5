@@ -9,12 +9,11 @@ function init(data) {
   Game.baseTraffic = Game.maxTraffic; Game.basePeds = Game.maxPeds;
   renderer = new THREE.WebGLRenderer({ canvas, antialias: !touch, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.25 : 1.5));
-  layoutView();
-  renderer.setSize(View.w, View.h);
+  renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(65, View.w / View.h, 0.1, 900);
+  camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 900);
   buildWorld(scene);
   if (touch) World.sun.shadow.mapSize.set(1024, 1024);
   FX.init(scene);
@@ -69,16 +68,8 @@ function finishInit(data) {
   document.getElementById('play').focus();
   requestAnimationFrame(frame);
 }
-// Telefonda o'yin doim albom (yotiq) holatda: telefon tik tursa, butun sahifa 90° burib ko'rsatiladi
-function layoutView() {
-  const rot = Input.touch && innerHeight > innerWidth, b = document.body, de = document.documentElement.style;
-  View.rot = rot; View.w = rot ? innerHeight : innerWidth; View.h = rot ? innerWidth : innerHeight;
-  b.classList.toggle('rot', rot);
-  b.style.width = rot ? View.w + 'px' : ''; b.style.height = rot ? View.h + 'px' : '';
-  b.style.transform = rot ? `translateX(${innerWidth}px) rotate(90deg)` : '';
-  if (rot) { de.setProperty('--vw', View.w + 'px'); de.setProperty('--vh', View.h + 'px'); }
-  else { de.removeProperty('--vw'); de.removeProperty('--vh'); }
-}
+// Telefonda faqat albom (yotiq) rejimi: tik holatda "telefonni yotqizing" ekrani chiqadi (CSS), o'yin to'xtaydi
+const isPortrait = () => Input.touch && innerHeight > innerWidth;
 // To'liq ekran va albom holatini qulflash (Android Chrome'da ishlaydi; iPhone'da — bosh ekranga qo'shilgan ilovada)
 function goFullscreen() {
   if (!Input.touch || document.fullscreenElement || document.webkitFullscreenElement) return;
@@ -91,13 +82,14 @@ function goFullscreen() {
   } catch (e) { /* ruxsat yo'q (masalan, iframe ichida) */ }
 }
 function onResize() {
-  layoutView();
-  renderer.setSize(View.w, View.h);
-  camera.aspect = View.w / View.h;
+  if (isPortrait() && Game.started && !Game.paused) pauseGame();
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 }
 function startGame() {
   goFullscreen();
+  if (isPortrait()) return; // tik holatda o'yin boshlanmaydi
   SFX.init();
   document.getElementById('menu').hidden = true;
   HUD.el.hud.hidden = false;
@@ -131,7 +123,7 @@ function frame(now) {
   if (!Game.started) menuDemo(raw);
   else if (!Game.paused && !Game.shopOpen) step(raw);
   MP.update(raw);
-  renderer.render(scene, camera);
+  if (!isPortrait()) renderer.render(scene, camera); // tik holatda chizish shart emas (batareya)
   endFrameInput();
 }
 // Menyu orqasida shahar "jonli" ko'rinadi

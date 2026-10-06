@@ -14,8 +14,7 @@ const TouchUI = {
     const joy = document.getElementById('joy'), knob = document.getElementById('joyKnob'), R = 56;
     let joyId = null, camId = null, cx = 0, cy = 0, lx = 0, ly = 0;
     const move = t => {
-      const q = toView(t.clientX, t.clientY);
-      let dx = q.x - cx, dy = q.y - cy;
+      let dx = t.clientX - cx, dy = t.clientY - cy;
       const d = Math.hypot(dx, dy);
       if (d > R) { dx *= R / d; dy *= R / d; }
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -23,7 +22,7 @@ const TouchUI = {
     };
     joy.addEventListener('touchstart', e => {
       e.preventDefault();
-      const t = e.changedTouches[0], r = viewRect(joy);
+      const t = e.changedTouches[0], r = joy.getBoundingClientRect();
       joyId = t.identifier; cx = r.left + r.width / 2; cy = r.top + r.height / 2;
       move(t);
     }, { passive: false });
@@ -31,12 +30,12 @@ const TouchUI = {
     Input.canvas.addEventListener('touchstart', e => {
       e.preventDefault();
       const t = e.changedTouches[0];
-      if (camId === null) { const q = toView(t.clientX, t.clientY); camId = t.identifier; lx = q.x; ly = q.y; }
+      if (camId === null) { camId = t.identifier; lx = t.clientX; ly = t.clientY; }
     }, { passive: false });
     addEventListener('touchmove', e => {
       for (const t of e.changedTouches) {
         if (t.identifier === joyId) move(t);
-        else if (t.identifier === camId) { const q = toView(t.clientX, t.clientY); Input.mdx += (q.x - lx) * 2.2; Input.mdy += (q.y - ly) * 2.2; lx = q.x; ly = q.y; }
+        else if (t.identifier === camId) { Input.mdx += (t.clientX - lx) * 2.2; Input.mdy += (t.clientY - ly) * 2.2; lx = t.clientX; ly = t.clientY; }
       }
       if (Game.started && !Game.paused && !Game.shopOpen) e.preventDefault();
     }, { passive: false });
@@ -47,8 +46,8 @@ const TouchUI = {
       }
     };
     addEventListener('touchend', end); addEventListener('touchcancel', end);
-    // Har bosishda to'liq ekranni tiklash (foydalanuvchi chiqib ketgan bo'lsa)
-    addEventListener('touchend', () => { if (Game.started) goFullscreen(); }, { passive: true });
+    // Har bosishda to'liq ekran va albom qulfi (Android'da telefon tik tursa ham ekran yotiq bo'ladi)
+    addEventListener('touchend', goFullscreen, { passive: true });
     // Mashinada: chap/o'ng tugmalari va pedallar — klaviatura strelkalari kabi ishlaydi
     root.querySelectorAll('[data-key]').forEach(btn => {
       const code = btn.dataset.key;

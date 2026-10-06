@@ -29,8 +29,13 @@
 }
 [hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night); color: var(--ink); font-family: var(--f-ui); }
-/* Telefon tik turganda butun sahifa 90° buriladi (o'lchamlar JS da: layoutView) */
-body.rot { position: fixed; top: 0; left: 0; transform-origin: 0 0; }
+/* Telefon tik turganda o'yin o'rniga "telefonni yotqizing" ekrani */
+.portrait-block { display: none; position: fixed; inset: 0; z-index: 100; background: var(--night); flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; touch-action: none; }
+.portrait-block b { font-family: var(--f-display); font-weight: 400; font-size: 26px; color: var(--sun); letter-spacing: .02em; }
+.portrait-block span { font-size: 17px; color: var(--muted); max-width: 280px; }
+.pb-phone { width: 54px; height: 92px; border: 4px solid var(--ink); border-radius: 10px; margin-bottom: 10px; animation: pb-turn 2.2s ease-in-out infinite; }
+@keyframes pb-turn { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) and (pointer: coarse) { .portrait-block { display: flex; } }
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 .hud { position: fixed; inset: 0; pointer-events: none; user-select: none; text-shadow: 0 2px 0 rgba(0,0,0,.55), 0 0 6px rgba(0,0,0,.4); }
 
@@ -65,10 +70,10 @@ body.rot { position: fixed; top: 0; left: 0; transform-origin: 0 0; }
 .car-hp { width: 120px; height: 5px; margin-left: auto; background: rgba(0,0,0,.55); border-radius: 2px; overflow: hidden; }
 .car-hp i { display: block; height: 100%; background: var(--sun); }
 
-.help { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); left: 18px; max-width: min(360px, calc(var(--vw, 100vw) - 36px)); background: var(--shade); padding: 10px 14px; border-radius: 4px; font-size: 18px; font-weight: 500; line-height: 1.3; text-shadow: none; }
+.help { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); left: 18px; max-width: min(360px, calc(100vw - 36px)); background: var(--shade); padding: 10px 14px; border-radius: 4px; font-size: 18px; font-weight: 500; line-height: 1.3; text-shadow: none; }
 .help kbd, .prompt kbd, .menu kbd, #panel kbd { font-family: var(--f-ui); font-weight: 700; background: var(--ink); color: var(--night); border-radius: 3px; padding: 0 6px; text-shadow: none; }
 .prompt { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); background: var(--shade); padding: 6px 12px; border-radius: 4px; font-size: 19px; font-weight: 600; text-shadow: none; white-space: nowrap; }
-.objective { position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); max-width: min(640px, calc(var(--vw, 100vw) - 36px)); text-align: center; font-size: 22px; font-weight: 600; }
+.objective { position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); max-width: min(640px, calc(100vw - 36px)); text-align: center; font-size: 22px; font-weight: 600; }
 .objective em { font-style: normal; color: var(--sun); }
 .timer { position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); font-family: var(--f-display); font-size: 30px; font-variant-numeric: tabular-nums; }
 .timer.low { color: var(--danger); }
@@ -77,7 +82,7 @@ body.rot { position: fixed; top: 0; left: 0; transform-origin: 0 0; }
 .cross.hit { border-color: var(--danger); background: var(--danger); }
 
 .big { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(0,0,0,.15), rgba(0,0,0,.55)); }
-.big div:first-child { font-family: var(--f-display); font-size: clamp(44px, calc(var(--vw, 100vw) * .1), 110px); letter-spacing: .02em; animation: drop .6s cubic-bezier(.2,1.4,.4,1); }
+.big div:first-child { font-family: var(--f-display); font-size: clamp(44px, 10vw, 110px); letter-spacing: .02em; animation: drop .6s cubic-bezier(.2,1.4,.4,1); }
 .big.wasted div:first-child { color: var(--danger); }
 .big.busted div:first-child { color: var(--cop); }
 .big.passed div:first-child { color: var(--sun); }
@@ -87,10 +92,10 @@ body.rot { position: fixed; top: 0; left: 0; transform-origin: 0 0; }
 .fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .5s; }
 .fade.on { opacity: 1; }
 
-.menu { position: fixed; inset: 0; display: flex; align-items: center; padding-inline: clamp(16px, calc(var(--vw, 100vw) * .07), 110px); background: linear-gradient(90deg, rgba(18,15,28,.94) 0%, rgba(18,15,28,.82) 44%, rgba(18,15,28,.15) 100%); overflow-y: auto; }
+.menu { position: fixed; inset: 0; display: flex; align-items: center; padding-inline: clamp(16px, 7vw, 110px); background: linear-gradient(90deg, rgba(18,15,28,.94) 0%, rgba(18,15,28,.82) 44%, rgba(18,15,28,.15) 100%); overflow-y: auto; }
 .menu-inner { max-width: 560px; display: flex; flex-direction: column; gap: 18px; padding-block: 28px; }
 .eyebrow { font-weight: 700; font-size: 16px; letter-spacing: .22em; text-transform: uppercase; color: var(--sun); }
-.menu h1 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: clamp(46px, calc(var(--vw, 100vw) * .09), 92px); line-height: .92; color: var(--ink); text-wrap: balance; }
+.menu h1 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: clamp(46px, 9vw, 92px); line-height: .92; color: var(--ink); text-wrap: balance; }
 .menu h1 span { color: var(--sun); }
 .menu p { margin: 0; font-size: 20px; line-height: 1.35; color: var(--muted); max-width: 46ch; }
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; font-size: 18px; align-items: baseline; }
@@ -105,7 +110,7 @@ body.rot { position: fixed; top: 0; left: 0; transform-origin: 0 0; }
 
 /* Do'kon oynasi */
 .shop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding-inline: 16px; background: rgba(10, 8, 18, .55); }
-.shop-card { width: min(580px, 100%); max-height: min(calc(var(--vh, 100vh) * .88), 720px); display: flex; flex-direction: column; background: var(--night); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; box-shadow: 0 24px 60px rgba(0,0,0,.55); overflow: hidden; }
+.shop-card { width: min(580px, 100%); max-height: min(88vh, 720px); display: flex; flex-direction: column; background: var(--night); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; box-shadow: 0 24px 60px rgba(0,0,0,.55); overflow: hidden; }
 .shop-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .shop-head h2 { margin: 2px 0 0; font-family: var(--f-display); font-weight: 400; font-size: 28px; line-height: 1.05; }
 .shop-money { font-family: var(--f-display); font-size: 24px; color: var(--cash); font-variant-numeric: tabular-nums; }
@@ -150,10 +155,10 @@ body.rot { position: fixed; top: 0; left: 0; transform-origin: 0 0; }
 .tbtn.lock { border-color: var(--sun); color: var(--sun); }
 .touch .radar-wrap { top: calc(10px + env(safe-area-inset-top, 0px)); bottom: auto; left: calc(10px + env(safe-area-inset-left, 0px)); width: 150px; }
 .touch #radar { width: 150px; height: 108px; }
-.touch .help { top: calc(146px + env(safe-area-inset-top, 0px)); left: 10px; max-width: min(300px, calc(var(--vw, 100vw) - 20px)); font-size: 15px; }
+.touch .help { top: calc(146px + env(safe-area-inset-top, 0px)); left: 10px; max-width: min(300px, calc(100vw - 20px)); font-size: 15px; }
 .touch .area { display: none; }
 .touch .speedo { bottom: auto; top: calc(150px + env(safe-area-inset-top, 0px)); }
-.touch .objective { bottom: auto; top: calc(58px + env(safe-area-inset-top, 0px)); font-size: 17px; max-width: min(420px, calc(var(--vw, 100vw) - 340px)); }
+.touch .objective { bottom: auto; top: calc(58px + env(safe-area-inset-top, 0px)); font-size: 17px; max-width: min(420px, calc(100vw - 340px)); }
 .touch .prompt { bottom: 48%; }
 @media (max-width: 520px) {
   .joy { width: 120px; height: 120px; }
@@ -196,7 +201,7 @@ body.rot { position: fixed; top: 0; left: 0; transform-origin: 0 0; }
 .map-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 15px; color: var(--muted); }
 .map-legend i { font-style: normal; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: #111; font-weight: 700; font-size: 12px; margin-right: 4px; }
 /* Yutuq va saqlash xabari */
-.toast { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); min-width: 260px; max-width: calc(var(--vw, 100vw) - 32px); background: var(--shade); border-left: 4px solid var(--sun); padding: 10px 16px; border-radius: 4px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; }
+.toast { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); min-width: 260px; max-width: calc(100vw - 32px); background: var(--shade); border-left: 4px solid var(--sun); padding: 10px 16px; border-radius: 4px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; }
 .toast small { font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--sun); font-size: 13px; }
 .toast b { font-family: var(--f-display); font-weight: 400; font-size: 22px; }
 .toast span { font-size: 16px; color: var(--muted); }
@@ -457,6 +462,13 @@ body.rot { position: fixed; top: 0; left: 0; transform-origin: 0 0; }
     <dt><kbd>P</kbd></dt><dd>Pauza</dd>
   </dl>
 </template>
+
+<!-- Telefonda faqat albom (yotiq) rejimi: tik holatda o'yin to'xtaydi -->
+<div class="portrait-block" id="portraitBlock" aria-live="polite">
+  <div class="pb-phone"></div>
+  <b>Telefonni yotqizing</b>
+  <span>Ko'cha Qiroli faqat albom (yotiq) rejimida o'ynaladi. Android'da ekranga bossangiz, o'zi yotiq holatga o'tadi.</span>
+</div>
 
 <div class="fade" id="fade"></div>
 
