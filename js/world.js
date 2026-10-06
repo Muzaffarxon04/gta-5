@@ -81,7 +81,9 @@ function buildWorld(scene) {
   const shore = new THREE.Mesh(new THREE.BoxGeometry(L * 2, 1, L * 2), new THREE.MeshLambertMaterial({ color: 0x627d40 }));
   shore.position.y = -0.52; shore.receiveShadow = true; scene.add(shore);
   const S = CITY.SIZE + R;
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(S, S), new THREE.MeshLambertMaterial({ color: 0x3b3e44 }));
+  // Asfalt: yomg'irda yaltiraydi (Weather specular ni o'zgartiradi)
+  World.roadMat = new THREE.MeshPhongMaterial({ color: 0x3b3e44, specular: 0x000000, shininess: 45 });
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(S, S), World.roadMat);
   road.rotation.x = -Math.PI / 2; road.receiveShadow = true; scene.add(road);
 
   const mats = {
@@ -92,9 +94,11 @@ function buildWorld(scene) {
     path: new THREE.MeshLambertMaterial({ color: 0xc9b99a }),
     water: new THREE.MeshLambertMaterial({ color: 0x3f8fb5 }),
   };
+  // Qor yoqqanda oqaradigan materiallar (asl rangini eslab qolamiz)
+  World.snowMats = [shore.material, mats.park, mats.slab, mats.plaza, World.roofMat].map(m => ({ m, base: m.color.clone() }));
   const slabGeo = new THREE.BoxGeometry(B, 0.15, B);
   const innerGeo = new THREE.BoxGeometry(B - SW * 2, 0.04, B - SW * 2);
-  const special = { '4,4': 'park', '1,6': 'park', '6,1': 'park', '6,6': 'park', '3,5': 'lot', '5,2': 'lot', '2,2': 'lot', '6,4': 'lot', '1,3': 'lot' };
+  const special = { '4,4': 'square', '1,6': 'park', '6,1': 'tower', '6,6': 'park', '2,4': 'bazaar', '3,5': 'lot', '5,2': 'lot', '2,2': 'lot', '6,4': 'lot', '1,3': 'lot' };
   const white = [], yellow = [], trees = [], lamps = [];
 
   for (let i = 0; i < N; i++) {
@@ -110,7 +114,7 @@ function buildWorld(scene) {
 
       const slab = new THREE.Mesh(slabGeo, mats.slab);
       slab.position.set(cx, 0.075, cz); slab.receiveShadow = true; scene.add(slab);
-      const inner = new THREE.Mesh(innerGeo, type === 'park' ? mats.park : type === 'lot' ? mats.lot : mats.plaza);
+      const inner = new THREE.Mesh(innerGeo, type === 'park' || type === 'square' || type === 'tower' ? mats.park : type === 'lot' ? mats.lot : mats.plaza);
       inner.position.set(cx, 0.16, cz); inner.receiveShadow = true; scene.add(inner);
 
       const m = SW + 1.5, ix0 = x0 + m, ix1 = x1 - m, iz0 = z0 + m, iz1 = z1 - m;
@@ -148,6 +152,8 @@ function buildWorld(scene) {
           if (Math.abs(tx - cx) < 4 || Math.abs(tz - cz) < 4 || Math.hypot(tx - cx, tz - cz) < 9) continue;
           trees.push([tx, tz, rand(0.9, 1.5)]);
         }
+      } else if (type === 'square' || type === 'tower' || type === 'bazaar') {
+        buildLandmark(blk, scene, trees);
       } else {
         // avtoturargoh
         for (const rowZ of [iz0 + 4, iz1 - 4]) {
@@ -182,8 +188,11 @@ function buildWorld(scene) {
   }
   instStripes(scene, white, 0xe8e6df);
   instStripes(scene, yellow, 0xe9c13a);
+  buildMetro(scene, trees);
   buildTrees(scene, trees);
   buildLamps(scene, lamps);
+  buildSignals(scene);
+  buildBusStops(scene);
   setupSky(scene);
   buildMapCanvas();
 }
@@ -225,6 +234,67 @@ function buildLamps(scene, list) {
     addCollider(x - 0.15, z - 0.15, x + 0.15, z + 0.15, 6.5, 'lamp');
   });
   scene.add(pole, arm, head);
+}
+
+// ===== Svetoforlar =====
+// Sikl (27 s): z bo'ylab yashil 0–10, sariq 10–12.5, hammasi qizil; x bo'ylab yashil 14–24, sariq 24–26.
+const SIG_CYCLE = 27;
+const SIG_ON = [new THREE.Color(0xff2a1a), new THREE.Color(0xffc21a), new THREE.Color(0x2bff6e)];
+const SIG_OFF = [new THREE.Color(0x3a0d0a), new THREE.Color(0x3a2e08), new THREE.Color(0x0a3318)];
+World.sigT = 0; World.sigMap = {}; World.sigHeads = [];
+function signalFor(i, j, alongX) {
+  const s = World.sigMap[i * 100 + j];
+  if (!s) return 'G';
+  const t = (World.sigT + s.off) % SIG_CYCLE;
+  if (alongX) return t >= 14 && t < 24 ? 'G' : t >= 24 && t < 26 ? 'Y' : 'R';
+  return t < 10 ? 'G' : t < 12.5 ? 'Y' : 'R';
+}
+function buildSignals(scene) {
+  const heads = World.sigHeads;
+  for (let i = 1; i < CITY.N; i++) for (let j = 1; j < CITY.N; j++) {
+    const s = { i, j, off: rand(0, SIG_CYCLE) };
+    World.sigMap[i * 100 + j] = s;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) heads.push({ s, dx, dz, c: -1 });
+  }
+  const n = heads.length, dark = new THREE.MeshLambertMaterial({ color: 0x24262a });
+  const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.1, 0.12, 5.6, 6), dark, n);
+  const arm = new THREE.InstancedMesh(new THREE.BoxGeometry(0.1, 0.1, 5.4), dark, n);
+  const box = new THREE.InstancedMesh(new THREE.BoxGeometry(0.45, 1.2, 0.35), new THREE.MeshLambertMaterial({ color: 0x1a1b1e }), n);
+  const lamps = new THREE.InstancedMesh(new THREE.BoxGeometry(0.26, 0.26, 0.05), new THREE.MeshBasicMaterial({ color: 0xffffff }), n * 3);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3();
+  const off = CITY.R / 2 + 1;
+  heads.forEach((h, k) => {
+    // Kelayotgan mashinaga nisbatan o'ng-yaqin burchakda ustun, yo'l ustida chiroq
+    const nx = roadPos(h.s.i), nz = roadPos(h.s.j), rx = -h.dz, rz = h.dx;
+    const cx = nx - h.dx * off + rx * off, cz = nz - h.dz * off + rz * off;
+    m4.makeTranslation(cx, 2.8, cz); pole.setMatrixAt(k, m4);
+    q.setFromAxisAngle(up, Math.atan2(-rx, -rz));
+    m4.compose(v.set(cx - rx * 2.7, 5.5, cz - rz * 2.7), q, one); arm.setMatrixAt(k, m4);
+    const hx = cx - rx * 5.2, hz = cz - rz * 5.2;
+    q.setFromAxisAngle(up, Math.atan2(-h.dx, -h.dz));
+    m4.compose(v.set(hx, 4.95, hz), q, one); box.setMatrixAt(k, m4);
+    for (let c = 0; c < 3; c++) {
+      m4.compose(v.set(hx - h.dx * 0.19, 5.31 - c * 0.36, hz - h.dz * 0.19), q, one);
+      lamps.setMatrixAt(k * 3 + c, m4);
+      lamps.setColorAt(k * 3 + c, SIG_OFF[c]);
+    }
+    addCollider(cx - 0.15, cz - 0.15, cx + 0.15, cz + 0.15, 5.6, 'lamp');
+  });
+  pole.castShadow = arm.castShadow = box.castShadow = true;
+  scene.add(pole, arm, box, lamps);
+  World.sigLamps = lamps;
+  updateSignals(0);
+}
+function updateSignals(dt) {
+  World.sigT += dt;
+  let changed = false;
+  World.sigHeads.forEach((h, k) => {
+    const st = signalFor(h.s.i, h.s.j, h.dx !== 0), c = st === 'R' ? 0 : st === 'Y' ? 1 : 2;
+    if (h.c === c) return;
+    h.c = c; changed = true;
+    for (let q = 0; q < 3; q++) World.sigLamps.setColorAt(k * 3 + q, q === c ? SIG_ON[q] : SIG_OFF[q]);
+  });
+  if (changed) World.sigLamps.instanceColor.needsUpdate = true;
 }
 
 // ===== Osmon va yorug'lik =====
@@ -276,11 +346,12 @@ function buildMapCanvas() {
   const S = CITY.SIZE + CITY.R;
   g.fillStyle = '#8c929b'; g.fillRect(-S / 2 - o, -S / 2 - o, S, S);
   for (const col of World.blocks) for (const b of col) {
-    g.fillStyle = b.type === 'park' ? '#4f7d3c' : b.type === 'lot' ? '#525760' : '#3f4752';
+    g.fillStyle = b.type === 'park' || b.type === 'square' || b.type === 'tower' ? '#4f7d3c' : b.type === 'lot' ? '#525760' : b.type === 'bazaar' ? '#6b6457' : '#3f4752';
     g.fillRect(b.x0 - o, b.z0 - o, b.x1 - b.x0, b.z1 - b.z0);
     g.fillStyle = '#2c333c';
     for (const k of b.buildings) g.fillRect(k.x0 - o, k.z0 - o, k.x1 - k.x0, k.z1 - k.z0);
     if (b.type === 'park') { g.fillStyle = '#3f8fb5'; g.beginPath(); g.arc(b.cx - o, b.cz - o, 6, 0, TAU); g.fill(); }
   }
+  drawLandmarksOnMap(g, o);
   World.mapCanvas = c; World.mapMin = o;
 }

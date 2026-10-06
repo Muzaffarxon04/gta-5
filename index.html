@@ -1,8 +1,7 @@
 <title>Ko'cha Qiroli</title>
 <meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="lib/fonts.css">
 <style>
 /* Layout: to'liq ekranli 3D shahar, HUD burchaklarda (GTA uslubi), menyu chap tomonda */
 :root {
@@ -76,6 +75,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .big div:last-child { font-size: 22px; font-weight: 600; margin-top: 4px; }
 @keyframes drop { from { transform: scale(1.6); opacity: 0; } }
 .flash { position: absolute; inset: 0; background: var(--danger); opacity: 0; transition: opacity .25s; }
+.fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .5s; }
+.fade.on { opacity: 1; }
 
 .menu { position: fixed; inset: 0; display: flex; align-items: center; padding-inline: clamp(16px, 7vw, 110px); background: linear-gradient(90deg, rgba(18,15,28,.94) 0%, rgba(18,15,28,.82) 44%, rgba(18,15,28,.15) 100%); overflow-y: auto; }
 .menu-inner { max-width: 560px; display: flex; flex-direction: column; gap: 18px; padding-block: 28px; }
@@ -93,6 +94,105 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .note { font-size: 16px; color: var(--muted); }
 .loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--f-display); font-size: 28px; background: var(--night); color: var(--sun); }
 
+/* Do'kon oynasi */
+.shop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding-inline: 16px; background: rgba(10, 8, 18, .55); }
+.shop-card { width: min(580px, 100%); max-height: min(88vh, 720px); display: flex; flex-direction: column; background: var(--night); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; box-shadow: 0 24px 60px rgba(0,0,0,.55); overflow: hidden; }
+.shop-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.shop-head h2 { margin: 2px 0 0; font-family: var(--f-display); font-weight: 400; font-size: 28px; line-height: 1.05; }
+.shop-money { font-family: var(--f-display); font-size: 24px; color: var(--cash); font-variant-numeric: tabular-nums; }
+.shop-list { overflow-y: auto; padding: 4px 12px; }
+.shop-item { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.shop-info { min-width: 0; display: flex; flex-direction: column; }
+.shop-info b { font-size: 20px; font-weight: 700; }
+.shop-info span { font-size: 15px; color: var(--muted); }
+.shop-price { font-weight: 700; font-size: 19px; color: var(--cash); font-variant-numeric: tabular-nums; }
+.shop-price.no { color: var(--danger); }
+.shop-buy { font-family: var(--f-ui); font-weight: 700; font-size: 16px; min-width: 108px; padding: 9px 14px; border: 0; border-radius: 4px; background: var(--sun); color: var(--night); cursor: pointer; }
+.shop-buy:disabled { background: rgba(255,255,255,.1); color: var(--muted); cursor: default; }
+.shop-buy:focus-visible, .shop-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.shop-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid rgba(255,255,255,.08); }
+.shop-foot span { color: var(--cash); font-weight: 600; font-size: 16px; min-width: 0; }
+.shop-close { flex: none; font-family: var(--f-ui); font-weight: 700; font-size: 16px; padding: 9px 14px; background: transparent; color: var(--ink); border: 1px solid rgba(255,255,255,.3); border-radius: 4px; cursor: pointer; }
+@media (max-width: 480px) { .shop-item { grid-template-columns: 1fr auto; } .shop-buy { grid-column: 1 / -1; } }
+
+/* Telefon boshqaruvi */
+.touch-ui { position: fixed; inset: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.joy { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.07); border: 2px solid rgba(255,255,255,.28); pointer-events: auto; touch-action: none; }
+.joy-knob { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: rgba(255,255,255,.32); border: 2px solid rgba(255,255,255,.65); }
+.tbtns { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 64px); grid-auto-rows: 64px; gap: 10px;
+  grid-template-areas: "pause weapon aim" "run enter fire" ". jump fire"; }
+.tbtn { pointer-events: auto; touch-action: none; border-radius: 50%; background: rgba(20, 16, 30, .5); border: 2px solid rgba(255,255,255,.35); color: var(--ink); font-family: var(--f-ui); font-weight: 700; font-size: 14px; letter-spacing: .02em; padding: 0; }
+.tbtn[data-act="fire"] { grid-area: fire; border-radius: 40px; background: rgba(239, 75, 70, .5); font-size: 17px; }
+.tbtn[data-act="jump"] { grid-area: jump; } .tbtn[data-act="enter"] { grid-area: enter; } .tbtn[data-act="run"], .tbtn[data-act="radio"] { grid-area: run; }
+.tbtn[data-act="aim"], .tbtn[data-act="siren"] { grid-area: aim; } .tbtn[data-act="weapon"] { grid-area: weapon; } .tbtn[data-act="pause"] { grid-area: pause; font-size: 18px; }
+.tbtn.on { background: rgba(255,255,255,.35); }
+.tbtn.lock { border-color: var(--sun); color: var(--sun); }
+.touch .radar-wrap { top: calc(10px + env(safe-area-inset-top, 0px)); bottom: auto; left: calc(10px + env(safe-area-inset-left, 0px)); width: 150px; }
+.touch #radar { width: 150px; height: 108px; }
+.touch .help { top: calc(146px + env(safe-area-inset-top, 0px)); left: 10px; max-width: min(300px, calc(100vw - 20px)); font-size: 15px; }
+.touch .area { display: none; }
+.touch .speedo { bottom: auto; top: calc(150px + env(safe-area-inset-top, 0px)); }
+.touch .objective { bottom: auto; top: calc(58px + env(safe-area-inset-top, 0px)); font-size: 17px; max-width: min(420px, calc(100vw - 340px)); }
+.touch .prompt { bottom: 48%; }
+.touch .keys { display: none; }
+@media (max-width: 520px) {
+  .joy { width: 120px; height: 120px; }
+  .tbtns { grid-template-columns: repeat(3, 54px); grid-auto-rows: 54px; gap: 8px; }
+  .tbtn { font-size: 12px; }
+  .tbtn[data-act="fire"] { font-size: 15px; }
+}
+
+/* Menyu tugmalari, sozlamalar, statistika */
+.menu-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ghost { font-family: var(--f-ui); font-weight: 700; font-size: 17px; color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.25); border-radius: 4px; padding: 9px 14px; cursor: pointer; }
+.ghost:hover { background: rgba(255,255,255,.12); }
+.ghost.danger { color: #ff9b97; border-color: rgba(239,75,70,.5); }
+.ghost:focus-visible, .seg:focus-visible, .sw:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.set-row { display: grid; grid-template-columns: 1fr minmax(110px, 200px) 56px; gap: 12px; align-items: center; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 18px; }
+.set-row input[type=range] { width: 100%; accent-color: var(--sun); }
+.set-row output { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.set-row input[type=checkbox] { justify-self: start; width: 20px; height: 20px; accent-color: var(--sun); }
+.segs { display: flex; gap: 6px; grid-column: 2 / 4; }
+.seg { flex: 1; font-family: var(--f-ui); font-weight: 700; font-size: 16px; padding: 7px 10px; background: rgba(255,255,255,.06); color: var(--ink); border: 1px solid rgba(255,255,255,.2); border-radius: 4px; cursor: pointer; }
+.seg.on { background: var(--sun); color: var(--night); border-color: var(--sun); }
+.set-note { margin: 6px 8px 10px; font-size: 15px; color: var(--muted); line-height: 1.35; }
+.stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 18px; }
+.stat-row span { color: var(--muted); }
+.stat-row b { font-variant-numeric: tabular-nums; text-align: right; }
+.ach-head { font-family: var(--f-display); font-weight: 400; font-size: 20px; margin: 16px 8px 8px; }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; padding: 0 8px 12px; }
+.ach { padding: 10px; border-radius: 6px; border: 1px dashed rgba(255,255,255,.18); opacity: .55; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ach.got { opacity: 1; border: 1px solid var(--sun); background: rgba(255,159,67,.1); }
+.ach b { font-size: 17px; }
+.ach span { font-size: 14px; color: var(--muted); }
+/* Katta xarita */
+.mapwrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,8,18,.72); padding-inline: 16px; }
+.map-card { display: flex; flex-direction: column; gap: 8px; max-width: 100%; }
+.map-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.map-head b { font-family: var(--f-display); font-weight: 400; font-size: 24px; }
+.map-head span { color: var(--muted); font-size: 16px; }
+.map-head div { display: flex; gap: 8px; }
+#bigmap { border-radius: 6px; box-shadow: 0 0 0 2px rgba(0,0,0,.6); cursor: crosshair; max-width: 100%; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 15px; color: var(--muted); }
+.map-legend i { font-style: normal; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: #111; font-weight: 700; font-size: 12px; margin-right: 4px; }
+/* Yutuq va saqlash xabari */
+.toast { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); min-width: 260px; max-width: calc(100vw - 32px); background: var(--shade); border-left: 4px solid var(--sun); padding: 10px 16px; border-radius: 4px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; }
+.toast small { font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--sun); font-size: 13px; }
+.toast b { font-family: var(--f-display); font-weight: 400; font-size: 22px; }
+.toast span { font-size: 16px; color: var(--muted); }
+.toast.show { animation: toastIn .35s ease-out; }
+@keyframes toastIn { from { transform: translate(-50%, -12px); opacity: 0; } }
+.nitro { width: 120px; height: 5px; margin: 4px 0 0 auto; background: rgba(0,0,0,.55); border-radius: 2px; overflow: hidden; }
+.nitro i { display: block; height: 100%; width: 100%; background: #4fc3f7; }
+.swatches { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); cursor: pointer; }
+.sw:disabled { opacity: .35; cursor: default; }
+#radar { pointer-events: auto; cursor: pointer; }
+#panel { z-index: 20; }
+.toast { z-index: 30; }
+.tbtn[data-act="taxi"] { grid-area: aim; }
+.tbtn[data-act="nitro"] { grid-area: weapon; background: rgba(79,195,247,.45); }
+
 @media (max-width: 640px) {
   #radar { width: 150px; height: 110px; }
   .radar-wrap { width: 150px; left: 12px; }
@@ -101,7 +201,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   .keys { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .big div:first-child, .money.bump, .stars.flash span.on { animation: none; }
+  .big div:first-child, .money.bump, .stars.flash span.on, .toast.show { animation: none; }
 }
 </style>
 
@@ -120,7 +220,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="cross" id="cross"></div>
   <div class="prompt" id="prompt" hidden></div>
   <div class="objective" id="objective" hidden></div>
-  <div class="speedo" id="speedo" hidden><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div></div>
+  <div class="speedo" id="speedo" hidden><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
   <div class="area"><b id="district">Chilonzor</b><span id="street">Amir Temur ko'chasi</span></div>
   <div class="radar-wrap">
     <canvas id="radar" width="420" height="300"></canvas>
@@ -129,11 +229,64 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="big" id="big" hidden><div id="bigText">O'LDING</div><div id="bigSub"></div></div>
 </div>
 
+<div class="shop" id="shop" hidden>
+  <div class="shop-card" role="dialog" aria-labelledby="shopTitle">
+    <div class="shop-head">
+      <div><div class="eyebrow" id="shopKind">Do'kon</div><h2 id="shopTitle">Do'kon</h2></div>
+      <div class="shop-money" id="shopMoney">$0</div>
+    </div>
+    <div class="shop-list" id="shopList"></div>
+    <div class="shop-foot"><span id="shopMsg"></span><button class="shop-close" id="shopClose" type="button">Chiqish (Esc)</button></div>
+  </div>
+</div>
+
+<div class="shop" id="panel" hidden>
+  <div class="shop-card" role="dialog" aria-labelledby="panelTitle">
+    <div class="shop-head"><div><div class="eyebrow" id="panelKicker">O'yin</div><h2 id="panelTitle">Sozlamalar</h2></div></div>
+    <div class="shop-list" id="panelBody"></div>
+    <div class="shop-foot"><span></span><button class="shop-close" id="panelClose" type="button">Yopish (Esc)</button></div>
+  </div>
+</div>
+
+<div class="mapwrap" id="mapPanel" hidden>
+  <div class="map-card">
+    <div class="map-head">
+      <b>Xarita</b><span>Belgi qo'yish uchun xaritaga bosing — GPS yo'lni ko'rsatadi</span>
+      <div><button class="ghost" id="mapClear" type="button">Belgini o'chirish</button><button class="ghost" id="mapClose" type="button">Yopish (M)</button></div>
+    </div>
+    <canvas id="bigmap" width="600" height="600"></canvas>
+    <div class="map-legend">
+      <span><i style="background:#2f7fe0">M</i>Metro</span><span><i style="background:#d9a441">C</i>Choyxona</span>
+      <span><i style="background:#ef4b46">Q</i>Qurol do'koni</span><span><i style="background:#b36bff">K</i>Kiyim do'koni</span>
+      <span><i style="background:#ff8f00">G</i>Garaj</span><span><i style="background:#ffc83d">!</i>Vazifa</span><span><i style="background:#ffd21f">T</i>Taksi</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden><small id="toastKicker"></small><b id="toastName"></b><span id="toastDesc"></span></div>
+
+<div class="touch-ui" id="touchUI" hidden>
+  <div class="joy" id="joy"><div class="joy-knob" id="joyKnob"></div></div>
+  <div class="tbtns">
+    <button class="tbtn" type="button" data-act="pause" aria-label="Pauza">II</button>
+    <button class="tbtn" type="button" data-act="weapon">Qurol</button>
+    <button class="tbtn" type="button" data-act="aim">Nishon</button>
+    <button class="tbtn" type="button" data-act="siren" hidden>Sirena</button>
+    <button class="tbtn" type="button" data-act="radio" hidden>Radio</button>
+    <button class="tbtn" type="button" data-act="taxi" hidden>Taksi</button>
+    <button class="tbtn" type="button" data-act="nitro" hidden>Nitro</button>
+    <button class="tbtn" type="button" data-act="run">Yugurish</button>
+    <button class="tbtn" type="button" data-act="enter">Minish</button>
+    <button class="tbtn" type="button" data-act="fire">Otish</button>
+    <button class="tbtn" type="button" data-act="jump">Sakrash</button>
+  </div>
+</div>
+
 <div class="menu" id="menu" hidden>
   <div class="menu-inner">
     <div class="eyebrow">Ochiq dunyo · Shahar</div>
     <h1>Ko'cha <span>Qiroli</span></h1>
-    <p>Katta shahar, o'g'irlanadigan mashinalar, politsiya ta'qibi va pul ishlash uchun vazifalar. Sariq belgilarni toping va ish boshlang.</p>
+    <p>Toshkentga o'xshash katta shahar: Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxona. O'zbek mashinalari, avtobuslar, radio, yomg'ir va qor, politsiya ta'qibi, do'konlar va vazifalar.</p>
     <dl class="keys">
       <dt><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></dt><dd>Yurish / mashina haydash</dd>
       <dt>Sichqoncha</dt><dd>Kamerani burish (ekranni bosing)</dd>
@@ -142,26 +295,55 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
       <dt><kbd>F</kbd></dt><dd>Mashinaga o'tirish / tushish</dd>
       <dt>Chap tugma</dt><dd>Urish / otish</dd>
       <dt>O'ng tugma</dt><dd>Nishonga olish</dd>
-      <dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>Mushtlar / to'pponcha</dd>
+      <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Qurol tanlash (sichqoncha g'ildiragi ham)</dd>
       <dt><kbd>H</kbd></dt><dd>Signal chalish</dd>
+      <dt><kbd>G</kbd></dt><dd>Sirena va chiroqlar (politsiya mashinasida)</dd>
+      <dt><kbd>R</kbd></dt><dd>Radio stansiyasini almashtirish (mashinada)</dd>
+      <dt><kbd>O</kbd></dt><dd>Ob-havoni almashtirish</dd>
+      <dt><kbd>M</kbd></dt><dd>Katta xarita va GPS (mini-xaritaga bosish ham)</dd>
+      <dt><kbd>T</kbd></dt><dd>Taksi ishi (sariq taksida)</dd>
+      <dt><kbd>N</kbd></dt><dd>Nitro (garajda o'rnatilgan bo'lsa)</dd>
       <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Kamerani klaviatura bilan burish</dd>
       <dt><kbd>P</kbd></dt><dd>Pauza</dd>
     </dl>
     <button class="play" id="play" type="button">O'yinni boshlash</button>
+    <div class="menu-actions">
+      <button class="ghost" id="btnSettings" type="button">Sozlamalar</button>
+      <button class="ghost" id="btnStats" type="button">Statistika</button>
+      <button class="ghost" id="btnSave" type="button">Saqlash</button>
+      <button class="ghost danger" id="btnReset" type="button">Yangi o'yin</button>
+    </div>
     <div class="note" id="note">Klaviatura va sichqoncha kerak. Esc kursorni bo'shatadi.</div>
   </div>
 </div>
 
+<div class="fade" id="fade"></div>
+
 <div class="loading" id="loading">Shahar qurilmoqda…</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/three.min.js"></script>
+<script src="lib/GLTFLoader.js"></script>
+<script src="models/gls.js"></script>
+<script src="models/charger.js"></script>
+<script src="models/police.js"></script>
 <script src="js/core.js"></script>
 <script src="js/world.js"></script>
+<script src="js/landmarks.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/radio.js"></script>
 <script src="js/cars.js"></script>
+<script src="js/models.js"></script>
 <script src="js/vehicles.js"></script>
-<script src="js/people.js"></script>
-<script src="js/fx.js"></script>
+<script src="js/people.js"></script><script src="js/fx.js"></script>
 <script src="js/hud.js"></script>
 <script src="js/missions.js"></script>
+<script src="js/shop.js"></script>
+<script src="js/touch.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/mapui.js"></script>
+<script src="js/taxi.js"></script>
+<script src="js/garage.js"></script>
+<script src="js/police.js"></script>
 <script src="js/game.js"></script>
 <script src="js/loop.js"></script>

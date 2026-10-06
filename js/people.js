@@ -263,6 +263,12 @@ function nearestBlock(x, z) {
   return World.blocks[i][j];
 }
 
+// Soyabon (yomg'irda)
+const UMB_GEO = new THREE.ConeGeometry(0.75, 0.32, 10, 1, true), UMB_STICK = new THREE.CylinderGeometry(0.015, 0.015, 1.15, 5);
+const UMB_STICK_MAT = new THREE.MeshLambertMaterial({ color: 0x222222 }), _umb = {};
+const umbMat = c => _umb[c] || (_umb[c] = new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
+const UMB_COLORS = [0x1b1c1f, 0x1b1c1f, 0xc62828, 0x1565c0, 0x6a1b9a, 0x2e7d32, 0xf9a825];
+
 class Ped {
   constructor(blk, t, style) {
     this.outfit = style && typeof style === 'object' ? style : randomOutfit(style);
@@ -272,6 +278,7 @@ class Ped {
     this.y = 0.15; this.h = 0; this.state = 'walk'; this.hp = 40;
     this.walkSpd = rand(1.1, 1.6); this.phase = rand(0, 6);
     this.fleeT = 0; this.fx = 0; this.fz = 0; this.vx = 0; this.vy = 0; this.vz = 0; this.deadT = 0; this.fall = 0;
+    this.onRoad = false; this.crossCd = rand(1, 6); this.umb = Math.random() < 0.5; this.umbMesh = null;
     World.scene.add(this.hm.g);
   }
   get alive() { return this.state !== 'dead'; }
@@ -299,7 +306,42 @@ class Ped {
         this.blk = blockAt(this.x, this.z) || nearestBlock(this.x, this.z);
         this.t = ringT(this.blk, this.x, this.z);
       }
+    } else if (this.state === 'hail') {
+      // Taksi chaqirmoqda: qo'lini ko'tarib, mashinaga qarab turadi
+      poseHuman(hm, 0, 0, 0);
+      hm.b.uaR.rotation.set(-2.7, 0, 0.25); hm.b.faR.rotation.x = -0.25;
+      this.h += wrapAng(Math.atan2(Player.x - this.x, Player.z - this.z) - this.h) * Math.min(1, dt * 3);
+    } else if (this.state === 'wait') {
+      // Svetofor oldida kutish: mashinalar uchun qizil yonsa — o'tadi
+      const c = this.cr;
+      this.h += wrapAng(Math.atan2(c.tx - this.x, c.tz - this.z) - this.h) * Math.min(1, dt * 6);
+      poseHuman(hm, 0, 0, 0);
+      if (signalFor(c.ni, c.nj, c.alongX) === 'R') { this.state = 'cross'; this.onRoad = true; }
+      else if ((this.waitT += dt) > 40) this.state = 'walk';
+    } else if (this.state === 'cross') {
+      const c = this.cr, dx = c.tx - this.x, dz = c.tz - this.z, d = Math.hypot(dx, dz);
+      const hurry = signalFor(c.ni, c.nj, c.alongX) !== 'R', sp = hurry ? 3.2 : this.walkSpd * 1.1;
+      if (d < 0.3) {
+        this.state = 'walk'; this.onRoad = false; this.blk = c.blk;
+        this.t = ringT(c.blk, this.x, this.z); this.dir = Math.random() < 0.5 ? 1 : -1; this.crossCd = 6;
+      } else {
+        this.h += wrapAng(Math.atan2(dx, dz) - this.h) * Math.min(1, dt * 8);
+        this.x += dx / d * Math.min(sp * dt, d); this.z += dz / d * Math.min(sp * dt, d);
+      }
+      this.phase += dt * sp * 3;
+      poseHuman(hm, this.phase, hurry ? 1 : 0.75, hurry ? 1 : 0);
     } else {
+      // Chorraha burchagiga yetganda ba'zan yo'lni kesib o'tadi
+      this.crossCd -= dt;
+      if (this.crossCd <= 0) {
+        const r = this.blk.ring;
+        for (const [qx, qz, sx, sz] of [[r.a, r.d, -1, -1], [r.c, r.d, 1, -1], [r.c, r.e, 1, 1], [r.a, r.e, -1, 1]]) {
+          if (Math.abs(this.x - qx) > 1.5 || Math.abs(this.z - qz) > 1.5) continue;
+          this.crossCd = 10;
+          if (Math.random() < 0.5) this.planCross(qx, qz, sx, sz);
+          break;
+        }
+      }
       const [tx, tz] = ringPoint(this.blk, this.t + this.dir * 1.2);
       const dx = tx - this.x, dz = tz - this.z, d = Math.hypot(dx, dz);
       if (d < 1.4) this.t += this.dir * this.walkSpd * dt;
@@ -308,15 +350,38 @@ class Ped {
         const sp = this.walkSpd * (d > 2 ? 1.4 : 1);
         this.x += dx / d * sp * dt; this.z += dz / d * sp * dt;
       }
-      this.phase += dt * this.walkSpd * 3.4;
-      poseHuman(hm, this.phase, 0.75, 0);
+      if (this.state === 'walk') { this.phase += dt * this.walkSpd * 3.4; poseHuman(hm, this.phase, 0.75, 0); }
     }
+    // Yomg'irda soyabon
+    const umb = this.umb && this.alive && this.state !== 'flee' && Weather.rain > 0.35;
+    this.umbrella(umb);
+    if (umb) { hm.b.uaL.rotation.set(-0.45, 0, -0.3); hm.b.faL.rotation.x = -1.45; }
     if (this.state !== 'dead') this.y = lerp(this.y, groundH(this.x, this.z), 0.3);
     hm.g.position.set(this.x, this.y, this.z);
     hm.g.rotation.y = this.h;
   }
+  planCross(qx, qz, sx, sz) {
+    const b = this.blk, horiz = Math.random() < 0.5;
+    const ni = b.i + (sx > 0 ? 1 : 0), nj = b.j + (sz > 0 ? 1 : 0);
+    if (!World.sigMap[ni * 100 + nj]) return;
+    const bi = b.i + (horiz ? sx : 0), bj = b.j + (horiz ? 0 : sz);
+    if (bi < 0 || bj < 0 || bi >= CITY.N || bj >= CITY.N) return;
+    const gap = CITY.R + 4;
+    this.cr = { ni, nj, alongX: !horiz, tx: horiz ? qx + sx * gap : qx, tz: horiz ? qz : qz + sz * gap, blk: World.blocks[bi][bj] };
+    this.state = 'wait'; this.waitT = 0; this.onRoad = false;
+  }
+  umbrella(on) {
+    if (on && !this.umbMesh) {
+      const g = new THREE.Group(), canopy = new THREE.Mesh(UMB_GEO, umbMat(pick(UMB_COLORS))), stick = new THREE.Mesh(UMB_STICK, UMB_STICK_MAT);
+      canopy.position.y = 2.18; stick.position.y = 1.62;
+      g.add(canopy, stick); g.position.set(0.17, 0, 0.12);
+      this.hm.g.add(g); this.umbMesh = g;
+    }
+    if (this.umbMesh) this.umbMesh.visible = on;
+  }
   scare(sx, sz) {
     if (!this.alive) return;
+    this.onRoad = false;
     this.state = 'flee'; this.fleeT = rand(6, 10); this.fx = sx; this.fz = sz;
   }
   hurt(dmg, sx, sz, kvx = 0, kvy = 0, kvz = 0) {
@@ -349,7 +414,7 @@ function initPlayer(x, z) {
 }
 function updatePlayerFoot(dt, yaw, cars) {
   const P = Player;
-  const J = Input.joy;
+  const J = activeStick();
   const ix = J.active ? J.x : (kd('KeyD') || kd('ArrowRight') ? 1 : 0) - (kd('KeyA') || kd('ArrowLeft') ? 1 : 0);
   const iz = J.active ? -J.y : (kd('KeyW') || kd('ArrowUp') ? 1 : 0) - (kd('KeyS') || kd('ArrowDown') ? 1 : 0);
   const fx = Math.sin(yaw), fz = Math.cos(yaw), rx = -fz, rz = fx;

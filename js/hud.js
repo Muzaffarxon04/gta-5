@@ -40,7 +40,7 @@ const HUD = {
   update(dt, s) {
     const e = this.el, P = Player;
     if (this.helpT > 0) { this.helpT -= dt; if (this.helpT <= 0) e.help.hidden = true; }
-    e.clock.textContent = clockText();
+    e.clock.textContent = clockText() + ' · ' + Weather.label();
     // Pul hisoblagichi asta-sekin yetib boradi
     if (this.moneyShown !== P.money) {
       const d = P.money - this.moneyShown;
@@ -50,22 +50,23 @@ const HUD = {
     }
     this.starEls.forEach((el, i) => el.classList.toggle('on', i < s.wanted));
     e.stars.classList.toggle('flash', s.wanted > 0 && s.evading);
-    e.wname.textContent = P.weapon === 1 ? 'To\'pponcha' : 'Mushtlar';
-    e.ammo.textContent = P.weapon === 1 ? P.ammo : '';
+    const W = WEAPONS[P.weapon];
+    e.wname.textContent = W.name;
+    e.ammo.textContent = W.melee ? '' : P.ammo[P.weapon] || 0;
     e.hpbar.style.width = clamp(P.hp, 0, 100) + '%';
     e.hpwrap.classList.toggle('low', P.hp < 30);
     e.arbar.style.width = clamp(P.armor, 0, 100) + '%';
     const car = P.inCar;
     e.speedo.hidden = !car;
-    if (car) { e.kmh.textContent = Math.round(car.speed * 3.6); e.carhp.style.width = clamp(car.hp / car.T.hp * 100, 0, 100) + '%'; }
+    if (car) { e.kmh.textContent = Math.round(car.speed * 3.6); e.carhp.style.width = clamp(car.hp / (car.maxHp || car.T.hp) * 100, 0, 100) + '%'; }
     e.cross.hidden = !!car || P.dead;
     e.cross.classList.toggle('aim', s.aiming);
     e.cross.classList.toggle('hit', s.hitMark > 0);
     this.areaT -= dt;
-    if (this.areaT <= 0) { this.areaT = 0.5; e.district.textContent = districtAt(P.x, P.z); e.street.textContent = streetAt(P.x, P.z); }
+    if (this.areaT <= 0) { this.areaT = 0.5; e.district.textContent = Landmarks.nameAt(P.x, P.z) || districtAt(P.x, P.z); e.street.textContent = streetAt(P.x, P.z); }
   },
   // Mini-xarita: kamera yo'nalishi doim tepaga qaragan
-  drawRadar(px, pz, yaw, ph, zoom, blips, wanted, time) {
+  drawRadar(px, pz, yaw, ph, zoom, blips, wanted, time, route, routeColor) {
     const c = this.el.radar, g = this.rc, W = c.width, H = c.height, s = zoom;
     const cx = W / 2, cy = H * 0.6, cs = Math.cos(yaw), sn = Math.sin(yaw);
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -75,6 +76,16 @@ const HUD = {
     g.drawImage(World.mapCanvas, 0, 0);
     g.setTransform(1, 0, 0, 1, 0, 0);
     const toS = (x, z) => { const dx = x - px, dz = z - pz; return [cx + s * (-cs * dx + sn * dz), cy - s * (sn * dx + cs * dz)]; };
+    // GPS yo'li va masofa
+    if (route && route.length > 1) {
+      g.strokeStyle = routeColor; g.lineWidth = 7; g.lineJoin = g.lineCap = 'round'; g.beginPath();
+      let len = 0;
+      route.forEach((p, k) => { const [x, y] = toS(p.x, p.z); if (k) { g.lineTo(x, y); len += Math.hypot(p.x - route[k - 1].x, p.z - route[k - 1].z); } else g.moveTo(x, y); });
+      g.stroke();
+      g.font = 'bold 22px "Barlow Condensed", sans-serif'; g.textAlign = 'right'; g.textBaseline = 'bottom';
+      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(W - 96, H - 34, 90, 28);
+      g.fillStyle = routeColor; g.fillText(len > 1000 ? (len / 1000).toFixed(1) + ' km' : Math.round(len) + ' m', W - 12, H - 8);
+    }
     for (const bp of blips) {
       let [x, y] = toS(bp.x, bp.z);
       const out = x < 8 || y < 8 || x > W - 8 || y > H - 8;

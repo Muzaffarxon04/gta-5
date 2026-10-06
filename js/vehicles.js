@@ -6,20 +6,29 @@ class Car {
     this.type = type; this.T = T; this.role = role;
     this.color = color != null ? color : type === 'police' ? 0xf3f3f3 : type === 'taxi' ? 0xf2c200 : pick(T.palette || CAR_COLORS);
     this.mesh = new THREE.Group(); this.mesh.rotation.order = 'YXZ';
-    this.body = new THREE.Mesh(carGeo(type, this.color), CAR_MAT); this.body.castShadow = true;
-    this.lights = new THREE.Mesh(lightGeo(type), LIGHT_MAT);
+    const M = T.model && MODELS[T.model];
+    if (M) {
+      // Tashqi 3D model: geometriya umumiy, faqat bo'yoq rangi har mashinada o'zgacha
+      this.body = M.scene.clone(true);
+      this.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(this.color); });
+      this.lights = new THREE.Object3D();
+    } else {
+      this.body = new THREE.Mesh(carGeo(type, this.color), CAR_MAT); this.body.castShadow = true;
+      this.lights = new THREE.Mesh(lightGeo(type), LIGHT_MAT);
+      const gg = glassGeo(type);
+      if (gg) { this.glass = new THREE.Mesh(gg, GLASS_MAT); this.mesh.add(this.glass); }
+    }
     this.mesh.add(this.body, this.lights);
-    const gg = glassGeo(type);
-    if (gg) { this.glass = new THREE.Mesh(gg, GLASS_MAT); this.mesh.add(this.glass); }
     this.driverHM = null; this.driverOutfit = null;
     if (type === 'police') {
-      const g = new THREE.BoxGeometry(0.4, 0.12, 0.2);
+      const B = M && M.bar, g = B ? new THREE.BoxGeometry(B.w, B.h, B.d) : new THREE.BoxGeometry(0.4, 0.12, 0.2);
       this.bar = [new THREE.Mesh(g, BAR_RED), new THREE.Mesh(g, BAR_BLUE)];
-      this.bar[0].position.set(0.24, T.H + 0.12, T.roofZ); this.bar[1].position.set(-0.24, T.H + 0.12, T.roofZ);
+      if (B) { this.bar[0].position.set(-B.x, B.y, B.z); this.bar[1].position.set(B.x, B.y, B.z); }
+      else { this.bar[0].position.set(0.24, T.H + 0.12, T.roofZ); this.bar[1].position.set(-0.24, T.H + 0.12, T.roofZ); }
       this.mesh.add(...this.bar);
     }
     this.x = x; this.z = z; this.y = groundH(x, z); this.h = h; this.vx = 0; this.vz = 0;
-    this.hp = T.hp; this.driver = role === 'parked' ? null : role;
+    this.hp = T.hp; this.maxHp = T.hp; this.mods = null; this.boost = false; this.driver = role === 'parked' ? null : role;
     this.thr = 0; this.steer = 0; this.hand = false; this.drift = 0;
     this.onFire = false; this.burnT = 0; this.dead = false;
     this.ai = null; this.stuckT = 0; this.revT = 0; this.panic = 0; this.waitT = 0; this.shootT = rand(0.5, 2);
@@ -33,9 +42,14 @@ class Car {
     let fx = Math.sin(this.h), fz = Math.cos(this.h), rx = -fz, rz = fx;
     let vF = this.vx * fx + this.vz * fz, vR = this.vx * rx + this.vz * rz;
     const thr = this.dead || this.onFire && this.driver !== 'player' ? 0 : this.thr;
-    const maxS = T.max * (this.hp < 30 ? 0.6 : 1);
-    if (thr > 0) { if (vF < -0.5) vF += 30 * thr * dt; else if (vF < maxS) vF += T.acc * thr * dt * (1 - (vF / maxS) * 0.55); }
-    else if (thr < 0) { if (vF > 0.5) vF += 30 * thr * dt; else if (vF > -13) vF += T.acc * 0.7 * thr * dt; }
+    // Tyuning (dvigatel, shinalar) va nitro
+    const md = this.mods, bo = this.boost;
+    const maxS = T.max * (md ? 1 + 0.12 * md.eng : 1) * (bo ? 1.3 : 1) * (this.hp < 30 ? 0.6 : 1);
+    // Ob-havo: ho'l yoki qorli yo'lda tezlanish va tormoz sustroq
+    const wg = Weather.grip * (md ? 1 + 0.12 * md.grip : 1), brake = 30 * (0.5 + 0.5 * Weather.grip);
+    const acc = T.acc * (md ? 1 + 0.18 * md.eng : 1) * (bo ? 2.2 : 1) * (0.7 + 0.3 * Weather.grip);
+    if (thr > 0) { if (vF < -0.5) vF += brake * thr * dt; else if (vF < maxS) vF += acc * thr * dt * (1 - (vF / maxS) * 0.55); }
+    else if (thr < 0) { if (vF > 0.5) vF += brake * thr * dt; else if (vF > -13) vF += acc * 0.7 * thr * dt; }
     vF -= vF * (thr === 0 ? 0.55 : 0.1) * dt;
     if (this.hand || !this.driver || this.dead) vF -= Math.sign(vF) * Math.min(Math.abs(vF), (this.hand ? 10 : 7) * dt);
     this.vx = fx * vF + rx * vR; this.vz = fz * vF + rz * vR;
@@ -45,7 +59,7 @@ class Car {
     // Yon sirpanish (drift) — qo'l tormozi ushlashni kamaytiradi
     fx = Math.sin(this.h); fz = Math.cos(this.h); rx = -fz; rz = fx;
     vF = this.vx * fx + this.vz * fz; vR = this.vx * rx + this.vz * rz;
-    vR *= Math.exp(-(this.hand ? 1.3 : T.grip) * dt);
+    vR *= Math.exp(-(this.hand ? 1.3 : T.grip * wg) * dt);
     this.drift = Math.abs(vR);
     this.vx = fx * vF + rx * vR; this.vz = fz * vF + rz * vR;
     this.x += this.vx * dt; this.z += this.vz * dt;
@@ -53,8 +67,8 @@ class Car {
     this.y = lerp(this.y, groundH(this.x, this.z), 1 - Math.exp(-12 * dt));
   }
   collideWorld() {
-    const fx = Math.sin(this.h), fz = Math.cos(this.h), off = this.T.l / 2 - this.T.w / 2, r = this.T.w / 2 + 0.05;
-    for (const s of [off, -off, 0]) {
+    const fx = Math.sin(this.h), fz = Math.cos(this.h), r = this.T.w / 2 + 0.05;
+    for (const s of carCircles(this.T)) {
       const o = { x: this.x + fx * s, z: this.z + fz * s };
       const hit = pushOut(o, r, this.y + 0.5);
       if (!hit) continue;
@@ -82,14 +96,15 @@ class Car {
     this.mesh.rotation.z = lerp(this.mesh.rotation.z, lean, 0.1);
     if (this.driverHM) this.driverHM.b.head.rotation.y = this.steer * 0.35;
     if (this.bar) {
-      const on = !this.dead && (this.siren || this.driver === 'player');
+      const on = !this.dead && this.siren;
       const f = Math.floor(time * 6) % 2;
       this.bar[0].visible = on ? f === 0 : true; this.bar[1].visible = on ? f === 1 : true;
     }
   }
   wreck() {
     this.dead = true; this.onFire = false; this.driver = null;
-    this.body.material = WRECK_MAT; this.lights.visible = false;
+    this.body.traverse(o => { if (o.isMesh) { if (o.userData.glass) o.visible = false; else o.material = WRECK_MAT; } });
+    this.lights.visible = false;
     if (this.glass) this.glass.visible = false;
     if (this.bar) this.bar.forEach(b => (b.visible = false));
     if (this.driverHM && !this.driverHM.keep) this.setDriverModel(null);
@@ -125,6 +140,14 @@ class Car {
   }
 }
 
+// To'qnashuv doiralari mashina uzunligi bo'ylab (avtobusda ko'proq)
+function carCircles(T) {
+  if (!T.circ) {
+    const n = Math.max(3, Math.ceil(T.l / (T.w * 0.95))), off = T.l / 2 - T.w / 2;
+    T.circ = Array.from({ length: n }, (_, k) => -off + (2 * off * k) / (n - 1));
+  }
+  return T.circ;
+}
 // Mashina koordinatalariga o'tkazish: f — oldinga, r — o'ngga
 function carLocal(car, x, z) {
   const dx = x - car.x, dz = z - car.z, fx = Math.sin(car.h), fz = Math.cos(car.h);
@@ -142,11 +165,12 @@ function collideCars(cars) {
     const A = cars[i];
     for (let k = i + 1; k < cars.length; k++) {
       const B = cars[k];
-      if (dist2(A.x, A.z, B.x, B.z) > 36) continue;
-      const oa = A.T.l / 2 - A.T.w / 2, ob = B.T.l / 2 - B.T.w / 2, ra = A.T.w / 2, rb = B.T.w / 2;
+      const reach = (A.T.l + B.T.l) / 2 + 1;
+      if (dist2(A.x, A.z, B.x, B.z) > reach * reach) continue;
+      const ra = A.T.w / 2, rb = B.T.w / 2;
       let done = false;
-      for (const sa of [oa, 0, -oa]) {
-        for (const sb of [ob, 0, -ob]) {
+      for (const sa of carCircles(A.T)) {
+        for (const sb of carCircles(B.T)) {
           const ax = A.x + Math.sin(A.h) * sa, az = A.z + Math.cos(A.h) * sa, bx = B.x + Math.sin(B.h) * sb, bz = B.z + Math.cos(B.h) * sb;
           const dx = bx - ax, dz = bz - az, d = Math.hypot(dx, dz), minD = ra + rb;
           if (d >= minD || d < 1e-4) continue;
@@ -235,12 +259,15 @@ function aiObstacle(car, range, cars, player) {
   };
   for (const o of cars) if (o !== car) test(o.x, o.z, 2.3);
   if (player && !player.inCar && !player.dead) test(player.x, player.z, 1.6);
+  // Yo'l kesib o'tayotgan piyodalarga yo'l berish
+  for (const p of Game.peds) if (p.onRoad && p.alive) test(p.x, p.z, 1.9);
   return best;
 }
 // Oddiy yo'l harakati
 function updateTrafficAI(car, dt, cars, player) {
   if (car.revT > 0) { car.revT -= dt; car.thr = -0.8; car.steer = -car.steer || 0.6; return; }
-  let cruise = car.panic > 0 ? 22 : 12;
+  let cruise = car.panic > 0 ? 22 : 12 * (0.75 + 0.25 * Weather.grip);
+  if (car.type === 'bus') cruise = busCruise(car, Math.min(cruise, 11), dt);
   car.panic = Math.max(0, car.panic - dt);
   const obst = aiObstacle(car, 16, cars, player);
   let blocked = false;
@@ -250,6 +277,17 @@ function updateTrafficAI(car, dt, cars, player) {
   // Svetoforda emas, faqat yo'l to'silganda signal chaladi
   if (blocked) { car.waitT += dt; if (car.waitT > 3 && Math.random() < dt * 0.5) honk(car); } else car.waitT = 0;
   trackStuck(car, dt);
+}
+// Avtobus bekatda 6 soniya to'xtaydi
+function busCruise(car, cruise, dt) {
+  if (car.dwell > 0) { car.dwell -= dt; return 0; }
+  const a = car.ai, key = a.fi + ',' + a.fj + ',' + a.ti + ',' + a.tj, st = World.busStops[key];
+  if (!st || car.served === key) return cruise;
+  const ax = roadPos(a.fi), az = roadPos(a.fj), dx = Math.sign(roadPos(a.ti) - ax), dz = Math.sign(roadPos(a.tj) - az);
+  const dist = st.s - ((car.x - ax) * dx + (car.z - az) * dz);
+  if (dist < -2) { car.served = key; return cruise; }
+  if (dist < 0.8 && car.speed < 0.6) { car.dwell = 6; car.served = key; return 0; }
+  return dist < 30 ? Math.min(cruise, Math.max(1.2, dist * 0.45)) : cruise;
 }
 // Svetofor: qizil yoki sariqda to'xtash chizig'i oldida to'xtaydi
 function signalCruise(car, cruise) {
@@ -279,7 +317,7 @@ function updatePoliceAI(car, dt, cars, player, wanted) {
     car.direct = true;
     const lead = clamp(d / 25, 0, 1);
     const tx = P.x + (P.vx || 0) * lead, tz = P.z + (P.vz || 0) * lead;
-    const cruise = !player.inCar && d < 10 ? 0 : car.T.max;
+    const cruise = !player.inCar && d < (wanted >= 2 ? 18 : 10) ? 0 : car.T.max;
     steerTo(car, tx, tz, cruise);
   } else {
     if (car.direct) { car.direct = false; anchorToRoad(car, 2.5, P); }

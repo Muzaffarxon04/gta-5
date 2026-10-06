@@ -18,19 +18,29 @@ CAR_TYPES.taxi = { ...CAR_TYPES.cobalt, name: 'Taksi (Cobalt)' };
 CAR_TYPES.police = { ...CAR_TYPES.malibu, name: 'Politsiya (Malibu)', max: 52, acc: 18, mass: 1.3, hp: 140 };
 CAR_TYPES.moto = { name: 'Mototsikl', kind: 'moto', l: 2.1, w: 0.8, H: 1.2, wr: 0.32, fa: 0.72, ra: -0.72, max: 52, acc: 21, grip: 9.5, mass: 0.45, hp: 60,
   palette: [0xc62828, 0x1b1c1f, 0x1565c0, 0xf3f3f0, 0x2e7d32, 0xff8f00] };
+// Tashqi 3D modeldan olinadigan mashinalar (js/models.js yuklaydi)
+CAR_TYPES.gls = { name: 'Mercedes-Benz GLS 580', kind: 'model', model: 'gls', l: 5.21, w: 1.98, H: 1.82, wr: 0.38, max: 60, acc: 20, grip: 8.2, mass: 1.7, hp: 160,
+  palette: [0x111214, 0x111214, 0xf2f2f0, 0xb9bcc0, 0x1d2a44, 0x5a5e63], seat: { x: 0.42, y: 0.75, z: 0.15 } };
+CAR_TYPES.charger = { name: 'Fast Charger', kind: 'model', model: 'charger', l: 4.95, w: 2.1, H: 1.68, wr: 0.4, max: 64, acc: 25, grip: 8.8, mass: 1.15, hp: 110,
+  seat: { x: 0.42, y: 0.5, z: -0.25 } };
+// Shahar avtobusi (oq, yashil chiziqli)
+CAR_TYPES.bus = { name: 'Avtobus', kind: 'bus', l: 11.5, w: 2.5, H: 3.15, wr: 0.5, max: 19, acc: 5.5, grip: 6.5, mass: 3.2, hp: 260,
+  palette: [0xf2f2f0], seat: { x: 0.72, y: 1.2, z: 4.4 } };
 for (const T of Object.values(CAR_TYPES)) {
-  T.roofZ = T.kind === 'moto' ? 0 : (T.uB + T.uC) / 2;
+  T.roofZ = T.uB != null ? (T.uB + T.uC) / 2 : 0;
   // Haydovchi o'rindig'i (O'zbekistonda rul chap tomonda: +x)
-  T.seat = T.kind === 'moto' ? { x: 0, y: 0.9, z: -0.22 } : { x: T.w * 0.22, y: T.wr + 0.3, z: T.uB - 0.35 };
+  T.seat = T.seat || (T.kind === 'moto' ? { x: 0, y: 0.9, z: -0.22 } : { x: T.w * 0.22, y: T.wr + 0.3, z: T.uB - 0.35 });
 }
 
 // Toshkent ko'chalaridagidek: oq rang ko'pchilik, keyin kumush va qora
 const CAR_COLORS = [0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xb9bcc0, 0xb9bcc0, 0x1b1c1f, 0x1b1c1f,
   0x6c7178, 0xd6c9a8, 0x8a1c26, 0x274a7a, 0x2f5a3c];
-const CAR_MIX = [['nexia', 16], ['cobalt', 18], ['gentra', 13], ['spark', 13], ['matiz', 8], ['damas', 9], ['labo', 5], ['jiguli', 7], ['malibu', 5], ['taxi', 6], ['moto', 7]];
+const CAR_MIX = [['nexia', 16], ['cobalt', 18], ['gentra', 13], ['spark', 13], ['matiz', 8], ['damas', 9], ['labo', 5], ['jiguli', 7], ['malibu', 5], ['taxi', 6], ['moto', 7], ['gls', 4], ['charger', 3]];
 function randomCarType() {
-  let r = Math.random() * CAR_MIX.reduce((s, m) => s + m[1], 0);
-  for (const [t, w] of CAR_MIX) if ((r -= w) <= 0) return t;
+  // Model yuklanmagan bo'lsa (masalan, internet yo'q), u mashina chiqmaydi
+  const mix = CAR_MIX.filter(([t]) => !CAR_TYPES[t].model || MODELS[CAR_TYPES[t].model]);
+  let r = Math.random() * mix.reduce((s, m) => s + m[1], 0);
+  for (const [t, w] of mix) if ((r -= w) <= 0) return t;
   return 'nexia';
 }
 
@@ -106,6 +116,7 @@ function carGeo(type, color) {
   if (_geo[key]) return _geo[key];
   const T = CAR_TYPES[type], W = T.w, L2 = T.l / 2, trim = T.chrome ? 0xcfd2d6 : 0x1e1f22;
   if (T.kind === 'moto') return (_geo[key] = motoGeo(color));
+  if (T.kind === 'bus') return (_geo[key] = busGeo(color));
   const S = T.seat, inner = 0x2a2a2d;
   const P = [
     { geo: extrudeSide(bodyShape(T), W, 0.06), color },
@@ -141,8 +152,28 @@ function carGeo(type, color) {
 }
 function glassGeo(type) {
   const T = CAR_TYPES[type], key = 'G' + type;
-  if (T.kind === 'moto') return null;
+  if (T.kind === 'moto' || T.kind === 'bus') return null;
   return _geo[key] || (_geo[key] = extrudeSide(cabinShape(T), T.w * 0.86, 0.03));
+}
+function busGeo(color) {
+  const L2 = 5.75, glass = 0x1f2b36, P = [
+    [2.5, 2.55, 11.5, 0, 1.68, 0, color],
+    [2.53, 0.36, 11.52, 0, 1.1, 0, 0x2e7d32],
+    [2.53, 1.05, 10.2, 0, 2.2, -0.35, glass],
+    [2.3, 1.45, 0.05, 0, 2.05, L2 + 0.01, glass],
+    [2.0, 0.8, 0.05, 0, 2.4, -L2 - 0.01, glass],
+    [1.3, 0.3, 0.05, 0, 3.0, L2 + 0.02, 0xffa000],
+    [1.7, 0.28, 3.2, 0, 3.08, -1.5, 0xd6d6d2],
+    [0.04, 2.0, 1.2, -1.26, 1.45, 4.3, 0x2a2b2e],
+    [0.04, 2.0, 1.2, -1.26, 1.45, -0.6, 0x2a2b2e],
+    [2.55, 0.3, 0.2, 0, 0.55, L2, 0x1e1f22],
+    [2.55, 0.3, 0.2, 0, 0.55, -L2, 0x1e1f22],
+  ];
+  for (const s of [-1, 1]) for (const z of [3.7, -3.3]) {
+    P.push([0.5, 0.32, 0, s * 1.08, 0.5, z, 0x151515, 'cyl']);
+    P.push([0.26, 0.33, 0, s * 1.08, 0.5, z, 0xb5b8bc, 'cyl']);
+  }
+  return mergeParts(P);
 }
 function motoGeo(color) {
   return mergeParts([
@@ -165,6 +196,8 @@ function lightGeo(type) {
   if (_geo[key]) return _geo[key];
   const T = CAR_TYPES[type], W = T.w, L2 = T.l / 2, P = [];
   if (T.kind === 'moto') return (_geo[key] = mergeParts([[0.14, 0.1, 0.04, 0, 0.92, 0.66, 0xfff6d0], [0.12, 0.06, 0.04, 0, 0.82, -0.92, 0xff2a1a]]));
+  if (T.kind === 'bus') return (_geo[key] = mergeParts([[0.36, 0.18, 0.05, 0.9, 0.9, L2 + 0.02, 0xfff6d0], [0.36, 0.18, 0.05, -0.9, 0.9, L2 + 0.02, 0xfff6d0],
+    [0.3, 0.3, 0.05, 1.0, 1.0, -L2 - 0.02, 0xff2a1a], [0.3, 0.3, 0.05, -1.0, 1.0, -L2 - 0.02, 0xff2a1a]]));
   const tailY = T.kind === 'sedan' ? T.tail - 0.1 : T.kind === 'pickup' ? T.tail - 0.12 : T.belt - 0.2;
   for (const s of [-1, 1]) {
     P.push([0.3, 0.1, 0.06, s * (W / 2 - 0.26), T.nose - 0.07, L2 - 0.01, 0xfff6d0]);

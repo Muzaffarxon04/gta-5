@@ -115,7 +115,14 @@ function lineOfSight(ax, ay, az, bx, by, bz) {
 
 // ===== Klaviatura va sichqoncha =====
 const Input = { keys: {}, pressed: {}, mdx: 0, mdy: 0, mouseL: false, mouseR: false, clickL: false, locked: false, canvas: null,
-  joy: { x: 0, y: 0, active: false }, wheel: 0, touch: false };
+  joy: { x: 0, y: 0, active: false }, wheel: 0, touch: false, pad: { active: false, x: 0, y: 0, rt: 0, lt: 0 } };
+// Faol tayoq: telefon joystigi yoki geympadning chap tayog'i
+const _noStick = { x: 0, y: 0, active: false };
+function activeStick() {
+  if (Input.joy.active) return Input.joy;
+  const p = Input.pad;
+  return p.active && (p.x || p.y) ? { x: p.x, y: p.y, active: true } : _noStick;
+}
 const kd = c => !!Input.keys[c];
 const kp = c => !!Input.pressed[c];
 function initInput(canvas) {
@@ -155,62 +162,208 @@ function requestLock() {
 function endFrameInput() { Input.pressed = {}; Input.mdx = 0; Input.mdy = 0; Input.clickL = false; Input.wheel = 0; }
 
 // ===== Ovoz (WebAudio sintez, fayllarsiz) =====
+// Dvigatel profillari: base/top — salt va maksimal aylanishdagi chastota (Gs)
+const ENGINE_PROFILES = {
+  car:   { base: 34, top: 165, sub: 0.35, hi: 0.18, cut: 1 },
+  v8:    { base: 25, top: 118, sub: 0.62, hi: 0.1, cut: 0.75 },
+  small: { base: 44, top: 205, sub: 0.18, hi: 0.26, cut: 1.25 },
+  moto:  { base: 52, top: 310, sub: 0.22, hi: 0.32, cut: 1.6 },
+  truck: { base: 20, top: 85, sub: 0.75, hi: 0.08, cut: 0.6 },
+};
+function engineProfile(car) {
+  if (car.T.kind === 'moto') return ENGINE_PROFILES.moto;
+  if (car.T.kind === 'bus') return ENGINE_PROFILES.truck;
+  if (['gls', 'charger', 'malibu', 'police'].includes(car.type)) return ENGINE_PROFILES.v8;
+  if (['damas', 'labo', 'matiz', 'spark'].includes(car.type)) return ENGINE_PROFILES.small;
+  return ENGINE_PROFILES.car;
+}
+const SHOT_PROFILES = {
+  pistol:  { crack: 0.9, body: 0.75, len: 0.24, low: 165, lp: 3200 },
+  smg:     { crack: 0.65, body: 0.5, len: 0.13, low: 190, lp: 3800 },
+  shotgun: { crack: 0.9, body: 0.85, len: 0.5, low: 105, lp: 2100 },
+};
 const SFX = {
   ctx: null,
   init() {
     if (this.ctx) { if (this.ctx.resume) this.ctx.resume(); return; }
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
-      const ctx = new AC(); this.ctx = ctx;
-      this.out = ctx.createGain(); this.out.gain.value = 0.45; this.out.connect(ctx.destination);
-      const len = ctx.sampleRate, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+      const c = new AC(); this.ctx = c;
+      // Umumiy chiqish: kompressor ovozni baland, lekin buzilmagan holda saqlaydi
+      this.comp = c.createDynamicsCompressor(); this.comp.threshold.value = -14; this.comp.ratio.value = 6; this.comp.attack.value = 0.002;
+      this.out = c.createGain(); this.out.gain.value = 0.75;
+      this.out.connect(this.comp).connect(c.destination);
+      const len = c.sampleRate * 2, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       this.noiseBuf = buf;
-      // dvigatel
-      this.eng = ctx.createOscillator(); this.eng.type = 'sawtooth';
-      this.engF = ctx.createBiquadFilter(); this.engF.type = 'lowpass'; this.engF.frequency.value = 400;
-      this.engG = ctx.createGain(); this.engG.gain.value = 0;
-      this.eng.connect(this.engF).connect(this.engG).connect(this.out); this.eng.start();
-      // sirena
-      this.sir = ctx.createOscillator(); this.sir.type = 'square';
-      const sf = ctx.createBiquadFilter(); sf.type = 'lowpass'; sf.frequency.value = 1600;
-      this.sirG = ctx.createGain(); this.sirG.gain.value = 0;
-      this.sir.connect(sf).connect(this.sirG).connect(this.out); this.sir.start();
+      // Shahar aks-sadosi (binolar orasidagi reverb)
+      const irLen = Math.floor(c.sampleRate * 1.6), ir = c.createBuffer(2, irLen, c.sampleRate), gap = c.sampleRate * 0.012;
+      for (let ch = 0; ch < 2; ch++) { const x = ir.getChannelData(ch); for (let i = 0; i < irLen; i++) x[i] = i < gap ? 0 : (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 3.2); }
+      this.verb = c.createConvolver(); this.verb.buffer = ir;
+      this.verbIn = c.createGain(); this.verbIn.gain.value = 0.32;
+      this.verbIn.connect(this.verb).connect(this.out);
+      // Yomg'ir va shamol shovqini (balandligi ob-havoga qarab)
+      const rs = c.createBufferSource(); rs.buffer = buf; rs.loop = true;
+      const rhp = c.createBiquadFilter(); rhp.type = 'highpass'; rhp.frequency.value = 900;
+      this.rainLP = c.createBiquadFilter(); this.rainLP.type = 'lowpass'; this.rainLP.frequency.value = 9000;
+      this.rainG = c.createGain(); this.rainG.gain.value = 0;
+      rs.connect(rhp).connect(this.rainLP).connect(this.rainG).connect(this.out); rs.start();
+      const ws = c.createBufferSource(); ws.buffer = buf; ws.loop = true; ws.playbackRate.value = 0.5;
+      const wlp = c.createBiquadFilter(); wlp.type = 'lowpass'; wlp.frequency.value = 380;
+      this.windG = c.createGain(); this.windG.gain.value = 0;
+      ws.connect(wlp).connect(this.windG).connect(this.out); ws.start();
+      // Vertolyot parragi: past shovqin, sekundiga ~15 marta urinadi
+      const hs = c.createBufferSource(); hs.buffer = buf; hs.loop = true;
+      const hlp = c.createBiquadFilter(); hlp.type = 'lowpass'; hlp.frequency.value = 260;
+      const ham = c.createGain(); ham.gain.value = 0.5;
+      const hlfo = c.createOscillator(), hlg = c.createGain(); hlfo.type = 'square'; hlfo.frequency.value = 15; hlg.gain.value = 0.5;
+      hlfo.connect(hlg).connect(ham.gain); hlfo.start();
+      this.heliG = c.createGain(); this.heliG.gain.value = 0;
+      hs.connect(hlp).connect(ham).connect(this.heliG).connect(this.out); hs.start();
+      this.engine = this.makeEngine(0.5);
+      this.traffic = this.makeEngine(0.35);
+      // Sirena (migalka): arra + uchburchak to'lqin
+      this.sir = c.createOscillator(); this.sir.type = 'sawtooth';
+      this.sir2 = c.createOscillator(); this.sir2.type = 'triangle'; this.sir2.detune.value = 18;
+      const sf = c.createBiquadFilter(); sf.type = 'bandpass'; sf.frequency.value = 1300; sf.Q.value = 0.6;
+      this.sirG = c.createGain(); this.sirG.gain.value = 0;
+      this.sir.connect(sf); this.sir2.connect(sf);
+      sf.connect(this.sirG).connect(this.out);
+      this.sir.start(); this.sir2.start();
     } catch (e) { this.ctx = null; }
   },
-  noise(dur, freq, vol) {
+  // Dvigatel ovozi: asosiy ohang, past "gurillash", yuqori garmonika, havo so'rish shovqini va titrash
+  makeEngine(level) {
+    const c = this.ctx, E = { level };
+    E.out = c.createGain(); E.out.gain.value = 0;
+    E.am = c.createGain(); E.am.gain.value = 0.8;
+    E.f = c.createBiquadFilter(); E.f.type = 'lowpass'; E.f.frequency.value = 600; E.f.Q.value = 1.4;
+    E.f.connect(E.am).connect(E.out).connect(this.out);
+    E.osc = [['sawtooth', 1], ['square', 0.5], ['triangle', 2]].map(([type, mul]) => {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type; g.gain.value = 0.3;
+      o.connect(g).connect(E.f); o.start();
+      return { o, g, mul };
+    });
+    const lfo = c.createOscillator(), lg = c.createGain();
+    lfo.type = 'sine'; lfo.frequency.value = 12; lg.gain.value = 0.2;
+    lfo.connect(lg).connect(E.am.gain); lfo.start(); E.lfo = lfo;
+    const n = c.createBufferSource(); n.buffer = this.noiseBuf; n.loop = true;
+    E.nf = c.createBiquadFilter(); E.nf.type = 'bandpass'; E.nf.frequency.value = 900; E.nf.Q.value = 0.7;
+    E.ng = c.createGain(); E.ng.gain.value = 0;
+    n.connect(E.nf).connect(E.ng).connect(E.out); n.start();
+    return E;
+  },
+  driveEngine(E, vol, rpm, thr, p) {
     if (!this.ctx) return;
-    const c = this.ctx, t = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-    s.buffer = this.noiseBuf; f.type = 'lowpass'; f.frequency.value = freq;
+    const t = this.ctx.currentTime, f = p.base + (p.top - p.base) * rpm;
+    E.out.gain.setTargetAtTime(vol * E.level * (0.75 + thr * 0.45), t, 0.08);
+    for (const s of E.osc) s.o.frequency.setTargetAtTime(f * s.mul, t, 0.04);
+    E.osc[1].g.gain.setTargetAtTime(p.sub, t, 0.1);
+    E.osc[2].g.gain.setTargetAtTime(p.hi, t, 0.1);
+    E.f.frequency.setTargetAtTime((320 + rpm * 1500 + thr * 700) * p.cut, t, 0.05);
+    E.lfo.frequency.setTargetAtTime(f * 0.25, t, 0.05);
+    E.ng.gain.setTargetAtTime(0.12 * thr * (0.3 + rpm), t, 0.08);
+    E.nf.frequency.setTargetAtTime(600 + rpm * 1800, t, 0.05);
+  },
+  setEngine(on, rpm = 0, thr = 0, prof = ENGINE_PROFILES.car) {
+    if (!this.ctx) return;
+    if (!on) { this.engine.out.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1); return; }
+    this.driveEngine(this.engine, 1, rpm, thr, prof);
+  },
+  setTraffic(vol, rpm = 0.3, prof = ENGINE_PROFILES.car) {
+    if (!this.ctx) return;
+    if (vol <= 0.001) { this.traffic.out.gain.setTargetAtTime(0, this.ctx.currentTime, 0.15); return; }
+    this.driveEngine(this.traffic, vol, 0.15 + rpm * 0.7, 0.3, prof);
+  },
+  // Qisqa shovqin portlashi (filtr bilan)
+  burst(dest, t, dur, type, freq, vol, q = 0.7) {
+    const c = this.ctx, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = this.noiseBuf; f.type = type; f.frequency.value = freq; f.Q.value = q;
     g.gain.setValueAtTime(Math.max(vol, 0.002), t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    s.connect(f).connect(g).connect(this.out); s.start(t); s.stop(t + dur + 0.05);
+    s.connect(f).connect(g).connect(dest); s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
   },
-  tone(freq, dur, vol, type = 'sine', slide = 0) {
+  tone(freq, dur, vol, type = 'sine', slide = 0, when = 0, dest = null) {
     if (!this.ctx) return;
-    const c = this.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    const c = this.ctx, t = c.currentTime + when, o = c.createOscillator(), g = c.createGain();
     o.type = type; o.frequency.setValueAtTime(freq, t);
-    if (slide) o.frequency.linearRampToValueAtTime(Math.max(20, freq + slide), t + dur);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t + dur);
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(g).connect(this.out); o.start(t); o.stop(t + dur + 0.05);
+    o.connect(g).connect(dest || this.out); o.start(t); o.stop(t + dur + 0.05);
   },
-  shot(vol = 0.6) { this.noise(0.22, 2600, vol); this.tone(140, 0.1, vol * 0.5, 'square', -90); },
-  boom() { this.noise(1.6, 420, 1.0); this.tone(70, 0.9, 0.7, 'sine', -45); },
-  punch() { this.noise(0.08, 800, 0.55); },
-  crash(v) { this.noise(0.35, 650, clamp(v, 0.08, 0.8)); },
-  coin() { this.tone(988, 0.08, 0.2, 'square'); setTimeout(() => this.tone(1319, 0.14, 0.2, 'square'), 70); },
+  // O'q ovozi: keskin "chirs" + tana + past gumburlash + aks-sado. far: 0 — yaqin, 1 — juda uzoq
+  shot(kind = 'pistol', vol = 1, far = 0) {
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime, P = SHOT_PROFILES[kind] || SHOT_PROFILES.pistol;
+    const bus = c.createGain(); bus.gain.value = vol * 0.6;
+    const send = c.createGain(); send.gain.value = 0.7 + far * 0.8;
+    bus.connect(this.out); bus.connect(send).connect(this.verbIn);
+    let node = bus;
+    if (far > 0) { const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4200 - far * 3300; lp.connect(bus); node = lp; }
+    this.burst(node, t, 0.035, 'highpass', 2200, P.crack);
+    this.burst(node, t, P.len, 'lowpass', P.lp, P.body);
+    this.tone(P.low, 0.16, 0.9 * P.body, 'sine', -P.low + 38, 0, node);
+    if (far < 0.2) {
+      if (kind === 'shotgun') { this.burst(this.out, t + 0.42, 0.05, 'bandpass', 2600, 0.5, 3); this.burst(this.out, t + 0.56, 0.06, 'bandpass', 1900, 0.55, 3); }
+      else if (Math.random() < 0.7) { this.tone(3600, 0.05, 0.05, 'sine', 0, 0.28); this.tone(4300, 0.06, 0.04, 'sine', 0, 0.36); }
+    }
+  },
+  click() { if (this.ctx) this.burst(this.out, this.ctx.currentTime, 0.03, 'bandpass', 3000, 0.4, 4); },
+  swing() { if (this.ctx) this.burst(this.out, this.ctx.currentTime, 0.18, 'bandpass', 700, 0.35, 1.2); },
+  boom() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime, bus = this.ctx.createGain(); bus.gain.value = 1;
+    bus.connect(this.out); bus.connect(this.verbIn);
+    this.burst(bus, t, 1.8, 'lowpass', 420, 1.0);
+    this.burst(bus, t, 0.08, 'highpass', 1500, 0.6);
+    this.tone(75, 1.0, 0.85, 'sine', -45, 0, bus);
+  },
+  punch() { if (this.ctx) this.burst(this.out, this.ctx.currentTime, 0.08, 'lowpass', 800, 0.6); },
+  crash(v) { if (this.ctx) { const t = this.ctx.currentTime; this.burst(this.out, t, 0.35, 'lowpass', 650, clamp(v, 0.08, 0.8)); this.burst(this.verbIn, t, 0.2, 'bandpass', 2400, clamp(v * 0.5, 0.05, 0.4), 2); } },
+  coin() { this.tone(988, 0.08, 0.2, 'square'); this.tone(1319, 0.14, 0.2, 'square', 0, 0.07); },
   horn() { this.tone(415, 0.4, 0.18, 'sawtooth'); this.tone(330, 0.4, 0.18, 'sawtooth'); },
-  door() { this.noise(0.12, 300, 0.4); },
-  setEngine(on, rpm) {
+  door() { if (this.ctx) this.burst(this.out, this.ctx.currentTime, 0.12, 'lowpass', 300, 0.45); },
+  // mode: 'wail' — sekin ko'tarilib-tushadi, 'yelp' — tez (yaqin ta'qibda)
+  setSiren(vol, time, mode = 'wail') {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.engG.gain.setTargetAtTime(on ? 0.1 : 0, t, 0.12);
-    this.eng.frequency.setTargetAtTime(38 + rpm * 120, t, 0.05);
-    this.engF.frequency.setTargetAtTime(280 + rpm * 1000, t, 0.05);
+    let f;
+    if (mode === 'yelp') { const k = (time / 0.34) % 1; f = 700 + 820 * (k < 0.5 ? k * 2 : 2 - k * 2); }
+    else f = 640 + 820 * (0.5 - 0.5 * Math.cos(time / 2.6 * TAU));
+    this.sirG.gain.setTargetAtTime(vol * 0.16, t, 0.15);
+    this.sir.frequency.setTargetAtTime(f, t, 0.012);
+    this.sir2.frequency.setTargetAtTime(f, t, 0.012);
   },
-  setSiren(vol, time) {
+  setRain(rain, wind, inCar) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.sirG.gain.setTargetAtTime(vol * 0.06, t, 0.2);
-    this.sir.frequency.setTargetAtTime(Math.floor(time * 1.6) % 2 ? 960 : 700, t, 0.03);
+    this.rainG.gain.setTargetAtTime(rain * 0.16, t, 0.5);
+    this.rainLP.frequency.setTargetAtTime(inCar ? 1600 : 9000, t, 0.2);
+    this.windG.gain.setTargetAtTime(wind * 0.14, t, 0.8);
+  },
+  thunder() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime, bus = this.ctx.createGain(); bus.gain.value = 0.9;
+    bus.connect(this.out); bus.connect(this.verbIn);
+    this.burst(bus, t, 0.35, 'lowpass', 1200, 0.5);
+    this.burst(bus, t + 0.05, 3.8, 'lowpass', 160, 1.0);
+    this.tone(48, 2.4, 0.5, 'sine', -18, 0.1, bus);
+  },
+  setHeli(vol) { if (this.ctx) this.heliG.gain.setTargetAtTime(vol * 0.5, this.ctx.currentTime, 0.3); },
+  nitro() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.burst(this.out, t, 0.9, 'bandpass', 1400, 0.4, 0.6);
+    this.tone(120, 0.6, 0.15, 'sawtooth', 160);
+  },
+  metro() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.burst(this.out, t, 1.4, 'bandpass', 420, 0.45, 0.8);
+    this.tone(190, 1.2, 0.12, 'sawtooth', -90);
+  },
+  mute() {
+    this.setEngine(false); this.setTraffic(0); this.setSiren(0, 0); this.setRain(0, 0, false); this.setHeli(0);
+    if (typeof Radio !== 'undefined') Radio.silence();
   },
 };

@@ -103,7 +103,11 @@ const Pickups = {
     if (p.kind === 'cash') { addMoney(p.value); }
     else if (p.kind === 'health') { if (P.hp >= 100) return false; P.hp = Math.min(100, P.hp + 40); HUD.help('Sog\'liq tiklandi'); }
     else if (p.kind === 'armor') { if (P.armor >= 100) return false; P.armor = Math.min(100, P.armor + 50); HUD.help('Zirh kiyildi'); }
-    else if (p.kind === 'ammo') { P.ammo += 24; HUD.help('To\'pponcha o\'qi +24. <kbd>2</kbd> — to\'pponchani olish'); }
+    else if (p.kind === 'ammo') {
+      const w = WEAPONS[P.weapon].melee ? 'pistol' : P.weapon, n = w === 'shotgun' ? 8 : w === 'smg' ? 40 : 24;
+      P.ammo[w] = (P.ammo[w] || 0) + n;
+      HUD.help(`${WEAPONS[w].name} o'qi +${n}`);
+    }
     SFX.coin();
     return true;
   },

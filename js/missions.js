@@ -102,6 +102,7 @@ const Missions = {
   pass() {
     const m = this.active;
     this.active = null; this.done++;
+    Stats.add('missions'); Save.soon();
     addMoney(m.reward);
     HUD.big('VAZIFA BAJARILDI', `+$${m.reward.toLocaleString('en-US')}`, 'passed');
     Game.bigT = 3.2; SFX.coin();
