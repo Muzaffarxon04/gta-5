@@ -209,11 +209,14 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .joy { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.07); border: 2px solid rgba(255,255,255,.28); pointer-events: auto; touch-action: none; }
 .joy-knob { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: rgba(255,255,255,.32); border: 2px solid rgba(255,255,255,.65); }
 .tbtns { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 64px); grid-auto-rows: 64px; gap: 10px;
-  grid-template-areas: "pause weapon aim" "run enter fire" ". jump fire"; }
+  grid-template-areas: ". weapon aim" "run enter fire" ". jump fire"; }
 .tbtn { pointer-events: auto; touch-action: none; border-radius: 50%; background: rgba(20, 16, 30, .5); border: 2px solid rgba(255,255,255,.35); color: var(--ink); font-family: var(--f-ui); font-weight: 700; font-size: 14px; letter-spacing: .02em; padding: 0; }
 .tbtn[data-act="fire"] { grid-area: fire; border-radius: 40px; background: rgba(239, 75, 70, .5); font-size: 17px; }
 .tbtn[data-act="jump"] { grid-area: jump; } .tbtn[data-act="enter"] { grid-area: enter; } .tbtn[data-act="run"], .tbtn[data-act="radio"] { grid-area: run; }
-.tbtn[data-act="aim"], .tbtn[data-act="siren"] { grid-area: aim; } .tbtn[data-act="weapon"] { grid-area: weapon; } .tbtn[data-act="pause"] { grid-area: pause; font-size: 18px; }
+.tbtn[data-act="aim"], .tbtn[data-act="siren"] { grid-area: aim; } .tbtn[data-act="weapon"] { grid-area: weapon; }
+/* Pauza — yuqori o'ng burchakda; soat, yulduzlar va pul undan chaproqqa suriladi */
+.pause-btn { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); width: 46px; height: 46px; font-size: 17px; letter-spacing: 0; }
+.touch .topright { right: calc(68px + env(safe-area-inset-right, 0px)); }
 .tbtn.on { background: rgba(255,255,255,.35); }
 /* Mashinada: joystik o'rniga chap/o'ng tugmalari va gaz/tormoz pedallari */
 .steer-pad { position: absolute; left: calc(18px + env(safe-area-inset-left, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 14px; }
@@ -480,8 +483,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="pedal brake" type="button" data-key="ArrowDown">TORMOZ</button>
     <button class="pedal gas" type="button" data-key="ArrowUp">GAZ</button>
   </div>
+  <button class="tbtn pause-btn" type="button" data-act="pause" aria-label="Pauza">II</button>
   <div class="tbtns">
-    <button class="tbtn" type="button" data-act="pause" aria-label="Pauza">II</button>
     <button class="tbtn" type="button" data-act="weapon">Qurol</button>
     <button class="tbtn" type="button" data-act="aim">Nishon</button>
     <button class="tbtn" type="button" data-act="siren" hidden>Sirena</button>
