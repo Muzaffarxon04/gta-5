@@ -156,8 +156,10 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .touch-ui:not(.driving) .steer-pad, .touch-ui:not(.driving) .pedals, .touch-ui.driving .joy { display: none; }
 .touch-ui.driving .tbtns { right: calc(222px + env(safe-area-inset-right, 0px)); grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 8px; }
 .tbtn[data-act="view"] { font-size: 13px; }
-.door-btn { position: absolute; left: 0; top: 0; width: 78px; height: 78px; margin: -39px 0 0 -39px; border-radius: 50%; pointer-events: auto; touch-action: none; padding: 0;
-  font-family: var(--f-ui); font-weight: 700; font-size: 16px; color: var(--night); background: rgba(255, 178, 56, .92); border: 3px solid rgba(255,255,255,.85); box-shadow: 0 4px 14px rgba(0,0,0,.45); animation: door-pulse 1.4s ease-in-out infinite; }
+.door-btn { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; pointer-events: auto; touch-action: none; padding: 0;
+  display: flex; align-items: center; justify-content: center; color: var(--night); background: rgba(255, 178, 56, .92); border: 3px solid rgba(255,255,255,.85); box-shadow: 0 4px 14px rgba(0,0,0,.45); animation: door-pulse 1.4s ease-in-out infinite; }
+.door-btn svg { width: 36px; height: 36px; display: block; }
+.door-btn.taken { background: rgba(239, 75, 70, .92); color: #fff; }
 .door-btn.on { background: #fff; }
 @keyframes door-pulse { 50% { box-shadow: 0 0 0 9px rgba(255, 178, 56, .25), 0 4px 14px rgba(0,0,0,.45); } }
 .tbtn.lock { border-color: var(--sun); color: var(--sun); }
@@ -448,8 +450,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="tbtn" type="button" data-act="fire">Otish</button>
     <button class="tbtn" type="button" data-act="jump">Sakrash</button>
   </div>
-  <!-- Mashina yonida: eshik oldida chiqadigan "Minish" tugmasi -->
-  <button class="door-btn" type="button" data-act="door" hidden>Minish</button>
+  <!-- Mashinalar yonida: har bir yaqin mashina eshigi oldida belgi (touch.js yaratadi) -->
+  <div class="door-layer" id="doorLayer"></div>
 </div>
 
 <div class="menu" id="menu" hidden>

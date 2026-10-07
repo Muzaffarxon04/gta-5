@@ -96,7 +96,7 @@ function startGame() {
   if (!Game.started) {
     Game.started = true;
     Game.camYaw = Player.h;
-    HUD.help(`Yoningizda qora Malibu va qizil mototsikl turibdi — ${Input.touch ? 'yoniga borib, eshik oldidagi «Minish» ni bosing' : '<kbd>F</kbd> bilan o\'tiring'}. Ko\'chaning narigi tomonida qurol (<b>Q</b>) va kiyim (<b>K</b>) do\'konlari bor. Sariq <b>!</b> — vazifalar.`, 9);
+    HUD.help(`Yoningizda qora Malibu va qizil mototsikl turibdi — ${Input.touch ? 'yoniga borib, eshigi oldida chiqqan belgini bosing' : '<kbd>F</kbd> bilan o\'tiring'}. Ko\'chaning narigi tomonida qurol (<b>Q</b>) va kiyim (<b>K</b>) do\'konlari bor. Sariq <b>!</b> — vazifalar.`, 9);
   }
   Game.paused = false;
   TouchUI.show(true);
@@ -169,7 +169,11 @@ function step(raw) {
 
 function handleActions() {
   const P = Player;
-  if (kp('KeyF') || kp('Enter')) {
+  // Telefonda bosilgan eshik belgisi — aynan o'sha mashinaga o'tirish
+  const req = Game.enterReq;
+  Game.enterReq = null;
+  if (req && !P.inCar && !req.dead && dist2(req.x, req.z, P.x, P.z) < 4.6 * 4.6) enterCar(req);
+  else if (kp('KeyF') || kp('Enter')) {
     if (P.inCar) exitCar();
     else { const c = nearestCar(4.2); if (c) enterCar(c); }
   }
