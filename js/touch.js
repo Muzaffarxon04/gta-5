@@ -1,11 +1,33 @@
 'use strict';
 const _doorV = new THREE.Vector3(), _doorP = new THREE.Vector3(), _doorY = new THREE.Vector3(0, 1, 0);
-// Eshik belgilari (SVG): rul, mototsikl, haydovchini tortib chiqarish
-const DOOR_ICONS = {
-  car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6"/><path d="M3.4 10.6 9.5 11.5M14.5 11.5l6.1-.9M12 14.6V21"/></svg>',
-  moto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 11h5l2.5 5.5M14 11l1.5-4H18M9 11 7.5 8H5"/></svg>',
-  taken: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="5" r="2.2"/><path d="M9 8v6l-3 6M9 14l3 6M6 11h6M14 12h7M18 9l3 3-3 3"/></svg>',
+// Telefon tugmalari uchun belgilar (SVG, 24×24, rangi tugma matni rangida)
+const TOUCH_ICONS = {
+  pause: '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>',
+  weapon: '<path d="M2 7.5h18v2.2h1.2V12H11l-1 1.2V15a1 1 0 0 1-1 1H8l-1.4 4H3.4l1.5-6.2L3.6 12H2z" fill="currentColor" stroke="none"/>',
+  aim: '<circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  run: '<circle cx="14.5" cy="4" r="2" fill="currentColor" stroke="none"/><path d="M13 7.5 11 13M13 7.5l-4 1.2L7 12M13 7.5l3 2.5 3-1M11 13l3 3-1 5M11 13l-3 3H4"/>',
+  exit: '<path d="M14 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H14"/><path d="M10 12h11M18 8.5l3.5 3.5-3.5 3.5"/>',
+  punch: '<path d="M12 2.5l1.8 5.4 5.6-1.9-3.6 4.6 4.7 3.3-5.7.6.3 5.9-3.1-4.9-3.1 4.9.3-5.9-5.7-.6 4.7-3.3-3.6-4.6 5.6 1.9z"/>',
+  shoot: '<path d="M2 8.5h11.5v3H8.6l-.8 1v2.3a.8.8 0 0 1-.8.8H5.3l-1 3.2H2.1l1.2-5.2L2 12z" fill="currentColor" stroke="none"/><path d="M16.5 10h5M16 6.5l4-2M16 13.5l4 2"/>',
+  horn: '<path d="M3 9.5v5h3.5L12 19V5L6.5 9.5z" fill="currentColor" stroke="none"/><path d="M15.5 9a4 4 0 0 1 0 6M18.3 6.3a8 8 0 0 1 0 11.4"/>',
+  jump: '<path d="M12 16V4M6.5 9.5 12 4l5.5 5.5"/><path d="M4 20.5h16"/>',
+  handbrake: '<circle cx="12" cy="12" r="7"/><path d="M10.2 15.8V8.2h2.6a2.4 2.4 0 0 1 0 4.8h-2.6"/><path d="M3.2 6.5a10.5 10.5 0 0 0 0 11M20.8 6.5a10.5 10.5 0 0 1 0 11"/>',
+  siren: '<path d="M7 18v-5.5a5 5 0 0 1 10 0V18"/><path d="M5 18h14v3H5z"/><path d="M12 2v2.5M4.6 5.2l1.7 1.7M19.4 5.2l-1.7 1.7M2 11.5h2.4M19.6 11.5H22"/>',
+  radio: '<rect x="3" y="8" width="18" height="12" rx="2"/><circle cx="15.5" cy="14" r="3"/><path d="M6.5 12h4M6.5 15.5h4M7.5 8l9-5"/>',
+  taxi: '<path d="M4 17.5h16v-4.5L17.8 9H6.2L4 13z"/><path d="M9.5 9V6.5h5V9"/><circle cx="8" cy="17.5" r="1.8"/><circle cx="16" cy="17.5" r="1.8"/>',
+  nitro: '<path d="M12 22c4 0 7-2.7 7-6.6 0-3.5-2.5-5.3-3.6-8.4-1.4 2-2.3 2.7-3.4 2.7.4-3-.8-5.7-3.5-7.7 0 4.3-4.5 6.6-4.5 12.6C4 19.3 8 22 12 22z"/>',
+  view: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  left: '<path d="M16 4.5 6.5 12l9.5 7.5z" fill="currentColor" stroke="none"/>',
+  right: '<path d="M8 4.5 17.5 12 8 19.5z" fill="currentColor" stroke="none"/>',
+  gas: '<path d="M6 13l6-6 6 6M6 19.5l6-6 6 6"/>',
+  brake: '<circle cx="12" cy="12" r="6"/><path d="M4.6 6.4a9.5 9.5 0 0 0 0 11.2M19.4 6.4a9.5 9.5 0 0 1 0 11.2M12 9v3.5"/><circle cx="12" cy="15" r=".6" fill="currentColor"/>',
+  // Mashina eshigi belgilari: rul, mototsikl, haydovchini tortib chiqarish
+  car: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6"/><path d="M3.4 10.6 9.5 11.5M14.5 11.5l6.1-.9M12 14.6V21"/>',
+  moto: '<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 11h5l2.5 5.5M14 11l1.5-4H18M9 11 7.5 8H5"/>',
+  taken: '<circle cx="9" cy="5" r="2.2"/><path d="M9 8v6l-3 6M9 14l3 6M6 11h6M14 12h7M18 9l3 3-3 3"/>',
 };
+const touchIcon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOUCH_ICONS[k]}</svg>`;
+const DOOR_ICONS = { car: touchIcon('car'), moto: touchIcon('moto'), taken: touchIcon('taken') };
 // ===== Telefon uchun ekrandagi boshqaruv: joystik, kamera, tugmalar =====
 const TouchUI = {
   root: null, running: false, aiming: false, _car: null,
@@ -55,6 +77,15 @@ const TouchUI = {
     addEventListener('touchend', end); addEventListener('touchcancel', end);
     // Har bosishda to'liq ekran va albom qulfi (Android'da telefon tik tursa ham ekran yotiq bo'ladi)
     addEventListener('touchend', goFullscreen, { passive: true });
+    // Tugmalarda yozuv o'rniga belgi (nomi aria-label'da — ekran o'quvchilar uchun)
+    const ICON_OF = { pause: 'pause', weapon: 'weapon', aim: 'aim', siren: 'siren', radio: 'radio', taxi: 'taxi', nitro: 'nitro', view: 'view', run: 'run',
+      ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'gas', ArrowDown: 'brake' };
+    const NAME_OF = { pause: 'Pauza', weapon: 'Qurolni almashtirish', aim: 'Nishonga olish', siren: 'Sirena', radio: 'Radio', taxi: 'Taksi ishi', nitro: 'Nitro',
+      view: 'Mashina ichidan ko\'rish', run: 'Yugurish', ArrowLeft: 'Chapga', ArrowRight: 'O\'ngga', ArrowUp: 'Gaz', ArrowDown: 'Tormoz' };
+    root.querySelectorAll('[data-act], [data-key]').forEach(b => {
+      const k = b.dataset.act || b.dataset.key;
+      if (ICON_OF[k]) this.setIcon(b, ICON_OF[k], NAME_OF[k]);
+    });
     // Mashinada: chap/o'ng tugmalari va pedallar — klaviatura strelkalari kabi ishlaydi
     root.querySelectorAll('[data-key]').forEach(btn => {
       const code = btn.dataset.key;
@@ -71,7 +102,7 @@ const TouchUI = {
       btn.addEventListener('touchcancel', up, { passive: false });
     });
     const note = document.getElementById('note');
-    if (note) note.textContent = 'Telefonda: chapdagi joystik — yurish, mashinada — chap/o\'ng tugmalari va gaz/tormoz pedallari, ekranni surish — kamera, «Kamera» — mashina ichidan ko\'rish. O\'yin doim albom (yotiq) rejimida ochiladi.';
+    if (note) note.textContent = 'Telefonda: chapdagi joystik — yurish, mashinada — chap/o\'ng tugmalari va gaz/tormoz pedallari, ekranni surish — kamera, ko\'z belgisi — mashina ichidan ko\'rish. Barcha belgilar ☰ → Yo\'riqnoma ichida. O\'yin doim albom (yotiq) rejimida ochiladi.';
   },
   press(act, down) {
     if (act === 'fire') { Input.mouseL = down; if (down) Input.clickL = true; }
@@ -87,6 +118,10 @@ const TouchUI = {
     else if (act === 'taxi') { if (down) Input.pressed.KeyT = true; }
     else if (act === 'nitro') Input.keys.KeyN = down;
     else if (act === 'view') { if (down) Input.pressed.KeyV = true; }
+  },
+  setIcon(b, k, label) {
+    if (b._ic === k) return;
+    b._ic = k; b.innerHTML = touchIcon(k); b.setAttribute('aria-label', label);
   },
   setAim(on) {
     this.aiming = on; Input.mouseR = on;
@@ -162,9 +197,9 @@ const TouchUI = {
     this.btn('radio').hidden = !car;
     this.btn('taxi').hidden = !taxi;
     this.btn('nitro').hidden = !nitro;
-    this.btn('jump').innerHTML = car ? 'Qo\'l<br>tormoz' : 'Sakrash';
-    this.btn('enter').textContent = car ? 'Tushish' : 'Minish';
-    this.btn('fire').textContent = car ? 'Signal' : 'Otish';
+    this.setIcon(this.btn('jump'), car ? 'handbrake' : 'jump', car ? 'Qo\'l tormozi' : 'Sakrash');
+    this.setIcon(this.btn('enter'), 'exit', 'Mashinadan tushish');
+    this.setIcon(this.btn('fire'), car ? 'horn' : gun ? 'shoot' : 'punch', car ? 'Signal' : gun ? 'Otish' : 'Urish');
     for (const a of ['run', 'weapon']) this.btn(a).hidden = car;
     this.btn('enter').hidden = !car; // piyodaga: har bir yaqin mashina eshigi oldida belgi (updateDoors)
     if (nitro) this.btn('weapon').hidden = true;

@@ -144,11 +144,18 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .pause-btn { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); width: 46px; height: 46px; font-size: 17px; letter-spacing: 0; }
 .touch .topright { right: calc(68px + env(safe-area-inset-right, 0px)); }
 .tbtn.on { background: rgba(255,255,255,.35); }
+/* Belgili tugmalar */
+.tbtn, .sbtn, .pedal { display: flex; align-items: center; justify-content: center; }
+.tbtn svg { width: 28px; height: 28px; display: block; }
+.tbtn[data-act="fire"] svg { width: 36px; height: 36px; }
+.pause-btn svg { width: 22px; height: 22px; }
+.sbtn svg { width: 44px; height: 44px; display: block; }
+.pedal svg { width: 42px; height: 42px; display: block; }
 /* Mashinada: joystik o'rniga chap/o'ng tugmalari va gaz/tormoz pedallari */
 .steer-pad { position: absolute; left: calc(18px + env(safe-area-inset-left, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 14px; }
 .sbtn { pointer-events: auto; touch-action: none; width: 92px; height: 92px; border-radius: 22px; background: rgba(20, 16, 30, .5); border: 2px solid rgba(255,255,255,.4); color: var(--ink); font-size: 38px; line-height: 1; padding: 0; }
 .pedals { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: flex-end; gap: 12px; }
-.pedal { pointer-events: auto; touch-action: none; width: 84px; border-radius: 14px 14px 18px 18px; border: 2px solid rgba(255,255,255,.45); color: #fff; font-family: var(--f-ui); font-weight: 700; font-size: 15px; letter-spacing: .06em; padding: 0 0 10px; display: flex; align-items: flex-end; justify-content: center;
+.pedal { pointer-events: auto; touch-action: none; width: 84px; border-radius: 14px 14px 18px 18px; border: 2px solid rgba(255,255,255,.45); color: #fff; font-family: var(--f-ui); font-weight: 700; font-size: 15px; letter-spacing: .06em; padding: 0; display: flex; align-items: center; justify-content: center;
   background: repeating-linear-gradient(180deg, rgba(255,255,255,.16) 0 4px, transparent 4px 13px), linear-gradient(180deg, #4a4f57, #24272c); box-shadow: 0 4px 0 rgba(0,0,0,.45); }
 .pedal.gas { height: 150px; border-color: rgba(120, 220, 140, .75); }
 .pedal.brake { height: 104px; width: 96px; border-color: rgba(239, 75, 70, .8); }
@@ -239,6 +246,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .info p, .info li { margin: 0; font-size: 17px; line-height: 1.45; color: var(--ink); max-width: 62ch; }
 .info .info-lead { font-size: 19px; color: var(--muted); }
 .guide .keys { font-size: 16px; margin: 2px 0 4px; }
+.guide .keys dt svg { width: 24px; height: 24px; vertical-align: middle; color: var(--ink); }
+.guide .keys dt .ic-red { color: #ff8a80; } .guide .keys dt .ic-sun { color: var(--sun); }
 .info ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 .info a { color: var(--sun); text-underline-offset: 2px; }
 .info a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

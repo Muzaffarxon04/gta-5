@@ -119,18 +119,34 @@ const Panel = {
   // Yo'riqnoma: klaviatura, telefon va geympad boshqaruvi
   guide() {
     const li = a => a.map(t => `<li>${t}</li>`).join('');
+    // Telefon tugmalari belgilari va ma'nosi
+    const legend = rows => `<dl class="keys">${rows.map(([ics, text, cls]) =>
+      `<dt>${ics.map(k => `<span class="${cls || ''}">${touchIcon(k)}</span>`).join(' ')}</dt><dd>${text}</dd>`).join('')}</dl>`;
     this.open('O\'yin', 'Yo\'riqnoma', `<div class="info guide">
       <h3>Klaviatura va sichqoncha</h3>
       ${document.getElementById('guideKeys').innerHTML}
       <h3>Telefonda</h3>
-      <ul>${li([
-        'Piyoda: chapdagi joystik — yurish, ekranni surish — kamerani burish, o\'ngdagi tugmalar — otish, sakrash, qurol',
-        '«Nishon» faqat qo\'lda o\'qotar qurol bo\'lsa chiqadi: bir bosish — kamera yaqinlashadi va mo\'ljal paydo bo\'ladi (aniq otish uchun), yana bosish — o\'chadi',
-        'Mashina va mototsiklda: chapda ◀ ▶ — rulni burish, o\'ngda <b>GAZ</b> va <b>TORMOZ</b> pedallari (to\'xtaganda tormoz — orqaga yurish)',
-        'Mashinaga o\'tirish: 4 m ichidagi har bir mashina eshigi oldida belgi chiqadi — rul (mashina), mototsikl yoki qizil belgi (ichida haydovchi bor, bossangiz tortib chiqarasiz). Qaysi belgini bossangiz, o\'sha mashinaga o\'tirasiz',
-        '«Qo\'l tormoz» — drift, «Kamera» — mashina ichidan ko\'rish, «Tushish» — mashinadan chiqish',
-        'Telefonni yotqizib (gorizontal) o\'ynang',
-      ])}</ul>
+      <p>Telefonni yotqizib (albom rejimida) o'ynang. Chapdagi joystik — yurish, ekranning bo'sh joyini surish — kamerani burish.</p>
+      ${legend([
+        [['run'], 'Yugurish (bir bosish — yoqiladi, yana bosish — o\'chadi)'],
+        [['jump'], 'Sakrash'],
+        [['punch', 'shoot'], 'Urish (musht, bita) / otish (o\'qotar qurol)'],
+        [['weapon'], 'Qurolni almashtirish'],
+        [['aim'], 'Nishon — faqat o\'qotar qurolda; bosish — kamera yaqinlashib mo\'ljal chiqadi, yana bosish — o\'chadi'],
+        [['car', 'moto'], 'Mashina/mototsikl eshigi oldida (4 m ichida) — bossangiz aynan o\'sha mashinaga o\'tirasiz', 'ic-sun'],
+        [['taken'], 'Ichida haydovchi bor — bossangiz uni tortib chiqarasiz', 'ic-red'],
+        [['left', 'right'], 'Mashinada: rulni chapga / o\'ngga burish'],
+        [['gas', 'brake'], 'Gaz va tormoz pedallari (to\'xtaganda tormoz — orqaga yurish)'],
+        [['handbrake'], 'Qo\'l tormozi (drift)'],
+        [['horn'], 'Signal'],
+        [['exit'], 'Mashinadan tushish'],
+        [['view'], 'Mashina ichidan ko\'rish (rul va tablo) / orqadan ko\'rish'],
+        [['radio'], 'Radio stansiyasi'],
+        [['siren'], 'Sirena (politsiya mashinasida)'],
+        [['taxi'], 'Taksi ishi (sariq taksida)'],
+        [['nitro'], 'Nitro (garajda o\'rnatilgan bo\'lsa)'],
+        [['pause'], 'Pauza (yuqori o\'ng burchakda)'],
+      ])}
       <h3>Geympad</h3>
       <ul>${li([
         'Chap tayoq — yurish va rul, o\'ng tayoq — kamera',
