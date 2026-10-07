@@ -11,7 +11,7 @@ const KeyHints = {
       mk.innerHTML = '<dl class="keys">' + [
         [K('W A S D'), 'yurish / haydash'], ['Sichqoncha', 'kamera'], [K('Shift'), 'yugurish'], [K('Probel'), 'sakrash / qo\'l tormozi'],
         [K('F'), 'o\'tirish / tushish'], ['Chap tugma', 'urish / otish'], ['O\'ng tugma', 'nishon'], [K('1–5'), 'qurol'],
-        [K('Z C'), 'burilish chirog\'i'], [K('X'), 'avariya chirog\'i'], [K('H'), 'signal'], [K('L'), 'faralar'], [K('V'), 'ichidan ko\'rish'], [K('R'), 'radio'],
+        [K('Z C'), 'burilish chirog\'i'], [K('X'), 'avariya chirog\'i'], [K('H'), 'signal'], [K('B'), 'yoqilg\'i quyish'], [K('L'), 'faralar'], [K('V'), 'ichidan ko\'rish'], [K('R'), 'radio'],
         [K('G'), 'sirena'], [K('N'), 'nitro'], [K('T'), 'taksi / avtobus ishi'], [K('M'), 'xarita'],
         [K('O'), 'ob-havo'], [K('Q E'), 'kamerani burish'], [K('I'), 'ko\'rsatma'], [K('P'), 'pauza'],
       ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('') + '</dl>';
@@ -29,7 +29,7 @@ const KeyHints = {
     if (c && P.passenger) return [k(['F'], 'tushish'), k(['M'], 'xarita'), k(['P'], 'pauza')];
     if (c) {
       const out = [k(['W', 'S'], 'gaz / tormoz, orqaga'), k(['A', 'D'], 'rul'), k(['Probel'], 'qo\'l tormozi'), k(['F'], 'tushish'),
-        k(['Z', 'C'], 'burilish chirog\'i'), k(['X'], 'avariya chirog\'i'), k(['H'], 'signal'), k(['L'], 'faralar'), k(['V'], 'ichidan ko\'rish'), k(['R'], 'radio')];
+        k(['Z', 'C'], 'burilish chirog\'i'), k(['X'], 'avariya chirog\'i'), k(['H'], 'signal'), k(['B'], 'yoqilg\'i (zapravkada)'), k(['L'], 'faralar'), k(['V'], 'ichidan ko\'rish'), k(['R'], 'radio')];
       if (c.mods && c.mods.nitro) out.push(k(['N'], 'nitro'));
       if (c.type === 'police') out.push(k(['G'], 'sirena'));
       if (c.type === 'taxi') out.push(k(['T'], 'taksi ishi'));

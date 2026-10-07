@@ -1,6 +1,7 @@
 'use strict';
 // ===== Tashqi 3D modellar (GLB): Nexia, Cobalt, Gentra, Spark, Lacetti, Mercedes GLS 580, Fast Charger, politsiya =====
-// Modellar models/*.js fayllarida base64 ko'rinishida turadi (fayl ochilganda ham ishlaydi).
+// Modellar models/*.js fayllarida base64 ko'rinishida turadi (fayl ochilganda ham ishlaydi). Ularni js/loader.js
+// bosqichma-bosqich yuklaydi: avval eng kerakli mashinalar, qolganlari o'yin ochilgach (onModelReady).
 // Mashina modellari qismlarga bo'lingan: paint, glass, lens, red, chrome, dark (tools/prep-cars.mjs).
 const MODELS = {};
 const MODEL_DARK = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -11,27 +12,53 @@ const CAR_LOD_FAR = 28; // shu masofadan (m) uzoqda yengil nusxa
 const _paint = {};
 const paintMat = c => _paint[c] || (_paint[c] = new THREE.MeshPhongMaterial({ color: c, shininess: 80, specular: 0x666666 }));
 
-function loadModels(done) {
-  const data = window.MODEL_DATA || {}, names = Object.keys(data);
-  if (!names.length || !THREE.GLTFLoader) { done(); return; }
-  let left = names.length;
-  const finish = () => { if (--left === 0) done(); };
-  // Yangi modellar meshopt bilan siqilgan
-  const loader = new THREE.GLTFLoader();
-  if (window.MeshoptDecoder && MeshoptDecoder.supported) loader.setMeshoptDecoder(MeshoptDecoder);
-  for (const n of names) {
-    try {
-      const bin = Uint8Array.from(atob(data[n]), ch => ch.charCodeAt(0)).buffer;
-      // Teksturalar fetch() emas, oddiy <img> orqali yuklansin (sahifa cheklovlari uchun)
-      const saved = window.createImageBitmap;
-      window.createImageBitmap = undefined;
-      try {
-        loader.parse(bin, '', g => { try { MODELS[n] = prepModel(n, g.scene); } catch (e) { console.warn(n, e); } finish(); },
-          e => { console.warn('Model yuklanmadi:', n, e); finish(); });
-      } finally { window.createImageBitmap = saved; }
-    } catch (e) { console.warn('Model yuklanmadi:', n, e); finish(); }
+let _gltf = null;
+// Bitta modelni ochish (base64 → GLB → sahna). Ochilgach base64 matn xotiradan o'chiriladi.
+function loadModel(n, done) {
+  const data = window.MODEL_DATA || {}, b64 = data[n];
+  if (!b64 || !THREE.GLTFLoader) { done(false); return; }
+  delete data[n];
+  if (!_gltf) {
+    // Yangi modellar meshopt bilan siqilgan
+    _gltf = new THREE.GLTFLoader();
+    if (window.MeshoptDecoder && MeshoptDecoder.supported) _gltf.setMeshoptDecoder(MeshoptDecoder);
   }
+  try {
+    const s = atob(b64), u = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+    // Teksturalar fetch() emas, oddiy <img> orqali yuklansin (sahifa cheklovlari uchun)
+    const saved = window.createImageBitmap;
+    window.createImageBitmap = undefined;
+    try {
+      _gltf.parse(u.buffer, '', g => { let ok = false; try { MODELS[n] = prepModel(n, g.scene); ok = true; } catch (e) { console.warn(n, e); } done(ok); },
+        e => { console.warn('Model yuklanmadi:', n, e); done(false); });
+    } finally { window.createImageBitmap = saved; }
+  } catch (e) { console.warn('Model yuklanmadi:', n, e); done(false); }
 }
+function loadModels(names, done) {
+  let left = names.length;
+  if (!left) { done(); return; }
+  for (const n of names) loadModel(n, () => { if (--left === 0) done(); });
+}
+// O'yin ochilgandan keyin kelgan modellar: navbat bilan bittadan ochiladi (kadrlar qotmasin), so'ng o'yinga qo'shiladi
+const ModelQueue = {
+  list: [], busy: false,
+  start() {
+    Loader.each((n, ok) => { if (ok) this.add(n); });
+    for (const n of Loader.ready()) this.add(n);
+    Loader.startStage2();
+  },
+  add(n) { if (!MODELS[n] && !this.list.includes(n)) { this.list.push(n); this.next(); } },
+  next() {
+    if (this.busy || !this.list.length) return;
+    this.busy = true;
+    const n = this.list.shift();
+    setTimeout(() => loadModel(n, ok => {
+      if (ok) try { onModelReady(n); } catch (e) { console.warn(n, e); }
+      this.busy = false; this.next();
+    }), 30);
+  },
+};
 
 // Siqilgan (kvantlangan) uch ma'lumotini oddiy float'ga o'tkazish — geometriyani o'zgartirish uchun
 function toFloatAttrs(geo) {
@@ -129,6 +156,7 @@ function prepModel(name, scene) {
     const hw = (x1 - x0) / 2;
     M.bar = { x: hw / 2, y: top - 0.07, z: (z0 + z1) / 2, w: hw * 0.92, h: 0.15, d: (z1 - z0) * 1.05 };
     Object.assign(CAR_TYPES.police, { model: 'police', kind: 'model', name: 'Politsiya', l: 4.8, w: 2.1, H: top, wr: 0.36, roofZ: M.bar.z, seat: { x: 0.45, y: 0.55, z: -0.1 }, plate: [0.42, 2.4, 0.55, -2.4] });
+    delete CAR_TYPES.police.circ; delete CAR_TYPES.police._lamps; // o'lchamlar o'zgardi
   }
   return M;
 }

@@ -41,9 +41,11 @@ for (const T of Object.values(CAR_TYPES)) {
 const CAR_COLORS = [0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xf3f3f0, 0xb9bcc0, 0xb9bcc0, 0x1b1c1f, 0x1b1c1f,
   0x6c7178, 0xd6c9a8, 0x8a1c26, 0x274a7a, 0x2f5a3c];
 const CAR_MIX = [['nexia', 17], ['cobalt', 18], ['gentra', 13], ['spark', 15], ['damas', 11], ['lacetti', 8], ['malibu', 6], ['taxi', 6], ['moto', 7], ['gls', 4], ['charger', 3]];
+// Kod bilan chiziladigan shakl: faqat modeldan iborat mashina (modeli hali yuklanmagan) Malibu shaklida
+const codeType = t => (CAR_TYPES[t].kind === 'model' ? 'malibu' : t);
 function randomCarType() {
-  // Faqat modeldan iborat mashina modeli yuklanmagan bo'lsa, u chiqmaydi
-  const mix = CAR_MIX.filter(([t]) => CAR_TYPES[t].kind !== 'model' || MODELS[CAR_TYPES[t].model]);
+  // Modeli hali yuklanayotgan mashinalar ko'chaga chiqmaydi (yuklanmay qolsa — kod bilan yasalgan shakli chiqadi)
+  const mix = CAR_MIX.filter(([t]) => { const T = CAR_TYPES[t]; return T.kind === 'model' ? MODELS[T.model] : !T.model || MODELS[T.model] || !Loader.pending(T.model); });
   let r = Math.random() * mix.reduce((s, m) => s + m[1], 0);
   for (const [t, w] of mix) if ((r -= w) <= 0) return t;
   return 'nexia';

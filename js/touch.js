@@ -31,6 +31,7 @@ const TOUCH_ICONS = {
   // Mashina eshigi belgilari: rul, mototsikl, haydovchini tortib chiqarish
   car: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6"/><path d="M3.4 10.6 9.5 11.5M14.5 11.5l6.1-.9M12 14.6V21"/>',
   moto: '<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 11h5l2.5 5.5M14 11l1.5-4H18M9 11 7.5 8H5"/>',
+  fuel: '<path d="M4 21V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 14 5v16M3 21h12M6.5 7h5v4h-5z"/><path d="M14 9.5h2a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/>',
   taken: '<circle cx="9" cy="5" r="2.2"/><path d="M9 8v6l-3 6M9 14l3 6M6 11h6M14 12h7M18 9l3 3-3 3"/>',
 };
 const touchIcon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOUCH_ICONS[k]}</svg>`;
@@ -138,6 +139,7 @@ const TouchUI = {
     else if (act === 'radio') { if (down) Input.pressed.KeyR = true; }
     else if (act === 'taxi') { if (down) Input.pressed.KeyT = true; }
     else if (act === 'nitro') Input.keys.KeyN = down;
+    else if (act === 'fuel') { if (down) Input.pressed.KeyB = true; }
     else if (act === 'view') { if (down) Input.pressed.KeyV = true; }
     else if (act === 'lights') { if (down) Input.pressed.KeyL = true; }
     else if (act === 'sigL') { if (down) Input.pressed.KeyZ = true; }
@@ -250,6 +252,14 @@ const TouchUI = {
     if (!this.root || this.root.hidden) { Input.steer.active = false; return; }
     this.updateDoors();
     this.updateSteer();
+    // Zapravkada — "Quyish", bak bo'sh bo'lsa — "Kanistr"
+    const fa = Fuel.action;
+    if (fa !== this._fa) {
+      this._fa = fa;
+      const fb = this.btn('fuel');
+      fb.hidden = !fa;
+      if (fa) { const t = fa === 'can' ? 'Kanistr' : fa === 'metan' ? 'Metan' : 'Benzin'; fb.innerHTML = touchIcon('fuel') + `<span>${t}</span>`; fb.setAttribute('aria-label', fa === 'can' ? 'Kanistr chaqirish' : t + ' quyish'); }
+    }
     // Fara tugmasi yoniq holatda ajralib turadi
     const lc = Player.inCar;
     if (lc && !Player.passenger) {

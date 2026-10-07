@@ -90,7 +90,8 @@ function buildAmirTemur(b, scene, trees) {
 // Amir Temur xiyoboni: skanerlangan maydon va otliq haykal (models/timur.js). Zinali maydon ustida yurish mumkin.
 Landmarks.useTemurModel = function () {
   const M = MODELS.timur, T = this.temur;
-  if (!M || !T) return;
+  if (!M || !T || T.used) return;
+  T.used = true;
   const node = M.scene.getObjectByName('timur'), meta = node && node.userData;
   if (!meta || !meta.zone) return;
   for (const o of T.code) o.visible = false;
@@ -289,7 +290,8 @@ function buildBusStops(scene) {
 // ----- Skanerlangan haqiqiy odam (models/person.js): turgan holatda, uch joyda -----
 function placePeople(scene) {
   const M = MODELS.person;
-  if (!M) return;
+  if (!M || placePeople.done) return;
+  placePeople.done = true;
   const spots = [], g = Missions.givers.find(v => v.type === 'race');
   if (g) spots.push([g.x + 1.4, g.z + 1.2, -Math.PI / 2]);
   const sq = Landmarks.areas.find(a => a.name === 'Amir Temur xiyoboni'), tw = Landmarks.areas.find(a => a.name === 'Teleminora');
@@ -325,6 +327,7 @@ function drawLandmarksOnMap(g, o) {
     const { cx, cz } = a.b;
     if (a.name === 'Chorsu bozori') { g.fillStyle = '#2ea3c7'; g.beginPath(); g.arc(cx - o, cz - o, 16, 0, TAU); g.fill(); }
     else if (a.name === 'Teleminora') { g.fillStyle = '#e8e8e6'; g.beginPath(); g.arc(cx - o, cz - o, 4, 0, TAU); g.fill(); }
-    else { g.fillStyle = '#c9c1b4'; g.beginPath(); g.arc(cx - o, cz - o, 15, 0, TAU); g.fill(); g.fillStyle = '#6b3a2e'; g.fillRect(cx - o - 3, cz - o - 4, 6, 8); }
+    else if (a.name === 'Amir Temur xiyoboni') { g.fillStyle = '#c9c1b4'; g.beginPath(); g.arc(cx - o, cz - o, 15, 0, TAU); g.fill(); g.fillStyle = '#6b3a2e'; g.fillRect(cx - o - 3, cz - o - 4, 6, 8); }
+    else if (a.name === 'Zapravka') { g.fillStyle = '#2e8b57'; g.fillRect(cx - o - 19, cz - o - 16.5, 22, 11); g.fillStyle = '#2f6db5'; g.fillRect(cx - o - 17, cz - o + 7, 18, 10); }
   }
 }

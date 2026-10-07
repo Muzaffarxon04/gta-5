@@ -98,7 +98,7 @@ function buildWorld(scene) {
   World.snowMats = [shore.material, mats.park, mats.slab, mats.plaza, World.roofMat].map(m => ({ m, base: m.color.clone() }));
   const slabGeo = new THREE.BoxGeometry(B, 0.15, B);
   const innerGeo = new THREE.BoxGeometry(B - SW * 2, 0.04, B - SW * 2);
-  const special = { '4,4': 'square', '1,6': 'park', '6,1': 'tower', '6,6': 'park', '2,4': 'bazaar', '3,5': 'lot', '5,2': 'autodrom', '2,2': 'lot', '6,4': 'lot', '1,3': 'lot' };
+  const special = { '4,4': 'square', '1,6': 'park', '6,1': 'tower', '6,6': 'park', '2,4': 'bazaar', '3,5': 'lot', '5,2': 'autodrom', '2,2': 'fuel', '6,4': 'fuel', '2,6': 'fuel', '1,3': 'lot' };
   const white = [], yellow = [], trees = [], lamps = [];
 
   for (let i = 0; i < N; i++) {
@@ -114,7 +114,7 @@ function buildWorld(scene) {
 
       const slab = new THREE.Mesh(slabGeo, mats.slab);
       slab.position.set(cx, 0.075, cz); slab.receiveShadow = true; scene.add(slab);
-      const inner = new THREE.Mesh(innerGeo, type === 'park' || type === 'square' || type === 'tower' ? mats.park : type === 'lot' || type === 'autodrom' ? mats.lot : mats.plaza);
+      const inner = new THREE.Mesh(innerGeo, type === 'park' || type === 'square' || type === 'tower' ? mats.park : type === 'lot' || type === 'autodrom' || type === 'fuel' ? mats.lot : mats.plaza);
       inner.position.set(cx, 0.16, cz); inner.receiveShadow = true; scene.add(inner);
 
       const m = SW + 1.5, ix0 = x0 + m, ix1 = x1 - m, iz0 = z0 + m, iz1 = z1 - m;
@@ -156,6 +156,8 @@ function buildWorld(scene) {
         buildLandmark(blk, scene, trees);
       } else if (type === 'autodrom') {
         Autodrom.build(blk, scene);
+      } else if (type === 'fuel') {
+        Fuel.build(blk, scene);
       } else {
         // avtoturargoh
         for (const rowZ of [iz0 + 4, iz1 - 4]) {
@@ -173,7 +175,7 @@ function buildWorld(scene) {
       ];
       for (const s of sides) [-26, -13, 0, 13, 26].forEach((o, k) => {
         const px = s.x + s.ax * o, pz = s.z + s.az * o;
-        if (k % 2 === 0) lamps.push([px, pz, s.out]); else if (type !== 'lot' && type !== 'autodrom') trees.push([px, pz, rand(0.8, 1.1)]);
+        if (k % 2 === 0) lamps.push([px, pz, s.out]); else if (type !== 'lot' && type !== 'autodrom' && type !== 'fuel') trees.push([px, pz, rand(0.8, 1.1)]);
       });
     }
   }
@@ -351,7 +353,7 @@ function buildMapCanvas() {
   const S = CITY.SIZE + CITY.R;
   g.fillStyle = '#8c929b'; g.fillRect(-S / 2 - o, -S / 2 - o, S, S);
   for (const col of World.blocks) for (const b of col) {
-    g.fillStyle = b.type === 'park' || b.type === 'square' || b.type === 'tower' ? '#4f7d3c' : b.type === 'lot' || b.type === 'autodrom' ? '#525760' : b.type === 'bazaar' ? '#6b6457' : '#3f4752';
+    g.fillStyle = b.type === 'park' || b.type === 'square' || b.type === 'tower' ? '#4f7d3c' : b.type === 'lot' || b.type === 'autodrom' || b.type === 'fuel' ? '#525760' : b.type === 'bazaar' ? '#6b6457' : '#3f4752';
     g.fillRect(b.x0 - o, b.z0 - o, b.x1 - b.x0, b.z1 - b.z0);
     g.fillStyle = '#2c333c';
     for (const k of b.buildings) g.fillRect(k.x0 - o, k.z0 - o, k.x1 - k.x0, k.z1 - k.z0);

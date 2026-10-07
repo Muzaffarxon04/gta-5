@@ -209,7 +209,7 @@ const SHOT_PROFILES = {
   shotgun: { crack: 0.9, body: 0.85, len: 0.5, low: 105, lp: 2100 },
 };
 const SFX = {
-  ctx: null,
+  ctx: null, samples: {}, hornSrc: null,
   init() {
     if (this.ctx) { if (this.ctx.resume) this.ctx.resume(); return; }
     try {
@@ -256,6 +256,7 @@ const SFX = {
       this.sir.connect(sf); this.sir2.connect(sf);
       sf.connect(this.sirG).connect(this.out);
       this.sir.start(); this.sir2.start();
+      this.decodeSamples();
     } catch (e) { this.ctx = null; }
   },
   // Dvigatel ovozi: asosiy ohang, past "gurillash", yuqori garmonika, havo so'rish shovqini va titrash
@@ -347,7 +348,31 @@ const SFX = {
   punch() { if (this.ctx) this.burst(this.out, this.ctx.currentTime, 0.08, 'lowpass', 800, 0.6); },
   crash(v) { if (this.ctx) { const t = this.ctx.currentTime; this.burst(this.out, t, 0.35, 'lowpass', 650, clamp(v, 0.08, 0.8)); this.burst(this.verbIn, t, 0.2, 'bandpass', 2400, clamp(v * 0.5, 0.05, 0.4), 2); } },
   coin() { this.tone(988, 0.08, 0.2, 'square'); this.tone(1319, 0.14, 0.2, 'square', 0, 0.07); },
-  horn() { this.tone(415, 0.4, 0.18, 'sawtooth'); this.tone(330, 0.4, 0.18, 'sawtooth'); },
+  // Signal: yozib olingan ovoz (sounds/horn.js). hold — bosib turilsa o'rtasi takrorlanadi (hornUp to'xtatadi).
+  // vol/rate — boshqa mashinalar uchun (uzoqlik va har xil ohang)
+  horn(vol = 1, rate = 1, hold = false) {
+    if (!this.ctx) return;
+    const b = this.samples.horn;
+    if (!b) { this.tone(415 * rate, 0.4, 0.18 * vol, 'sawtooth'); this.tone(330 * rate, 0.4, 0.18 * vol, 'sawtooth'); return; }
+    const c = this.ctx, s = c.createBufferSource(), g = c.createGain(), L = SOUND_DATA.horn.loop;
+    s.buffer = b; s.playbackRate.value = rate; g.gain.value = 0.85 * vol;
+    if (hold) { this.hornUp(); s.loop = true; s.loopStart = L[0]; s.loopEnd = L[1]; this.hornSrc = s; }
+    s.connect(g); g.connect(this.out); g.connect(this.verbIn);
+    s.start();
+  },
+  // Qo'yib yuborilganda: halqadan chiqib, ovoz tabiiy so'nadi
+  hornUp() { if (this.hornSrc) { this.hornSrc.loop = false; this.hornSrc = null; } },
+  // sounds/*.js dagi base64 WAV'larni bir marta ochib qo'yish
+  decodeSamples() {
+    this.samples = {};
+    for (const [n, S] of Object.entries(window.SOUND_DATA || {})) {
+      try {
+        const bin = atob(S.data), u = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        this.ctx.decodeAudioData(u.buffer, b => { this.samples[n] = b; }, () => {});
+      } catch (e) { /* namuna bo'lmasa sintez ovoz ishlaydi */ }
+    }
+  },
   door() { if (this.ctx) this.burst(this.out, this.ctx.currentTime, 0.12, 'lowpass', 300, 0.45); },
   // mode: 'wail' — sekin ko'tarilib-tushadi, 'yelp' — tez (yaqin ta'qibda)
   setSiren(vol, time, mode = 'wail') {
@@ -389,6 +414,7 @@ const SFX = {
     this.tone(190, 1.2, 0.12, 'sawtooth', -90);
   },
   mute() {
+    this.hornUp();
     this.setEngine(false); this.setTraffic(0); this.setSiren(0, 0); this.setRain(0, 0, false); this.setHeli(0);
     if (typeof Radio !== 'undefined') Radio.silence();
   },

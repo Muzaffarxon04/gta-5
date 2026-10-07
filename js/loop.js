@@ -28,9 +28,13 @@ function init(data) {
   KeyHints.init();
   initPlayer(SPAWN.x, SPAWN.z);
   Player.h = SPAWN.h;
-  loadModels(() => {
-    try { finishInit(data); }
-    catch (e) { document.getElementById('loading').textContent = 'Xatolik: ' + e.message; console.error(e); }
+  // Eng kerakli modellar kelgach o'yin ochiladi; qolganlari orqa fonda yuklanadi (ModelQueue)
+  Loader.wait(1, () => {
+    Loader.startStage2();
+    loadModels(Loader.ready(), () => {
+      try { finishInit(data); }
+      catch (e) { document.getElementById('loading').textContent = 'Xatolik: ' + e.message; console.error(e); }
+    });
   });
 }
 function finishInit(data) {
@@ -46,16 +50,21 @@ function finishInit(data) {
   Pickups.init();
   Missions.init(scene);
   placePeople(scene);
+  Fuel.init();
   Shops.init(scene);
   Garage.init(scene);
   MapUI.init(scene);
   Panel.init();
   MPUI.init();
-  // Saytdan ochilganda (GitHub Pages) internetsiz ishlash uchun keshni yoqamiz
-  try {
-    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && window.top === window.self && !/claude/.test(location.hostname))
-      navigator.serviceWorker.register('sw.js').catch(() => { /* kesh ixtiyoriy */ });
-  } catch (e) { /* iframe ichida */ }
+  ModelQueue.start();
+  // Saytdan ochilganda (GitHub Pages) internetsiz ishlash uchun keshni yoqamiz — hamma modellar kelgandan keyin
+  // (aks holda kesh ularni ikkinchi marta yuklab, o'yinning o'zini sekinlashtiradi)
+  Loader.wait(2, () => {
+    try {
+      if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && window.top === window.self && !/claude/.test(location.hostname))
+        navigator.serviceWorker.register('sw.js').catch(() => { /* kesh ixtiyoriy */ });
+    } catch (e) { /* iframe ichida */ }
+  });
   if (had) document.getElementById('play').textContent = 'Davom etish';
   addEventListener('resize', onResize);
   // Telefon burilganda o'lchamlar biroz kechikib yangilanadi
@@ -160,6 +169,7 @@ function step(raw) {
   Pickups.update(dt, Game.time);
   if (!P.dead) { Missions.update(dt); Shops.update(dt); Taxi.update(dt); BusJob.update(dt); }
   Autodrom.update(dt);
+  Fuel.update(dt);
   Garage.update(dt);
   MapUI.update(dt);
   PoliceAir.update(dt); Roadblocks.update(dt); deployCops(dt);
@@ -189,10 +199,13 @@ function handleActions() {
   }
   WEAPON_ORDER.forEach((w, i) => { if (kp('Digit' + (i + 1))) selectWeapon(w); });
   if (Input.wheel && !P.inCar) cycleWeapon(Input.wheel > 0 ? 1 : -1);
-  if (P.inCar && (kp('KeyH') || (Input.touch && Input.clickL))) SFX.horn();
+  // Signal: bosib turilsa uzun chalinadi (klaviatura H, telefonda Signal tugmasi, geympad L3)
+  if (P.inCar && (kp('KeyH') || (Input.touch && Input.clickL))) SFX.horn(1, hornRate(P.inCar), true);
+  if (SFX.hornSrc && !(P.inCar && (kd('KeyH') || (Input.touch && Input.mouseL)))) SFX.hornUp();
   if (P.inCar && kp('KeyR')) Radio.cycle();
   if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
+  if (kp('KeyB')) Fuel.act();
   if (kp('KeyI') && !Input.touch) KeyHints.toggle();
   if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
   if (P.inCar && !P.passenger) {
@@ -218,6 +231,8 @@ function updatePlayerCar(dt) {
   const st = Input.steer.active ? Input.steer.v : J.active ? -J.x : (kd('KeyA') || kd('ArrowLeft') ? 1 : 0) - (kd('KeyD') || kd('ArrowRight') ? 1 : 0);
   c.steer = lerp(c.steer, st, 1 - Math.exp(-7 * dt));
   c.hand = kd('Space');
+  // Bak bo'sh: dvigatel o'chgan — faqat tormoz ishlaydi, mashina inersiya bilan to'xtaydi
+  if (fuelEmpty(c)) c.thr = c.fwd > 0.5 ? Math.min(0, c.thr) : c.fwd < -0.5 ? Math.max(0, c.thr) : 0;
 }
 function deathAnim(dt) {
   const g = Player.hm.g;
@@ -360,7 +375,7 @@ function updateCamera(dt) {
 const GEARS = [0, 0.16, 0.33, 0.52, 0.74, 1.01];
 function updateAudio(dt) {
   const P = Player, c = P.inCar;
-  if (c && !c.dead && !P.dead) {
+  if (c && !c.dead && !P.dead && !fuelEmpty(c)) {
     const ratio = clamp(Math.abs(c.fwd) / c.T.max, 0, 1);
     let g = 0;
     while (g < 4 && ratio >= GEARS[g + 1]) g++;
@@ -402,6 +417,7 @@ function prompts() {
   if (P.dead) return HUD.prompt(null);
   if (Game.bustT > 0.3) return HUD.prompt('Politsiya seni ushlamoqda — qoch!');
   if (Autodrom.hint) return HUD.prompt(Autodrom.hint);
+  if (Fuel.hint) return HUD.prompt(Fuel.hint);
   if (!P.inCar) {
     const c = nearestCar(4.2);
     if (c && !Input.touch) return HUD.prompt(`<kbd>F</kbd> ${c.driver ? 'haydovchini tushirish' : c.T.kind === 'moto' ? 'mototsiklga minish' : 'mashinaga o\'tirish'}`);
@@ -415,7 +431,7 @@ function radarBlips() {
   for (const c of Game.cars) if (c.driver === 'police' && dist2(c.x, c.z, P.x, P.z) < 40000)
     out.push({ x: c.x, z: c.z, color: Game.wanted && Math.floor(Game.time * 4) % 2 ? '#ef4b46' : '#3d7bff', size: 5.5 });
   if (MapUI.wp) out.push({ x: MapUI.wp.x, z: MapUI.wp.z, color: '#b36bff', size: 7, edge: true, label: '★' });
-  return out.concat(Landmarks.blips(P.x, P.z), Shops.blips(), Garage.blips(), Missions.blips(), Taxi.blips(), BusJob.blips(), Autodrom.blips(), MP.blips());
+  return out.concat(Landmarks.blips(P.x, P.z), Shops.blips(), Garage.blips(), Missions.blips(), Taxi.blips(), BusJob.blips(), Autodrom.blips(), Fuel.blips(), MP.blips());
 }
 
 // ===== Ishga tushirish =====

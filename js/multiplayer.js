@@ -271,6 +271,7 @@ const Scanner = {
     v.srcObject = this.stream; v.hidden = false;
     try { await v.play(); } catch (e) { /* avtomatik ijro */ }
     const det = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+    if (!det) await new Promise(r => Loader.lib('lib/jsQR.js', r)); // brauzerda QR o'qigich yo'q — jsQR kerak
     const cv = document.createElement('canvas'), g = cv.getContext('2d', { willReadFrequently: true });
     const loop = async () => {
       if (!this.stream) return;
@@ -279,7 +280,7 @@ const Scanner = {
         if (det) { const r = await det.detect(v); if (r[0]) txt = r[0].rawValue; }
         else if (v.videoWidth) {
           cv.width = v.videoWidth; cv.height = v.videoHeight; g.drawImage(v, 0, 0);
-          const img = g.getImageData(0, 0, cv.width, cv.height), r = jsQR(img.data, img.width, img.height);
+          const img = g.getImageData(0, 0, cv.width, cv.height), r = typeof jsQR === 'function' ? jsQR(img.data, img.width, img.height) : null;
           if (r) txt = r.data;
         }
       } catch (e) { /* kadr tayyor emas */ }
@@ -342,11 +343,17 @@ const MPUI = {
   },
   reset() { this.el.mpRoom.textContent = ''; this.el.mpQrBox.hidden = true; this.after = null; Scanner.stop(); this.refresh(); },
   showQR(str, caption, after) {
-    const e = this.el, qr = qrcode(0, 'L');
-    qr.addData(str); qr.make();
-    e.mpQrImg.src = qr.createDataURL(Math.max(2, Math.floor(300 / qr.getModuleCount())), 2);
+    const e = this.el;
     e.mpQrCap.textContent = caption; e.mpOut.value = str; e.mpIn.value = '';
     e.mpQrBox.hidden = false; this.after = after;
+    // QR kutubxonasi birinchi kerak bo'lganda yuklanadi
+    e.mpQrImg.removeAttribute('src');
+    Loader.lib('lib/qrcode.js', () => {
+      if (typeof qrcode === 'undefined' || e.mpOut.value !== str) return;
+      const qr = qrcode(0, 'L');
+      qr.addData(str); qr.make();
+      e.mpQrImg.src = qr.createDataURL(Math.max(2, Math.floor(300 / qr.getModuleCount())), 2);
+    });
   },
   host() {
     if (Net.role === 'guest') MP.stop();

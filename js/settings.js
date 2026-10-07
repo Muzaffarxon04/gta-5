@@ -10,7 +10,7 @@ const QUALITY = {
 // Telefonda mashinani burish usullari
 const STEER_MODES = [['arrows', 'Strelka'], ['wheel', 'Rul'], ['tilt', 'Qiyshaytirish']];
 const Settings = {
-  v: { quality: 'auto', qv: 2, keyHints: true, master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
+  v: { quality: 'auto', qv: 2, keyHints: true, fuel: true, master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
   // Amaldagi sifat: "Avto" bo'lsa — AutoQuality tanlagani
   q() { const k = this.v.quality === 'auto' ? AutoQuality.level : this.v.quality; return QUALITY[k] && k !== 'auto' ? QUALITY[k] : QUALITY.high; },
   viewDist() { return this.q().view; },
@@ -58,8 +58,8 @@ const AutoQuality = {
 };
 
 // ----- Geympad (Xbox/PlayStation standart sxemasi) -----
-const PAD_HOLD = { 0: 'Space', 2: 'ShiftLeft', 1: 'KeyN' };
-const PAD_PRESS = { 3: 'KeyF', 10: 'KeyH', 11: 'KeyG', 12: 'KeyR', 13: 'KeyO', 14: 'KeyT', 15: 'KeyV' };
+const PAD_HOLD = { 0: 'Space', 2: 'ShiftLeft', 1: 'KeyN', 10: 'KeyH' };
+const PAD_PRESS = { 3: 'KeyF', 11: 'KeyG', 12: 'KeyR', 14: 'KeyT', 15: 'KeyV' };
 const Pad = {
   connected: false, prev: [],
   poll() {
@@ -82,6 +82,7 @@ const Pad = {
     if (rise(5)) { if (inCar) Input.pressed.KeyC = true; else Input.wheel += 1; }
     if (btn(7) !== !!was.rt) { Input.mouseL = btn(7) || val(7) > 0.5; if (Input.mouseL) Input.clickL = true; }
     if (btn(6) !== !!was.lt) Input.mouseR = btn(6) || val(6) > 0.5;
+    if (rise(13)) Input.pressed[Fuel.action ? 'KeyB' : 'KeyO'] = true; // D-pad pastga: zapravkada quyish, aks holda ob-havo
     if (rise(9)) { if (!Game.started) startGame(); else togglePause(); }
     if (rise(8)) MapUI.toggle();
     this.prev = now; this.prev.rt = btn(7); this.prev.lt = btn(6);
@@ -135,6 +136,7 @@ const Panel = {
       ${range('setSens', 'Sichqoncha sezgirligi', 0.4, 2.5, 0.1, v.sens, x => (+x).toFixed(1) + '×')}
       ${range('setFov', 'Ko\'rish burchagi', 55, 85, 1, v.fov, x => x + '°')}
       <label class="set-row" for="setInvert"><span>Kamerani teskari (yuqori/past)</span><input type="checkbox" id="setInvert"${v.invertY ? ' checked' : ''}></label>
+      <label class="set-row" for="setFuel"><span>Yoqilg'i sarflanadi (zapravkada quyish kerak)</span><input type="checkbox" id="setFuel"${v.fuel !== false ? ' checked' : ''}></label>
       ${Input.touch ? '' : `<label class="set-row" for="setHints"><span>Tugmalar ko'rsatmasi o'yin ichida (I)</span><input type="checkbox" id="setHints"${v.keyHints !== false ? ' checked' : ''}></label>`}
       ${Input.touch ? `<div class="set-row"><span>Mashinani burish (telefonda)</span><div class="segs" id="setSteer">${STEER_MODES.map(([k, n]) =>
         `<button type="button" class="seg${(v.steer || 'arrows') === k ? ' on' : ''}" data-steer="${k}">${n}</button>`).join('')}</div></div>
@@ -153,6 +155,7 @@ const Panel = {
     bind('setSens', 'sens', x => (+x).toFixed(1) + '×');
     bind('setFov', 'fov', x => x + '°');
     document.getElementById('setInvert').addEventListener('change', e => { v.invertY = e.target.checked; Save.soon(); });
+    document.getElementById('setFuel').addEventListener('change', e => { v.fuel = e.target.checked; Save.soon(); });
     const sh = document.getElementById('setHints');
     if (sh) sh.addEventListener('change', e => { v.keyHints = e.target.checked; KeyHints._k = null; Save.soon(); });
     b.querySelectorAll('[data-steer]').forEach(el => el.addEventListener('click', () => {
@@ -187,7 +190,8 @@ const Panel = {
         [['gas', 'brake'], 'Gaz va tormoz pedallari'],
         [['reverse'], 'Mashina to\'xtab turganda tormoz pedali shu belgiga aylanadi — bosib tursangiz orqaga yurasiz'],
         [['handbrake'], 'Qo\'l tormozi (drift)'],
-        [['horn'], 'Signal'],
+        [['horn'], 'Signal (bosib tursangiz uzun chaladi)'],
+        [['fuel'], 'Zapravkada kolonka yonida to\'xtasangiz chiqadi — benzin yoki metan quyish; bak bo\'shasa — kanistr chaqirish', 'ic-fuel'],
         [['exit'], 'Mashinadan tushish'],
         [['view'], 'Mashina ichidan ko\'rish (rul va tablo) / orqadan ko\'rish'],
         [['sigL', 'sigR'], 'Burilish chiroqlari (burilib bo\'lgach o\'zi o\'chadi)'],
@@ -207,6 +211,13 @@ const Panel = {
         'Tezlik 20 km/soatdan oshmasin (tezlashish bo\'lagida 40 gacha), har burilishda burilish chirog\'ini yoqing, chiziq va konuslarga tegmang',
         '3 ta xato — «O\'tmadi». Qizil chiroqda o\'tish yoki piyodaga yo\'l bermaslik — darhol «O\'tmadi»',
       ])}</ul>
+      <h3>Yoqilg'i va zapravka</h3>
+      <ul>${li([
+        'Haydaganingiz sari bak bo\'shaydi (spidometr ostidagi yashil chiziq). 15% dan kam qolsa, eng yaqin zapravka xaritada belgilanadi',
+        'Xaritadagi <b>Z</b> — zapravka (3 ta). Benzin kolonkasi yonida to\'xtang: navbatsiz, o\'tirgan joyingizda quyiladi (to\'la bak ≈ $40)',
+        'Metan uch baravar arzon, lekin navbat bor va quyish paytida mashinadan tushish shart. Malibu, Mercedes, Charger, mototsikl va politsiya mashinasi faqat benzinda yuradi',
+        'Bak bo\'shasa dvigatel o\'chadi — kanistr chaqiring ($25, 22% quyiladi) yoki boshqa mashina toping. Sozlamalarda yoqilg\'i sarfini o\'chirib qo\'yish mumkin',
+      ])}</ul>
       <h3>Politsiyadan qochish</h3>
       <ul>${li([
         'Ko\'zdan yo\'qoling: bino orqasiga buriling, uzoqlashing. Hech kim ko\'rmasa yulduzlar miltillaydi va 14–30 soniyada o\'chadi',
@@ -218,7 +229,7 @@ const Panel = {
       <ul>${li([
         'Chap tayoq — yurish va rul, o\'ng tayoq — kamera; mashinada LB / RB — burilish chiroqlari',
         'RT — otish / gaz, LT — nishon / tormoz, A — sakrash / qo\'l tormozi, B — nitro, Y — mashinaga o\'tirish',
-        'D-pad o\'ng — mashina ichidan ko\'rish, Back — xarita, Start — pauza',
+        'D-pad o\'ng — mashina ichidan ko\'rish, D-pad past — zapravkada yoqilg\'i quyish, Back — xarita, Start — pauza',
       ])}</ul>
     </div>`);
   },
@@ -233,6 +244,7 @@ const Panel = {
         'Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxonali shahar',
         'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Lacetti, Malibu, Spark, Damas, shuningdek Mercedes, SamAuto avtobusi va mototsikl',
         'Avtodrom: YIM tartibidagi 15 mashqli prava imtihoni',
+        'Yoqilg\'i: benzin va metan zapravkalari (metanda navbat bor), bo\'sh bakka kanistr',
         'Vazifalar, taksi va avtobus haydovchisi ishi, ko\'cha poygalari, garaj va tyuning, qurol va kiyim do\'konlari',
         'Politsiya: 5 yulduzli qidiruv, yo\'l to\'siqlari va vertolyot',
         'Ob-havo (yomg\'ir, qor, tuman), kun va tun, mashinada radio',
@@ -257,6 +269,7 @@ const Panel = {
         'Shriftlar: <b>Bungee</b> va <b>Barlow Condensed</b> (SIL Open Font License 1.1)',
         'QR-kod: <b>qrcode-generator</b> — Kazuhiko Arase (MIT), <b>jsQR</b> (Apache 2.0); modellarni ochish: <b>meshoptimizer</b> (MIT)',
         'Xona kodi orqali ulanish: <b>ntfy.sh</b> xizmati',
+        'Mashina signali ovozi: <b>Mixkit</b> (Mixkit Sound Effects Free License)',
         '3D modellar (Sketchfab, o\'yin uchun soddalashtirilgan): Nexia, Cobalt, Gentra, Spark va Lacetti — <a href="https://sketchfab.com/uzbek_supra" target="_blank" rel="noopener"><i>uzb_rx7</i></a> (CC BY 4.0); Malibu — <i>Ddiaz Design</i> (CC BY 4.0); Damas — <i>own.guest</i> (CC BY 4.0); SamAuto avtobusi — <i>ItsDiyor</i> (CC BY 4.0); BMW S1000RR mototsikli — <i>VTX</i> (CC BY-NC-SA 4.0); Amir Temur haykali skani — <i>Global Digital Heritage</i> (CC BY-NC 4.0)',
         'Boshqa 3D modellar: Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
       ])}</ul>

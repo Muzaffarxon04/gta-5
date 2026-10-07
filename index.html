@@ -8,7 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="lib/fonts.css">
+<!-- Shriftlar yuklash ekranini to'xtatib qo'ymasin -->
+<link rel="stylesheet" href="lib/fonts.css" media="print" onload="this.media='all'">
 <style>
 /* Layout: to'liq ekranli 3D shahar, HUD burchaklarda (GTA uslubi), menyu chap tomonda */
 :root {
@@ -72,6 +73,13 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .sigs i.on { color: #7ee0a1; text-shadow: 0 0 8px rgba(126,224,161,.8); }
 .car-hp { width: 120px; height: 5px; margin-left: auto; background: rgba(0,0,0,.55); border-radius: 2px; overflow: hidden; }
 .car-hp i { display: block; height: 100%; background: var(--sun); }
+.fuel { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 5px; color: var(--muted); }
+.fuel svg { width: 15px; height: 15px; }
+.fuel span { width: 99px; height: 5px; background: rgba(0,0,0,.55); border-radius: 2px; overflow: hidden; }
+.fuel i { display: block; height: 100%; width: 100%; background: #26a69a; }
+.fuel.low { color: var(--danger); animation: fuelBlink 1s steps(2, start) infinite; }
+.fuel.low i { background: var(--danger); }
+@keyframes fuelBlink { 50% { opacity: .35; } }
 
 .help { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); left: 18px; max-width: min(360px, calc(100vw - 36px)); background: var(--shade); padding: 10px 14px; border-radius: 4px; font-size: 18px; font-weight: 500; line-height: 1.3; text-shadow: none; }
 .help kbd, .prompt kbd, .menu kbd, #panel kbd { font-family: var(--f-ui); font-weight: 700; background: var(--ink); color: var(--night); border-radius: 3px; padding: 0 6px; text-shadow: none; }
@@ -122,6 +130,12 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .play:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 .note { font-size: 16px; color: var(--muted); }
 .loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--f-display); font-size: 28px; background: var(--night); color: var(--sun); }
+.load-box { display: grid; gap: 12px; justify-items: center; width: min(360px, 80vw); }
+.load-box b { font-weight: 400; }
+.load-bar { width: 100%; height: 8px; background: rgba(255,255,255,.12); border-radius: 4px; overflow: hidden; }
+.load-bar i { display: block; height: 100%; width: 0; background: var(--sun); transition: width .2s; }
+.load-box span { font-family: var(--f-ui); font-size: 16px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bg-load { position: absolute; right: max(24px, env(safe-area-inset-right, 0px)); bottom: calc(max(22px, env(safe-area-inset-bottom, 0px)) + 68px); font-size: 14px; color: var(--muted); text-align: right; }
 
 /* Do'kon oynasi */
 .shop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding-inline: 16px; background: rgba(10, 8, 18, .55); }
@@ -217,6 +231,10 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .touch .speedo { bottom: auto; top: calc(150px + env(safe-area-inset-top, 0px)); }
 .touch .objective { bottom: auto; top: calc(58px + env(safe-area-inset-top, 0px)); font-size: 17px; max-width: min(420px, calc(100vw - 340px)); }
 .touch .prompt { bottom: 48%; }
+.act-pill { position: absolute; left: 50%; bottom: calc(48% + 48px); transform: translateX(-50%); pointer-events: auto; touch-action: none; display: flex; align-items: center; gap: 8px;
+  height: 50px; padding: 0 20px 0 14px; border-radius: 25px; background: rgba(38,166,154,.85); border: 2px solid rgba(255,255,255,.6); color: #fff; font: 700 17px var(--f-ui); }
+.act-pill svg { width: 24px; height: 24px; display: block; }
+.act-pill.on { background: #26a69a; }
 @media (max-width: 520px) {
   .joy { width: 120px; height: 120px; }
   .tbtns { grid-template-columns: repeat(3, 54px); grid-auto-rows: 54px; gap: 8px; }
@@ -287,7 +305,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .info .info-lead { font-size: 19px; color: var(--muted); }
 .guide .keys { font-size: 16px; margin: 2px 0 4px; }
 .guide .keys dt svg { width: 24px; height: 24px; vertical-align: middle; color: var(--ink); }
-.guide .keys dt .ic-red { color: #ff8a80; } .guide .keys dt .ic-sun { color: var(--sun); }
+.guide .keys dt .ic-red { color: #ff8a80; } .guide .keys dt .ic-sun { color: var(--sun); } .guide .keys dt .ic-fuel { color: #4db6ac; }
 .info ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 .info a { color: var(--sun); text-underline-offset: 2px; }
 .info a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -382,7 +400,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="cross" id="cross"></div>
   <div class="prompt" id="prompt" hidden></div>
   <div class="objective" id="objective" hidden></div>
-  <div class="speedo" id="speedo" hidden><div class="sigs"><i class="sig-l" id="sigL">◀</i><i class="sig-r" id="sigR">▶</i></div><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
+  <div class="speedo" id="speedo" hidden><div class="sigs"><i class="sig-l" id="sigL">◀</i><i class="sig-r" id="sigR">▶</i></div><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="fuel" id="fuelWrap" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 14 5v16M3 21h12M6.5 7h5v4h-5z"/><path d="M14 9.5h2a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/></svg><span><i id="fuelBar"></i></span></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
   <div class="area"><b id="district">Chilonzor</b><span id="street">Amir Temur ko'chasi</span></div>
   <div class="radar-wrap">
     <canvas id="radar" width="420" height="300"></canvas>
@@ -470,6 +488,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
       <span><i style="background:#2f7fe0">M</i>Metro</span><span><i style="background:#d9a441">C</i>Choyxona</span>
       <span><i style="background:#ef4b46">Q</i>Qurol do'koni</span><span><i style="background:#b36bff">K</i>Kiyim do'koni</span>
       <span><i style="background:#ff8f00">G</i>Garaj</span><span><i style="background:#ffc83d">!</i>Vazifa</span><span><i style="background:#ffd21f">T</i>Taksi</span>
+      <span><i style="background:#26a69a">Z</i>Zapravka</span><span><i style="background:#7ee0a1">P</i>Avtodrom</span>
     </div>
   </div>
 </div>
@@ -496,6 +515,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="pedal gas" type="button" data-key="ArrowUp">GAZ</button>
   </div>
   <button class="tbtn pause-btn" type="button" data-act="pause" aria-label="Pauza">II</button>
+  <!-- Vaziyatga qarab chiqadigan amal (zapravkada quyish, bak bo'sh bo'lsa kanistr) -->
+  <button class="act-pill" type="button" data-act="fuel" hidden>Quyish</button>
   <div class="tbtns">
     <button class="tbtn" type="button" data-act="weapon">Qurol</button>
     <button class="tbtn" type="button" data-act="aim">Nishon</button>
@@ -533,6 +554,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="ghost" id="btnSave" type="button">Saqlash</button>
     <button class="ghost danger" id="btnReset" type="button">Yangi o'yin</button>
   </div>
+  <div class="bg-load" id="bgLoad" hidden></div>
   <button class="play" id="play" type="button">O'yinni boshlash</button>
 </div>
 
@@ -546,7 +568,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <dt>Chap tugma</dt><dd>Urish / otish</dd>
     <dt>O'ng tugma</dt><dd>Nishonga olish</dd>
     <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Qurol tanlash (sichqoncha g'ildiragi ham)</dd>
-    <dt><kbd>H</kbd></dt><dd>Signal chalish</dd>
+    <dt><kbd>H</kbd></dt><dd>Signal chalish (bosib tursangiz uzun chaladi)</dd>
+    <dt><kbd>B</kbd></dt><dd>Zapravkada yoqilg'i quyish / bak bo'sh bo'lsa — kanistr chaqirish</dd>
     <dt><kbd>G</kbd></dt><dd>Sirena va chiroqlar (politsiya mashinasida)</dd>
     <dt><kbd>R</kbd></dt><dd>Radio stansiyasini almashtirish (mashinada)</dd>
     <dt><kbd>O</kbd></dt><dd>Ob-havoni almashtirish</dd>
@@ -572,25 +595,13 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 
 <div class="fade" id="fade"></div>
 
-<div class="loading" id="loading">Shahar qurilmoqda…</div>
+<div class="loading" id="loading"><div class="load-box"><b id="loadText">Yuklanmoqda…</b><div class="load-bar"><i id="loadBar"></i></div><span id="loadPct">0%</span></div></div>
 
+<script src="js/loader.js"></script>
 <script src="lib/three.min.js"></script>
 <script src="lib/GLTFLoader.js"></script>
 <script src="lib/meshopt_decoder.js"></script>
-<script src="models/gls.js"></script>
-<script src="models/charger.js"></script>
-<script src="models/police.js"></script>
-<script src="models/person.js"></script>
-<script src="models/cobalt.js"></script>
-<script src="models/gentra.js"></script>
-<script src="models/nexia.js"></script>
-<script src="models/spark.js"></script>
-<script src="models/lacetti.js"></script>
-<script src="models/malibu.js"></script>
-<script src="models/damas.js"></script>
-<script src="models/bus.js"></script>
-<script src="models/moto.js"></script>
-<script src="models/timur.js"></script>
+<script src="sounds/horn.js"></script>
 <script src="js/core.js"></script>
 <script src="js/world.js"></script>
 <script src="js/landmarks.js"></script>
@@ -607,6 +618,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 <script src="js/hud.js"></script>
 <script src="js/race.js"></script>
 <script src="js/autodrom.js"></script>
+<script src="js/fuel.js"></script>
 <script src="js/missions.js"></script>
 <script src="js/shop.js"></script>
 <script src="js/touch.js"></script>
@@ -618,8 +630,6 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 <script src="js/busjob.js"></script>
 <script src="js/garage.js"></script>
 <script src="js/police.js"></script>
-<script src="lib/qrcode.js"></script>
-<script src="lib/jsQR.js"></script>
 <script src="js/net.js"></script>
 <script src="js/multiplayer.js"></script>
 <script src="js/game.js"></script>

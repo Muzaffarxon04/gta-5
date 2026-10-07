@@ -90,7 +90,14 @@ const Cockpit = {
     g.fillStyle = '#e8f1f5'; g.font = 'bold 44px Arial'; g.fillText(String(Math.round(kmh)), W / 2, 66);
     const gear = c.fwd < -0.5 ? 'R' : Math.abs(c.fwd) < 0.5 && !c.thr ? 'N' : 'D';
     g.font = 'bold 26px Arial'; g.fillStyle = gear === 'R' ? '#ff6b6b' : '#7ee0a1'; g.fillText(gear, W / 2, 108);
-    g.font = 'bold 16px Arial'; g.fillStyle = '#8fa1ad'; g.fillText(clockText(), W / 2, 140);
+    g.font = 'bold 16px Arial'; g.fillStyle = '#8fa1ad'; g.fillText(clockText(), W / 2, 136);
+    // Yoqilg'i: E — bo'sh, F — to'la; kam qolsa qizil
+    if (fuelOn() && c.fuel != null) {
+      const low = c.fuel < 0.15, x0 = W / 2 - 46;
+      g.fillStyle = '#20262d'; g.fillRect(x0, 152, 92, 8);
+      g.fillStyle = low ? '#ff3b30' : '#3ddc97'; g.fillRect(x0, 152, 92 * c.fuel, 8);
+      g.font = 'bold 13px Arial'; g.fillStyle = low && blinkOn() ? '#ff3b30' : '#8fa1ad'; g.fillText('E', x0 - 10, 157); g.fillText('F', x0 + 102, 157);
+    }
     if (c.hand) { g.fillStyle = '#ff3b30'; g.font = 'bold 16px Arial'; g.fillText('(P)', W / 2 - 52, 108); }
     if (c.boost) { g.fillStyle = '#4fc3f7'; g.font = 'bold 16px Arial'; g.fillText('NITRO', W / 2 + 58, 108); }
     if (carLightsOn(c)) { g.fillStyle = '#4fa3ff'; g.font = 'bold 15px Arial'; g.fillText('FARA', W / 2, 24); }

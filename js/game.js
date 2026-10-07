@@ -90,18 +90,30 @@ function populate() {
     c.persist = true; Game.cars.push(c);
   }
   const starter = new Car('malibu', roadPos(4) - 7.6, SPAWN.z + 8, 0, 'parked', 0x1b1c1f);
-  starter.persist = true; Game.cars.push(starter);
+  starter.persist = true; starter.fuel = 0.85; Game.cars.push(starter);
   const bike = new Car('moto', roadPos(4) - 7.6, SPAWN.z + 16, 0, 'parked', 0xc62828);
-  bike.persist = true; Game.cars.push(bike);
-  // Tashqi modellar yuklangan bo'lsa — yonida Mercedes va Charger ham turadi
-  if (MODELS.gls) { const g = new Car('gls', roadPos(4) - 7.6, SPAWN.z + 40, 0, 'parked', 0x111214); g.persist = true; Game.cars.push(g); }
-  if (MODELS.charger) { const g = new Car('charger', roadPos(4) - 7.6, SPAWN.z + 50, 0, 'parked'); g.persist = true; Game.cars.push(g); }
+  bike.persist = true; bike.fuel = 0.85; Game.cars.push(bike);
+  // Tashqi modellar yuklangan bo'lsa — yonida Mercedes va Charger ham turadi (keyinroq yuklansa — onModelReady)
+  placeShowcase('gls'); placeShowcase('charger');
   // Avtobus ishi uchun bo'sh avtobus
-  { const g = new Car('bus', roadPos(4) - 7.6, SPAWN.z + 62, 0, 'parked'); g.persist = true; Game.cars.push(g); }
+  { const g = new Car('bus', roadPos(4) - 7.6, SPAWN.z + 62, 0, 'parked'); g.persist = true; g.fuel = 1; Game.cars.push(g); }
   for (let k = 0; k < 24; k++) { const sp = randomRoadSpot(P.x, P.z, 20, 230, [2.5, 5.5]); if (sp) spawnCar(sp, randomCarType(), 'traffic'); }
   for (let k = 0; k < 12; k++) { const sp = randomRoadSpot(P.x, P.z, 12, 200, [7.6]); if (sp) spawnCar(sp, randomCarType(), 'parked'); }
   for (let k = 0; k < Game.maxPeds - 2; k++) spawnPed(P.x, P.z, 6, 140);
   for (let k = 0; k < 4; k++) spawnBus(P.x, P.z);
+}
+const SHOWCASE = { gls: [40, 0x111214], charger: [50, null] };
+function placeShowcase(n) {
+  const S = SHOWCASE[n], x = roadPos(4) - 7.6, z = SPAWN.z + S[0];
+  if (!MODELS[n] || Game.cars.some(c => c.showcase === n || dist2(c.x, c.z, x, z) < 9)) return;
+  const g = new Car(n, x, z, 0, 'parked', S[1] != null ? S[1] : undefined); g.persist = true; g.showcase = n; Game.cars.push(g);
+}
+// Orqa fonda yuklangan model tayyor: shu turdagi mashinalar kuzovi modelga almashadi, haykal va odamlar joyiga qo'yiladi
+function onModelReady(n) {
+  for (const c of Game.cars) if (c.T.model === n) c.upgradeBody();
+  if (n === 'timur') Landmarks.useTemurModel();
+  if (n === 'person') placePeople(World.scene);
+  if (SHOWCASE[n]) placeShowcase(n);
 }
 // Tirbandlik soatlarida ko'chalar gavjum, tunda bo'sh
 function trafficFactor() {
@@ -151,8 +163,12 @@ function manageSpawns(dt) {
 }
 
 // ===== Hodisalar (boshqa fayllar chaqiradi) =====
+// Signal ohangi: katta mashinada yo'g'onroq, kichigida va mototsiklda ingichkaroq
+const hornRate = car => car.T.kind === 'bus' ? 0.8 : car.T.kind === 'moto' ? 1.2 : clamp(1.35 - car.T.l * 0.08, 0.9, 1.12);
 function honk(car) {
-  if (dist2(car.x, car.z, Player.x, Player.z) < 3600) SFX.horn();
+  // Uzoqdagi signal pastroq eshitiladi
+  const d = Math.hypot(car.x - Player.x, car.z - Player.z);
+  if (d < 60) SFX.horn(clamp(1.15 - d / 50, 0.12, 0.9), hornRate(car));
 }
 function onCarImpact(car, imp) {
   if (car === Player.inCar) { SFX.crash(imp / 25); Game.shake = Math.max(Game.shake, Math.min(0.5, imp * 0.02)); Taxi.onCrash(imp); BusJob.onCrash(imp); bikeCrash(car, imp); }

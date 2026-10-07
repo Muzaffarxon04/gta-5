@@ -7,3 +7,6 @@ models/*.blend
 
 # Model tayyorlash vositasi paketlari
 tools/node_modules/
+
+# Asl ovoz fayllari (o'yin sounds/*.js dagi siqilgan nusxani ishlatadi)
+*.wav

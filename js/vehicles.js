@@ -9,7 +9,21 @@ class Car {
     this.type = type; this.T = T; this.role = role;
     this.color = color != null ? color : type === 'police' ? 0xf3f3f3 : type === 'taxi' ? 0xf2c200 : pick(T.palette || CAR_COLORS);
     this.mesh = new THREE.Group(); this.mesh.rotation.order = 'YXZ';
-    const M = T.model && MODELS[T.model];
+    this.makeBody();
+    this.driverHM = null; this.driverOutfit = null;
+    this.x = x; this.z = z; this.y = groundH(x, z); this.h = h; this.vx = 0; this.vz = 0;
+    this.hp = T.hp; this.maxHp = T.hp; this.mods = null; this.boost = false; this.driver = role === 'parked' ? null : role;
+    this.thr = 0; this.steer = 0; this.hand = false; this.drift = 0;
+    this.onFire = false; this.burnT = 0; this.dead = false;
+    this.ai = null; this.stuckT = 0; this.revT = 0; this.panic = 0; this.waitT = 0; this.shootT = rand(0.5, 2);
+    World.scene.add(this.mesh); this.sync(0);
+    this.setPlate();
+  }
+  // Kuzov: tashqi 3D model (yuklangan bo'lsa) yoki kod bilan yasalgan shakl.
+  // Model keyinroq (orqa fonda) yuklansa, upgradeBody() shu funksiya bilan kuzovni almashtiradi.
+  makeBody() {
+    const T = this.T, type = this.type, M = T.model && MODELS[T.model];
+    this.bodyModel = M ? T.model : null;
     if (M) {
       // Tashqi 3D model: geometriya umumiy, faqat bo'yoq rangi har mashinada o'zgacha
       this.body = M.scene.clone(true);
@@ -18,27 +32,39 @@ class Car {
       this.steerPivot = this.body.getObjectByName('steerPivot') || null;
       this.lights = new THREE.Object3D();
     } else {
-      this.body = new THREE.Mesh(carGeo(type, this.color), CAR_MAT); this.body.castShadow = true;
-      this.lights = new THREE.Mesh(lightGeo(type), LIGHT_MAT);
-      const gg = glassGeo(type);
+      const g = codeType(type);
+      this.body = new THREE.Mesh(carGeo(g, this.color), CAR_MAT); this.body.castShadow = true;
+      this.lights = new THREE.Mesh(lightGeo(g), LIGHT_MAT);
+      this.steerPivot = null;
+      const gg = glassGeo(g);
       if (gg) { this.glass = new THREE.Mesh(gg, GLASS_MAT); this.mesh.add(this.glass); }
     }
     this.mesh.add(this.body, this.lights);
-    this.driverHM = null; this.driverOutfit = null;
     if (type === 'police') {
       const B = M && M.bar, g = B ? new THREE.BoxGeometry(B.w, B.h, B.d) : new THREE.BoxGeometry(0.4, 0.12, 0.2);
+      if (this.bar) this.mesh.remove(...this.bar);
       this.bar = [new THREE.Mesh(g, BAR_RED), new THREE.Mesh(g, BAR_BLUE)];
       if (B) { this.bar[0].position.set(-B.x, B.y, B.z); this.bar[1].position.set(B.x, B.y, B.z); }
       else { this.bar[0].position.set(0.24, T.H + 0.12, T.roofZ); this.bar[1].position.set(-0.24, T.H + 0.12, T.roofZ); }
       this.mesh.add(...this.bar);
     }
-    this.x = x; this.z = z; this.y = groundH(x, z); this.h = h; this.vx = 0; this.vz = 0;
-    this.hp = T.hp; this.maxHp = T.hp; this.mods = null; this.boost = false; this.driver = role === 'parked' ? null : role;
-    this.thr = 0; this.steer = 0; this.hand = false; this.drift = 0;
-    this.onFire = false; this.burnT = 0; this.dead = false;
-    this.ai = null; this.stuckT = 0; this.revT = 0; this.panic = 0; this.waitT = 0; this.shootT = rand(0.5, 2);
-    World.scene.add(this.mesh); this.sync(0);
-    this.setPlate();
+  }
+  // Model endi yuklandi: kod bilan yasalgan (yoki boshqa modeldagi) kuzov o'rniga haqiqiy model
+  upgradeBody() {
+    const T = this.T;
+    if (this.dead || !T.model || !MODELS[T.model] || this.bodyModel === T.model) return;
+    if (Cockpit.car === this) Cockpit.detach();
+    this.disposePlate();
+    if (this.dented) this.body.traverse(o => { if (o.isMesh && o.userData.ownGeo) o.geometry.dispose(); });
+    this.mesh.remove(this.body, this.lights);
+    if (this.glass) { this.mesh.remove(this.glass); this.glass = null; }
+    this.dented = false;
+    this.makeBody();
+    this.setPlate(this.plate);
+    // Politsiya modeli kelganda o'rindiq joyi ham o'zgaradi
+    const S = T.seat, moto = T.kind === 'moto';
+    if (this.driverHM) this.driverHM.g.position.set(S.x, S.y - 0.95 * this.driverHM.mesh.scale.y, S.z);
+    if (this.passHM) this.passHM.g.position.set(moto ? 0 : -S.x, (moto ? S.y + 0.05 : S.y) - 0.95 * this.passHM.mesh.scale.y, moto ? S.z - 0.55 : S.z);
   }
   get speed() { return Math.hypot(this.vx, this.vz); }
   get fwd() { return this.vx * Math.sin(this.h) + this.vz * Math.cos(this.h); }

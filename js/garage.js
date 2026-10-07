@@ -2,12 +2,12 @@
 // ===== Garaj va tyuning: mashinani saqlash, bo'yash, dvigatel, shinalar, zirh, nitro =====
 const PAINTS = [0xf3f3f0, 0x1b1c1f, 0xb9bcc0, 0x8a1c26, 0xc62828, 0x1565c0, 0x274a7a, 0x2e7d32, 0xf9a825, 0xff6f00, 0x6a1b9a, 0xec407a];
 function carMods(c) { return c.mods || (c.mods = { eng: 0, grip: 0, armor: false, nitro: false }); }
-function paintable(c) { const M = c.T.model && MODELS[c.T.model]; return !M || M.paint; }
+function paintable(c) { const M = c.bodyModel && MODELS[c.bodyModel]; return !M || M.paint; }
 function paintCar(c, col) {
   if (Cockpit.car === c) Cockpit.detach(); // ichki ko'rinish materiallarini avval qaytaramiz
   c.color = col;
-  if (c.T.model && MODELS[c.T.model]) c.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(col); });
-  else c.body.geometry = carGeo(c.type, col);
+  if (c.bodyModel) c.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(col); });
+  else c.body.geometry = carGeo(codeType(c.type), col);
 }
 function applyMods(c, mods) {
   c.mods = Object.assign({ eng: 0, grip: 0, armor: false, nitro: false }, mods);
@@ -109,7 +109,7 @@ const Garage = {
   },
   store() {
     const P = Player, c = P.inCar;
-    this.slots.push({ type: c.type, color: c.color, mods: carMods(c), plate: c.plate });
+    this.slots.push({ type: c.type, color: c.color, mods: carMods(c), plate: c.plate, fuel: c.fuel != null ? +c.fuel.toFixed(3) : 1 });
     exitCar();
     c.remove(); Game.cars.splice(Game.cars.indexOf(c), 1);
     P.x = this.spot.x + 2.5; P.z = this.spot.z - 1;
@@ -125,6 +125,7 @@ const Garage = {
     const c = new Car(s.type, this.spot.x, this.spot.z, Math.PI, 'parked', s.color);
     applyMods(c, s.mods);
     if (s.plate) c.setPlate(s.plate);
+    c.fuel = s.fuel != null ? s.fuel : 1;
     c.persist = true; c.mine = true; Game.cars.push(c);
     enterCar(c);
     Save.soon();
