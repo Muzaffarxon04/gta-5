@@ -25,6 +25,7 @@ function init(data) {
   initInput(canvas);
   TouchUI.init();
   HUD.init();
+  KeyHints.init();
   initPlayer(SPAWN.x, SPAWN.z);
   Player.h = SPAWN.h;
   loadModels(() => {
@@ -162,6 +163,7 @@ function step(raw) {
   PoliceAir.update(dt); Roadblocks.update(dt); deployCops(dt);
   Stats.tick(dt); Save.update(raw);
   TouchUI.update();
+  KeyHints.update();
   Cockpit.update(raw);
   if (Cockpit.active()) Cockpit.camera(raw); else updateCamera(raw);
   updateAudio(raw);
@@ -188,6 +190,7 @@ function handleActions() {
   if (P.inCar && kp('KeyR')) Radio.cycle();
   if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
+  if (kp('KeyI') && !Input.touch) KeyHints.toggle();
   if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
   if (kp('KeyO')) Weather.cycle();
   if (P.inCar && P.inCar.type === 'police' && kp('KeyG')) {

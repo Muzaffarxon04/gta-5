@@ -10,7 +10,7 @@ const QUALITY = {
 // Telefonda mashinani burish usullari
 const STEER_MODES = [['arrows', 'Strelka'], ['wheel', 'Rul'], ['tilt', 'Qiyshaytirish']];
 const Settings = {
-  v: { quality: 'auto', qv: 2, master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
+  v: { quality: 'auto', qv: 2, keyHints: true, master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
   // Amaldagi sifat: "Avto" bo'lsa — AutoQuality tanlagani
   q() { const k = this.v.quality === 'auto' ? AutoQuality.level : this.v.quality; return QUALITY[k] && k !== 'auto' ? QUALITY[k] : QUALITY.high; },
   viewDist() { return this.q().view; },
@@ -133,6 +133,7 @@ const Panel = {
       ${range('setSens', 'Sichqoncha sezgirligi', 0.4, 2.5, 0.1, v.sens, x => (+x).toFixed(1) + '×')}
       ${range('setFov', 'Ko\'rish burchagi', 55, 85, 1, v.fov, x => x + '°')}
       <label class="set-row" for="setInvert"><span>Kamerani teskari (yuqori/past)</span><input type="checkbox" id="setInvert"${v.invertY ? ' checked' : ''}></label>
+      ${Input.touch ? '' : `<label class="set-row" for="setHints"><span>Tugmalar ko'rsatmasi o'yin ichida (I)</span><input type="checkbox" id="setHints"${v.keyHints !== false ? ' checked' : ''}></label>`}
       ${Input.touch ? `<div class="set-row"><span>Mashinani burish (telefonda)</span><div class="segs" id="setSteer">${STEER_MODES.map(([k, n]) =>
         `<button type="button" class="seg${(v.steer || 'arrows') === k ? ' on' : ''}" data-steer="${k}">${n}</button>`).join('')}</div></div>
       <p class="set-note">Strelka — chap/o'ng tugmalari; Rul — ekrandagi rulni barmoq bilan aylantirasiz; Qiyshaytirish — telefonni rul kabi chapga/o'ngga qiyshaytirasiz.</p>` : ''}
@@ -150,6 +151,8 @@ const Panel = {
     bind('setSens', 'sens', x => (+x).toFixed(1) + '×');
     bind('setFov', 'fov', x => x + '°');
     document.getElementById('setInvert').addEventListener('change', e => { v.invertY = e.target.checked; Save.soon(); });
+    const sh = document.getElementById('setHints');
+    if (sh) sh.addEventListener('change', e => { v.keyHints = e.target.checked; KeyHints._k = null; Save.soon(); });
     b.querySelectorAll('[data-steer]').forEach(el => el.addEventListener('click', () => {
       const mode = el.dataset.steer, pick = m => { v.steer = m; b.querySelectorAll('[data-steer]').forEach(x => x.classList.toggle('on', x.dataset.steer === m)); Save.soon(); };
       if (mode !== 'tilt') return pick(mode);

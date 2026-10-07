@@ -101,6 +101,17 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; font-size: 18px; align-items: baseline; }
 .keys dt { text-align: right; white-space: nowrap; }
 .keys dd { margin: 0; color: var(--muted); }
+/* Kompyuterda: menyuda tugmalar ro'yxati (ikki ustun) va o'yin ichida o'ng tomonda ko'rsatma */
+.menu-keys .keys { grid-template-columns: auto 1fr auto 1fr; gap: 5px 12px; font-size: 15px; }
+.keyhint { position: absolute; right: 18px; top: calc(150px + env(safe-area-inset-top, 0px)); display: grid; grid-template-columns: auto auto; gap: 5px 10px; align-items: center;
+  background: rgba(14, 11, 22, .55); padding: 9px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; text-shadow: none; pointer-events: none; }
+.keyhint span:nth-child(odd) { text-align: right; white-space: nowrap; }
+.keyhint span:nth-child(even) { color: rgba(255,255,255,.82); }
+.keyhint kbd { font-family: var(--f-ui); font-weight: 700; font-size: 13px; background: var(--ink); color: var(--night); border-radius: 3px; padding: 0 5px; }
+.keyhint .kh-foot { grid-column: 1 / -1; text-align: center !important; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.touch .keyhint, .touch .menu-keys { display: none; }
+@media (max-height: 800px) and (min-height: 501px) { .menu-inner { gap: 12px; padding-block: 20px 84px; } .menu h1 { font-size: clamp(44px, 9vh, 76px); } .menu p { font-size: 17px; } }
+@media (max-height: 620px) { .keyhint { font-size: 12px; gap: 3px 8px; top: calc(130px + env(safe-area-inset-top, 0px)); } .menu-keys .keys { font-size: 13px; gap: 3px 10px; } }
 /* O'yinni boshlash — pastki o'ng burchakda */
 .play { position: absolute; right: max(24px, env(safe-area-inset-right, 0px)); bottom: max(22px, env(safe-area-inset-bottom, 0px)); z-index: 1; pointer-events: auto; font-family: var(--f-display); font-size: 24px; color: var(--night); background: var(--sun); border: 0; border-radius: 4px; padding: 14px 28px; cursor: pointer; box-shadow: 0 4px 0 #b4621a; transition: transform .1s; }
 .play:hover { transform: translateY(-2px); }
@@ -358,6 +369,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <div class="money" id="money">$0</div>
   </div>
   <div class="mp-hud" id="mpHud" hidden></div>
+  <div class="keyhint" id="keyHint" hidden></div>
   <div class="cross" id="cross"></div>
   <div class="prompt" id="prompt" hidden></div>
   <div class="objective" id="objective" hidden></div>
@@ -492,6 +504,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <div class="eyebrow">Ochiq dunyo · Shahar</div>
     <h1>Ko'cha <span>Qiroli</span></h1>
     <p>Toshkentga o'xshash katta shahar: Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxona. O'zbek mashinalari, avtobuslar, radio, yomg'ir va qor, politsiya ta'qibi, do'konlar va vazifalar.</p>
+    <div class="menu-keys" id="menuKeys" hidden></div>
     <div class="note" id="note">Klaviatura va sichqoncha kerak. Esc kursorni bo'shatadi.</div>
   </div>
   <!-- Qo'shimcha bo'limlar burger menyuda (yuqori o'ng burchak) -->
@@ -528,6 +541,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Kamerani klaviatura bilan burish</dd>
     <dt><kbd>V</kbd></dt><dd>Mashina ichidan ko'rish (rul va tablo)</dd>
     <dt><kbd>L</kbd></dt><dd>Faralarni yoqish / o'chirish (kechasi o'zi yonadi)</dd>
+    <dt><kbd>I</kbd></dt><dd>Tugmalar ko'rsatmasini yashirish / ko'rsatish</dd>
     <dt><kbd>P</kbd></dt><dd>Pauza</dd>
   </dl>
 </template>
@@ -580,6 +594,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 <script src="js/touch.js"></script>
 <script src="js/progress.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/keyhints.js"></script>
 <script src="js/mapui.js"></script>
 <script src="js/taxi.js"></script>
 <script src="js/busjob.js"></script>
