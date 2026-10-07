@@ -135,9 +135,16 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .joy { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.07); border: 2px solid rgba(255,255,255,.28); pointer-events: auto; touch-action: none; }
 .joy-knob { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: rgba(255,255,255,.32); border: 2px solid rgba(255,255,255,.65); }
 .tbtns { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 64px); grid-auto-rows: 64px; gap: 10px;
-  grid-template-areas: ". weapon aim" "run enter fire" ". jump fire"; }
+  grid-template-areas: ". weapon aim" "run enter fire" ". jump ."; }
 .tbtn { pointer-events: auto; touch-action: none; border-radius: 50%; background: rgba(20, 16, 30, .5); border: 2px solid rgba(255,255,255,.35); color: var(--ink); font-family: var(--f-ui); font-weight: 700; font-size: 14px; letter-spacing: .02em; padding: 0; }
-.tbtn[data-act="fire"] { grid-area: fire; border-radius: 40px; background: rgba(239, 75, 70, .5); font-size: 17px; }
+.tbtn[data-act="fire"] { grid-area: fire; background: rgba(239, 75, 70, .55); font-size: 17px; }
+/* Piyoda: ixcham guruh — pastda yugurish, sakrash va otish (bosh barmoq ostida), tepada nishon va qurol */
+.touch-ui:not(.driving) .tbtns { grid-template-columns: 54px 54px 66px; grid-template-rows: 54px 66px; grid-auto-rows: 0; gap: 10px; align-items: center; justify-items: center;
+  grid-template-areas: ". aim weapon" "run jump fire"; }
+.touch-ui:not(.driving) .tbtn { width: 54px; height: 54px; }
+.touch-ui:not(.driving) .tbtn[data-act="fire"] { width: 66px; height: 66px; }
+.touch-ui:not(.driving) .tbtn svg { width: 26px; height: 26px; }
+.touch-ui:not(.driving) .tbtn[data-act="fire"] svg { width: 32px; height: 32px; }
 .tbtn[data-act="jump"] { grid-area: jump; } .tbtn[data-act="enter"] { grid-area: enter; } .tbtn[data-act="run"], .tbtn[data-act="radio"] { grid-area: run; }
 .tbtn[data-act="aim"], .tbtn[data-act="siren"] { grid-area: aim; } .tbtn[data-act="weapon"] { grid-area: weapon; }
 /* Pauza — yuqori o'ng burchakda; soat, yulduzlar va pul undan chaproqqa suriladi */
@@ -162,6 +169,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .sbtn.on, .pedal.on { background: rgba(255,255,255,.38); transform: translateY(3px); box-shadow: none; }
 .touch-ui:not(.driving) .steer-pad, .touch-ui:not(.driving) .pedals, .touch-ui.driving .joy { display: none; }
 .touch-ui.driving .tbtns { right: calc(222px + env(safe-area-inset-right, 0px)); grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 8px; }
+.touch-ui.driving .tbtn[data-act="fire"] svg { width: 30px; height: 30px; }
 .tbtn[data-act="view"] { font-size: 13px; }
 .door-btn { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; pointer-events: auto; touch-action: none; padding: 0;
   display: flex; align-items: center; justify-content: center; color: var(--night); background: rgba(255, 178, 56, .92); border: 3px solid rgba(255,255,255,.85); box-shadow: 0 4px 14px rgba(0,0,0,.45); animation: door-pulse 1.4s ease-in-out infinite; }
