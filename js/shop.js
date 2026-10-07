@@ -208,11 +208,36 @@ const Shops = {
           `<div class="swatches">${PAINTS.map(c => `<button type="button" class="sw" data-id="paint:${c}" style="background:#${c.toString(16).padStart(6, '0')}" aria-label="Rang"${ok ? '' : ' disabled'}></button>`).join('')}</div></div>`;
       }
       const st = this.state(it);
+      if (it.plateInput) {
+        // Raqam yozish: viloyat kodi, matn va jonli ko'rinish
+        const cur = (Player.inCar && Player.inCar.plate || '01 ').split(' '), reg = PLATE_CODES.includes(cur[0]) ? cur[0] : '01';
+        return `<div class="shop-item plate-item"><div class="shop-info"><b>${it.label}</b><span>${it.desc}</span></div>` +
+          `<div class="shop-price${st.afford ? '' : ' no'}">$${it.price}</div>` +
+          `<button type="button" class="shop-buy" data-id="${it.id}"${st.disabled ? ' disabled' : ''}>${st.text}</button>` +
+          `<div class="plate-edit"><select id="plateReg" aria-label="Viloyat kodi">${PLATE_CODES.map(r => `<option${r === reg ? ' selected' : ''}>${r}</option>`).join('')}</select>` +
+          `<input id="plateText" type="text" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="A 777 AA" value="${cur.slice(1).join(' ')}" aria-label="Raqam">` +
+          `<canvas id="platePrev" width="512" height="112" aria-hidden="true"></canvas></div></div>`;
+      }
       const extra = it.ammo ? ` · sizda ${P.ammo[it.ammo] || 0}` : '';
       return `<div class="shop-item"><div class="shop-info"><b>${it.label}</b><span>${it.desc}${extra}</span></div>` +
         `<div class="shop-price${st.afford ? '' : ' no'}">${it.price ? '$' + it.price.toLocaleString('en-US') : 'Bepul'}</div>` +
         `<button type="button" class="shop-buy" data-id="${it.id}"${st.disabled ? ' disabled' : ''}>${st.text}</button></div>`;
     }).join('');
+    this.platePreview();
+  },
+  // Raqam oynachasi: yozilgan matn darhol raqam rasmida ko'rinadi
+  platePreview() {
+    const reg = document.getElementById('plateReg'), txt = document.getElementById('plateText'), cv = document.getElementById('platePrev');
+    if (!reg || !txt || !cv) return;
+    const draw = () => {
+      const clean = cleanPlateText(txt.value);
+      if (txt.value !== clean && txt.value.trim().toUpperCase() !== clean) txt.value = clean;
+      plateCanvas(`${reg.value} ${clean || '…'}`, cv);
+    };
+    txt.addEventListener('input', () => { const p = txt.selectionStart; txt.value = txt.value.toUpperCase().replace(/[^A-Z0-9 ]/g, ''); txt.setSelectionRange(p, p); draw(); });
+    reg.addEventListener('change', draw);
+    txt.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); this.buy('plate'); } });
+    draw();
   },
   buy(id) {
     if (this.open.kind === 'garage') {

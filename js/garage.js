@@ -55,10 +55,7 @@ const Garage = {
       if (m.grip < 2) out.push({ id: 'grip', label: `Sport shinalar · ${m.grip + 1}-daraja`, desc: 'Yo\'lni 12% yaxshiroq ushlaydi', price: [300, 600][m.grip] });
       if (!m.armor) out.push({ id: 'armor', label: 'Zirhli kuzov', desc: 'Mashina 60% chidamliroq', price: 600 });
       if (!m.nitro) out.push({ id: 'nitro', label: 'Nitro', desc: 'N tugmasi — 3 soniyalik kuchli tezlanish', price: 750 });
-      if (c.T.plate) {
-        out.push({ id: 'plate', label: 'Yangi davlat raqami', desc: `Hozirgi: ${c.plate || '—'}`, price: 60 });
-        out.push({ id: 'vip', label: 'Chiroyli raqam', desc: '«01 A 777 AA» kabi takrorlanuvchi raqam', price: 400 });
-      }
+      if (c.T.plate) out.push({ id: 'plate', label: 'O\'z davlat raqamingiz', desc: `Istalgan harf va raqamlar · hozirgi: ${c.plate || '—'}`, price: 50, plateInput: true });
       if (c.type !== 'police' && c.type !== 'bus') out.push({ id: 'store', label: 'Garajda saqlash', desc: `${c.T.name} · joy ${this.slots.length}/4`, price: 0 });
     }
     this.slots.forEach((s, k) => out.push({ id: 'take' + k, label: CAR_TYPES[s.type].name, desc: (s.plate ? s.plate + ' · ' : '') + tuneDesc(s.mods), price: 0, take: k }));
@@ -71,6 +68,7 @@ const Garage = {
     if (it.id === 'repair') return c.hp >= c.maxHp - 0.5 && !c.dented && !c.lampBroken ? { text: 'Butun', disabled: true, afford: true } : { text: 'Ta\'mirlash', disabled: !afford, afford };
     if (it.id === 'store') return this.slots.length >= 4 ? { text: 'Joy yo\'q', disabled: true, afford: true } : { text: 'Saqlash', disabled: false, afford: true };
     if (it.take != null) return { text: 'Olib chiqish', disabled: false, afford: true };
+    if (it.plateInput) return { text: 'Yozish', disabled: !afford, afford };
     return { text: 'O\'rnatish', disabled: !afford, afford };
   },
   buy(id) {
@@ -83,6 +81,15 @@ const Garage = {
     const it = this.items().find(i => i.id === id);
     if (!it || this.state(it).disabled) return;
     if (it.take != null) { this.take(it.take); return null; }
+    if (id === 'plate') {
+      const reg = document.getElementById('plateReg'), txt = document.getElementById('plateText');
+      const plate = reg && txt && customPlate(reg.value, txt.value);
+      if (!plate) return 'Raqamga kamida bitta harf yoki son yozing';
+      if (plate === c.plate) return 'Mashinada allaqachon shu raqam';
+      addMoney(-it.price); SFX.coin();
+      c.setPlate(plate); Save.soon();
+      return `Yangi raqam: ${plate}`;
+    }
     if (id === 'store') { this.store(); return null; }
     addMoney(-it.price); SFX.coin();
     const m = c && carMods(c);
@@ -91,7 +98,6 @@ const Garage = {
     if (id === 'grip') m.grip++;
     if (id === 'armor') { m.armor = true; c.maxHp = c.T.hp * 1.6; c.hp = Math.min(c.maxHp, c.hp + c.T.hp * 0.6); }
     if (id === 'nitro') { m.nitro = true; this.nitro = 1; }
-    if (id === 'plate' || id === 'vip') { c.setPlate(id === 'vip' ? vipPlate() : randomPlate(c.type)); Save.soon(); return `Yangi raqam: ${c.plate}`; }
     if (m.eng === 3 && m.grip === 2 && m.armor && m.nitro && !c.fullTuned) { c.fullTuned = true; Stats.add('fullTune'); }
     Save.soon();
     return `${it.label} o'rnatildi`;

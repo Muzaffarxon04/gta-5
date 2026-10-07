@@ -198,6 +198,11 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .shop-price { font-weight: 700; font-size: 19px; color: var(--cash); font-variant-numeric: tabular-nums; }
 .shop-price.no { color: var(--danger); }
 .shop-buy { font-family: var(--f-ui); font-weight: 700; font-size: 16px; min-width: 108px; padding: 9px 14px; border: 0; border-radius: 4px; background: var(--sun); color: var(--night); cursor: pointer; }
+.plate-edit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.plate-edit select, .plate-edit input { font-family: var(--f-ui); font-weight: 700; font-size: 18px; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.3); border-radius: 4px; padding: 7px 9px; }
+.plate-edit input { width: 9.5em; letter-spacing: .08em; text-transform: uppercase; }
+.plate-edit select:focus-visible, .plate-edit input:focus-visible { outline: 2px solid var(--sun); outline-offset: 1px; }
+.plate-edit canvas { width: 200px; height: auto; border-radius: 3px; }
 .shop-buy:disabled { background: rgba(255,255,255,.1); color: var(--muted); cursor: default; }
 .shop-buy:focus-visible, .shop-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .shop-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid rgba(255,255,255,.08); }
@@ -4673,6 +4678,8 @@ function initInput(canvas) {
   Input.canvas = canvas;
   const block = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   addEventListener('keydown', e => {
+    // Matn maydoniga yozilayotganda (masalan, raqam) o'yin tugmalari ishlamaydi
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
     if (!e.repeat) Input.pressed[e.code] = true;
     Input.keys[e.code] = true;
     if (block.includes(e.code)) e.preventDefault();
@@ -6568,15 +6575,23 @@ function randomPlate(type) {
   const reg = plateRegion();
   return LEGAL_TYPES.includes(type) ? `${reg} ${plateDigits()} ${plateLetter()}${plateLetter()}${plateLetter()}` : `${reg} ${plateLetter()} ${plateDigits()} ${plateLetter()}${plateLetter()}`;
 }
-// "Chiroyli" raqam (garajda sotiladi): takrorlangan raqam va harflar
-function vipPlate() {
-  const d = pick(['777', '001', '999', '555', '100', '888', '007', '111']), l = pick(['A', 'X', 'B', 'S', 'M']);
-  return `01 ${l} ${d} ${l}${l}`;
+// O'z raqamingiz (garajda $50): viloyat kodi + istalgan harf/raqamlar (8 tagacha belgi)
+const PLATE_CODES = ['01', '10', '20', '25', '30', '40', '50', '60', '70', '75', '80', '85', '90', '95'];
+function cleanPlateText(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 9); }
+function customPlate(reg, text) {
+  const t = cleanPlateText(text);
+  return PLATE_CODES.includes(reg) && t.replace(/ /g, '').length ? `${reg} ${t}` : null;
 }
 
 // Raqam rasmi (kanvas): chapda viloyat kodi, o'rtada raqam, o'ngda bayroq va UZ
 function plateTexture(text) {
-  const W = 512, H = 112, cv = document.createElement('canvas');
+  const t = new THREE.CanvasTexture(plateCanvas(text));
+  t.anisotropy = 4;
+  return t;
+}
+function plateCanvas(text, cv) {
+  const W = 512, H = 112;
+  cv = cv || document.createElement('canvas');
   cv.width = W; cv.height = H;
   const g = cv.getContext('2d'), [reg, ...rest] = text.split(' ');
   g.fillStyle = '#111'; g.fillRect(0, 0, W, H);
@@ -6595,9 +6610,7 @@ function plateTexture(text) {
   g.fillStyle = '#ce1126'; g.fillRect(fx, fy + fh / 3 - 1.5, fw, 3); g.fillRect(fx, fy + 2 * fh / 3 - 1.5, fw, 3);
   g.strokeStyle = '#555'; g.lineWidth = 1; g.strokeRect(fx, fy, fw, fh);
   g.fillStyle = '#0a5ba8'; g.font = 'bold 30px Arial, sans-serif'; g.fillText('UZ', fx + fw / 2, 80);
-  const t = new THREE.CanvasTexture(cv);
-  t.anisotropy = 4;
-  return t;
+  return cv;
 }
 
 // Old va orqa raqam — bitta geometriyada (bitta chizish chaqiruvi)
@@ -8120,11 +8133,36 @@ const Shops = {
           `<div class="swatches">${PAINTS.map(c => `<button type="button" class="sw" data-id="paint:${c}" style="background:#${c.toString(16).padStart(6, '0')}" aria-label="Rang"${ok ? '' : ' disabled'}></button>`).join('')}</div></div>`;
       }
       const st = this.state(it);
+      if (it.plateInput) {
+        // Raqam yozish: viloyat kodi, matn va jonli ko'rinish
+        const cur = (Player.inCar && Player.inCar.plate || '01 ').split(' '), reg = PLATE_CODES.includes(cur[0]) ? cur[0] : '01';
+        return `<div class="shop-item plate-item"><div class="shop-info"><b>${it.label}</b><span>${it.desc}</span></div>` +
+          `<div class="shop-price${st.afford ? '' : ' no'}">$${it.price}</div>` +
+          `<button type="button" class="shop-buy" data-id="${it.id}"${st.disabled ? ' disabled' : ''}>${st.text}</button>` +
+          `<div class="plate-edit"><select id="plateReg" aria-label="Viloyat kodi">${PLATE_CODES.map(r => `<option${r === reg ? ' selected' : ''}>${r}</option>`).join('')}</select>` +
+          `<input id="plateText" type="text" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="A 777 AA" value="${cur.slice(1).join(' ')}" aria-label="Raqam">` +
+          `<canvas id="platePrev" width="512" height="112" aria-hidden="true"></canvas></div></div>`;
+      }
       const extra = it.ammo ? ` · sizda ${P.ammo[it.ammo] || 0}` : '';
       return `<div class="shop-item"><div class="shop-info"><b>${it.label}</b><span>${it.desc}${extra}</span></div>` +
         `<div class="shop-price${st.afford ? '' : ' no'}">${it.price ? '$' + it.price.toLocaleString('en-US') : 'Bepul'}</div>` +
         `<button type="button" class="shop-buy" data-id="${it.id}"${st.disabled ? ' disabled' : ''}>${st.text}</button></div>`;
     }).join('');
+    this.platePreview();
+  },
+  // Raqam oynachasi: yozilgan matn darhol raqam rasmida ko'rinadi
+  platePreview() {
+    const reg = document.getElementById('plateReg'), txt = document.getElementById('plateText'), cv = document.getElementById('platePrev');
+    if (!reg || !txt || !cv) return;
+    const draw = () => {
+      const clean = cleanPlateText(txt.value);
+      if (txt.value !== clean && txt.value.trim().toUpperCase() !== clean) txt.value = clean;
+      plateCanvas(`${reg.value} ${clean || '…'}`, cv);
+    };
+    txt.addEventListener('input', () => { const p = txt.selectionStart; txt.value = txt.value.toUpperCase().replace(/[^A-Z0-9 ]/g, ''); txt.setSelectionRange(p, p); draw(); });
+    reg.addEventListener('change', draw);
+    txt.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); this.buy('plate'); } });
+    draw();
   },
   buy(id) {
     if (this.open.kind === 'garage') {
@@ -9245,10 +9283,7 @@ const Garage = {
       if (m.grip < 2) out.push({ id: 'grip', label: `Sport shinalar · ${m.grip + 1}-daraja`, desc: 'Yo\'lni 12% yaxshiroq ushlaydi', price: [300, 600][m.grip] });
       if (!m.armor) out.push({ id: 'armor', label: 'Zirhli kuzov', desc: 'Mashina 60% chidamliroq', price: 600 });
       if (!m.nitro) out.push({ id: 'nitro', label: 'Nitro', desc: 'N tugmasi — 3 soniyalik kuchli tezlanish', price: 750 });
-      if (c.T.plate) {
-        out.push({ id: 'plate', label: 'Yangi davlat raqami', desc: `Hozirgi: ${c.plate || '—'}`, price: 60 });
-        out.push({ id: 'vip', label: 'Chiroyli raqam', desc: '«01 A 777 AA» kabi takrorlanuvchi raqam', price: 400 });
-      }
+      if (c.T.plate) out.push({ id: 'plate', label: 'O\'z davlat raqamingiz', desc: `Istalgan harf va raqamlar · hozirgi: ${c.plate || '—'}`, price: 50, plateInput: true });
       if (c.type !== 'police' && c.type !== 'bus') out.push({ id: 'store', label: 'Garajda saqlash', desc: `${c.T.name} · joy ${this.slots.length}/4`, price: 0 });
     }
     this.slots.forEach((s, k) => out.push({ id: 'take' + k, label: CAR_TYPES[s.type].name, desc: (s.plate ? s.plate + ' · ' : '') + tuneDesc(s.mods), price: 0, take: k }));
@@ -9261,6 +9296,7 @@ const Garage = {
     if (it.id === 'repair') return c.hp >= c.maxHp - 0.5 && !c.dented && !c.lampBroken ? { text: 'Butun', disabled: true, afford: true } : { text: 'Ta\'mirlash', disabled: !afford, afford };
     if (it.id === 'store') return this.slots.length >= 4 ? { text: 'Joy yo\'q', disabled: true, afford: true } : { text: 'Saqlash', disabled: false, afford: true };
     if (it.take != null) return { text: 'Olib chiqish', disabled: false, afford: true };
+    if (it.plateInput) return { text: 'Yozish', disabled: !afford, afford };
     return { text: 'O\'rnatish', disabled: !afford, afford };
   },
   buy(id) {
@@ -9273,6 +9309,15 @@ const Garage = {
     const it = this.items().find(i => i.id === id);
     if (!it || this.state(it).disabled) return;
     if (it.take != null) { this.take(it.take); return null; }
+    if (id === 'plate') {
+      const reg = document.getElementById('plateReg'), txt = document.getElementById('plateText');
+      const plate = reg && txt && customPlate(reg.value, txt.value);
+      if (!plate) return 'Raqamga kamida bitta harf yoki son yozing';
+      if (plate === c.plate) return 'Mashinada allaqachon shu raqam';
+      addMoney(-it.price); SFX.coin();
+      c.setPlate(plate); Save.soon();
+      return `Yangi raqam: ${plate}`;
+    }
     if (id === 'store') { this.store(); return null; }
     addMoney(-it.price); SFX.coin();
     const m = c && carMods(c);
@@ -9281,7 +9326,6 @@ const Garage = {
     if (id === 'grip') m.grip++;
     if (id === 'armor') { m.armor = true; c.maxHp = c.T.hp * 1.6; c.hp = Math.min(c.maxHp, c.hp + c.T.hp * 0.6); }
     if (id === 'nitro') { m.nitro = true; this.nitro = 1; }
-    if (id === 'plate' || id === 'vip') { c.setPlate(id === 'vip' ? vipPlate() : randomPlate(c.type)); Save.soon(); return `Yangi raqam: ${c.plate}`; }
     if (m.eng === 3 && m.grip === 2 && m.armor && m.nitro && !c.fullTuned) { c.fullTuned = true; Stats.add('fullTune'); }
     Save.soon();
     return `${it.label} o'rnatildi`;

@@ -123,6 +123,11 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .shop-price { font-weight: 700; font-size: 19px; color: var(--cash); font-variant-numeric: tabular-nums; }
 .shop-price.no { color: var(--danger); }
 .shop-buy { font-family: var(--f-ui); font-weight: 700; font-size: 16px; min-width: 108px; padding: 9px 14px; border: 0; border-radius: 4px; background: var(--sun); color: var(--night); cursor: pointer; }
+.plate-edit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.plate-edit select, .plate-edit input { font-family: var(--f-ui); font-weight: 700; font-size: 18px; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.3); border-radius: 4px; padding: 7px 9px; }
+.plate-edit input { width: 9.5em; letter-spacing: .08em; text-transform: uppercase; }
+.plate-edit select:focus-visible, .plate-edit input:focus-visible { outline: 2px solid var(--sun); outline-offset: 1px; }
+.plate-edit canvas { width: 200px; height: auto; border-radius: 3px; }
 .shop-buy:disabled { background: rgba(255,255,255,.1); color: var(--muted); cursor: default; }
 .shop-buy:focus-visible, .shop-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .shop-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid rgba(255,255,255,.08); }

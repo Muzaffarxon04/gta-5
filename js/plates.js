@@ -15,15 +15,23 @@ function randomPlate(type) {
   const reg = plateRegion();
   return LEGAL_TYPES.includes(type) ? `${reg} ${plateDigits()} ${plateLetter()}${plateLetter()}${plateLetter()}` : `${reg} ${plateLetter()} ${plateDigits()} ${plateLetter()}${plateLetter()}`;
 }
-// "Chiroyli" raqam (garajda sotiladi): takrorlangan raqam va harflar
-function vipPlate() {
-  const d = pick(['777', '001', '999', '555', '100', '888', '007', '111']), l = pick(['A', 'X', 'B', 'S', 'M']);
-  return `01 ${l} ${d} ${l}${l}`;
+// O'z raqamingiz (garajda $50): viloyat kodi + istalgan harf/raqamlar (8 tagacha belgi)
+const PLATE_CODES = ['01', '10', '20', '25', '30', '40', '50', '60', '70', '75', '80', '85', '90', '95'];
+function cleanPlateText(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 9); }
+function customPlate(reg, text) {
+  const t = cleanPlateText(text);
+  return PLATE_CODES.includes(reg) && t.replace(/ /g, '').length ? `${reg} ${t}` : null;
 }
 
 // Raqam rasmi (kanvas): chapda viloyat kodi, o'rtada raqam, o'ngda bayroq va UZ
 function plateTexture(text) {
-  const W = 512, H = 112, cv = document.createElement('canvas');
+  const t = new THREE.CanvasTexture(plateCanvas(text));
+  t.anisotropy = 4;
+  return t;
+}
+function plateCanvas(text, cv) {
+  const W = 512, H = 112;
+  cv = cv || document.createElement('canvas');
   cv.width = W; cv.height = H;
   const g = cv.getContext('2d'), [reg, ...rest] = text.split(' ');
   g.fillStyle = '#111'; g.fillRect(0, 0, W, H);
@@ -42,9 +50,7 @@ function plateTexture(text) {
   g.fillStyle = '#ce1126'; g.fillRect(fx, fy + fh / 3 - 1.5, fw, 3); g.fillRect(fx, fy + 2 * fh / 3 - 1.5, fw, 3);
   g.strokeStyle = '#555'; g.lineWidth = 1; g.strokeRect(fx, fy, fw, fh);
   g.fillStyle = '#0a5ba8'; g.font = 'bold 30px Arial, sans-serif'; g.fillText('UZ', fx + fw / 2, 80);
-  const t = new THREE.CanvasTexture(cv);
-  t.anisotropy = 4;
-  return t;
+  return cv;
 }
 
 // Old va orqa raqam — bitta geometriyada (bitta chizish chaqiruvi)

@@ -146,6 +146,8 @@ function initInput(canvas) {
   Input.canvas = canvas;
   const block = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   addEventListener('keydown', e => {
+    // Matn maydoniga yozilayotganda (masalan, raqam) o'yin tugmalari ishlamaydi
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
     if (!e.repeat) Input.pressed[e.code] = true;
     Input.keys[e.code] = true;
     if (block.includes(e.code)) e.preventDefault();
