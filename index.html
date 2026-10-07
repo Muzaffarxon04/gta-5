@@ -168,6 +168,13 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .pedal.brake { height: 104px; width: 96px; border-color: rgba(239, 75, 70, .8); }
 .sbtn.on, .pedal.on { background: rgba(255,255,255,.38); transform: translateY(3px); box-shadow: none; }
 .touch-ui:not(.driving) .steer-pad, .touch-ui:not(.driving) .pedals, .touch-ui.driving .joy { display: none; }
+/* Burish usuli (Sozlamalar): strelka, ekrandagi rul yoki telefonni qiyshaytirish */
+.steer-wheel { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: 156px; height: 156px; pointer-events: auto; touch-action: none; color: rgba(255,255,255,.88); }
+.tilt-ind { position: absolute; left: calc(28px + env(safe-area-inset-left, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: 96px; height: 96px; pointer-events: none; color: rgba(255,255,255,.7); }
+.steer-wheel svg, .tilt-ind svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
+.touch-ui.driving:not([data-steer="arrows"]) .steer-pad,
+.touch-ui:not(.driving) .steer-wheel, .touch-ui:not([data-steer="wheel"]) .steer-wheel,
+.touch-ui:not(.driving) .tilt-ind, .touch-ui:not([data-steer="tilt"]) .tilt-ind { display: none; }
 .touch-ui.driving .tbtns { right: calc(222px + env(safe-area-inset-right, 0px)); grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 8px; }
 .touch-ui.driving .tbtn[data-act="fire"] svg { width: 30px; height: 30px; }
 .tbtn[data-act="view"] { font-size: 13px; }
@@ -449,6 +456,9 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="sbtn" type="button" data-key="ArrowLeft" aria-label="Chapga">&#9664;</button>
     <button class="sbtn" type="button" data-key="ArrowRight" aria-label="O'ngga">&#9654;</button>
   </div>
+  <!-- Rul rejimi: ekrandagi rul (barmoq bilan aylantiriladi); qiyshaytirish rejimi: rul holati ko'rsatkichi -->
+  <div class="steer-wheel" id="steerWheel" role="slider" aria-label="Rul"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="50" cy="50" r="42" stroke-width="10" fill="rgba(20,16,30,.35)"/><path d="M12 54 38 52M88 54 62 52M50 64v26" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="52" r="12" fill="currentColor" stroke="none"/><path d="M50 4v12" stroke="#ffb238" stroke-width="7" stroke-linecap="round"/></svg></div>
+  <div class="tilt-ind" id="tiltInd" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="50" cy="50" r="42" stroke-width="10" fill="rgba(20,16,30,.35)"/><path d="M12 54 38 52M88 54 62 52M50 64v26" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="52" r="12" fill="currentColor" stroke="none"/><path d="M50 4v12" stroke="#ffb238" stroke-width="7" stroke-linecap="round"/></svg></div>
   <div class="pedals">
     <button class="pedal brake" type="button" data-key="ArrowDown">TORMOZ</button>
     <button class="pedal gas" type="button" data-key="ArrowUp">GAZ</button>

@@ -132,7 +132,7 @@ function lineOfSight(ax, ay, az, bx, by, bz) {
 
 // ===== Klaviatura va sichqoncha =====
 const Input = { keys: {}, pressed: {}, mdx: 0, mdy: 0, mouseL: false, mouseR: false, clickL: false, locked: false, canvas: null,
-  joy: { x: 0, y: 0, active: false }, wheel: 0, touch: false, pad: { active: false, x: 0, y: 0, rt: 0, lt: 0 } };
+  joy: { x: 0, y: 0, active: false }, steer: { v: 0, active: false }, wheel: 0, touch: false, pad: { active: false, x: 0, y: 0, rt: 0, lt: 0 } };
 // Faol tayoq: telefon joystigi yoki geympadning chap tayog'i
 const _noStick = { x: 0, y: 0, active: false };
 function activeStick() {

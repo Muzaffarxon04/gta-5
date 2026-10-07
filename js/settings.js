@@ -5,8 +5,10 @@ const QUALITY = {
   medium: { name: 'O\'rta', ratio: 1.25, shadow: 1024, traffic: 0.8, view: 340 },
   high: { name: 'Yuqori', ratio: 1.5, shadow: 2048, traffic: 1, view: 420 },
 };
+// Telefonda mashinani burish usullari
+const STEER_MODES = [['arrows', 'Strelka'], ['wheel', 'Rul'], ['tilt', 'Qiyshaytirish']];
 const Settings = {
-  v: { quality: 'high', master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65 },
+  v: { quality: 'high', master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
   viewDist() { return QUALITY[this.v.quality].view; },
   apply() {
     const q = QUALITY[this.v.quality] || QUALITY.high;
@@ -101,6 +103,9 @@ const Panel = {
       ${range('setSens', 'Sichqoncha sezgirligi', 0.4, 2.5, 0.1, v.sens, x => (+x).toFixed(1) + '×')}
       ${range('setFov', 'Ko\'rish burchagi', 55, 85, 1, v.fov, x => x + '°')}
       <label class="set-row" for="setInvert"><span>Kamerani teskari (yuqori/past)</span><input type="checkbox" id="setInvert"${v.invertY ? ' checked' : ''}></label>
+      ${Input.touch ? `<div class="set-row"><span>Mashinani burish (telefonda)</span><div class="segs" id="setSteer">${STEER_MODES.map(([k, n]) =>
+        `<button type="button" class="seg${(v.steer || 'arrows') === k ? ' on' : ''}" data-steer="${k}">${n}</button>`).join('')}</div></div>
+      <p class="set-note">Strelka — chap/o'ng tugmalari; Rul — ekrandagi rulni barmoq bilan aylantirasiz; Qiyshaytirish — telefonni rul kabi chapga/o'ngga qiyshaytirasiz.</p>` : ''}
       <p class="set-note">Geympad: chap tayoq — yurish, o'ng tayoq — kamera, RT — otish/gaz, LT — nishon/tormoz, A — sakrash, Y — mashinaga o'tirish, B — nitro, Back — xarita, Start — pauza.</p>`);
     const b = this.el.body;
     b.querySelectorAll('[data-q]').forEach(el => el.addEventListener('click', () => {
@@ -115,6 +120,12 @@ const Panel = {
     bind('setSens', 'sens', x => (+x).toFixed(1) + '×');
     bind('setFov', 'fov', x => x + '°');
     document.getElementById('setInvert').addEventListener('change', e => { v.invertY = e.target.checked; Save.soon(); });
+    b.querySelectorAll('[data-steer]').forEach(el => el.addEventListener('click', () => {
+      const mode = el.dataset.steer, pick = m => { v.steer = m; b.querySelectorAll('[data-steer]').forEach(x => x.classList.toggle('on', x.dataset.steer === m)); Save.soon(); };
+      if (mode !== 'tilt') return pick(mode);
+      // Qiyshaytirish uchun harakat sensori kerak (iPhone'da ruxsat so'raladi)
+      TouchUI.enableTilt(ok => { if (ok) pick('tilt'); else { pick(v.steer === 'tilt' ? 'arrows' : v.steer); toast('Sozlamalar', 'Harakat sensoriga ruxsat berilmadi', ''); } });
+    }));
   },
   // Yo'riqnoma: klaviatura, telefon va geympad boshqaruvi
   guide() {
@@ -135,7 +146,9 @@ const Panel = {
         [['aim'], 'Nishon — faqat o\'qotar qurolda; bosish — kamera yaqinlashib mo\'ljal chiqadi, yana bosish — o\'chadi'],
         [['car', 'moto'], 'Mashina/mototsikl eshigi oldida (4 m ichida) — bossangiz aynan o\'sha mashinaga o\'tirasiz', 'ic-sun'],
         [['taken'], 'Ichida haydovchi bor — bossangiz uni tortib chiqarasiz', 'ic-red'],
-        [['left', 'right'], 'Mashinada: rulni chapga / o\'ngga burish'],
+        [['left', 'right'], 'Mashinada burish — «Strelka» usuli (Sozlamalar → Mashinani burish)'],
+        [['car'], '«Rul» usuli: chapdagi rulni barmoq bilan aylantiring, qo\'yib yuborsangiz o\'rtaga qaytadi'],
+        [['tilt'], '«Qiyshaytirish» usuli: telefonni rul kabi chapga/o\'ngga qiyshaytiring (iPhone sensorga ruxsat so\'raydi)'],
         [['gas', 'brake'], 'Gaz va tormoz pedallari'],
         [['reverse'], 'Mashina to\'xtab turganda tormoz pedali shu belgiga aylanadi — bosib tursangiz orqaga yurasiz'],
         [['handbrake'], 'Qo\'l tormozi (drift)'],

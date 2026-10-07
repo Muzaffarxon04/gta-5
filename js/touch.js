@@ -21,6 +21,7 @@ const TOUCH_ICONS = {
   right: '<path d="M8 4.5 17.5 12 8 19.5z" fill="currentColor" stroke="none"/>',
   gas: '<path d="M6 13l6-6 6 6M6 19.5l6-6 6 6"/>',
   reverse: '<path d="M6 11l6 6 6-6M6 4.5l6 6 6-6"/>',
+  tilt: '<rect x="8" y="3.5" width="8" height="17" rx="2" transform="rotate(-28 12 12)"/><path d="M3 8.5a10 10 0 0 0 0 7M21 8.5a10 10 0 0 1 0 7"/>',
   brake: '<circle cx="12" cy="12" r="6"/><path d="M4.6 6.4a9.5 9.5 0 0 0 0 11.2M19.4 6.4a9.5 9.5 0 0 1 0 11.2M12 9v3.5"/><circle cx="12" cy="15" r=".6" fill="currentColor"/>',
   // Mashina eshigi belgilari: rul, mototsikl, haydovchini tortib chiqarish
   car: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6"/><path d="M3.4 10.6 9.5 11.5M14.5 11.5l6.1-.9M12 14.6V21"/>',
@@ -29,9 +30,11 @@ const TOUCH_ICONS = {
 };
 const touchIcon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOUCH_ICONS[k]}</svg>`;
 const DOOR_ICONS = { car: touchIcon('car'), moto: touchIcon('moto'), taken: touchIcon('taken') };
+const WHEEL_MAX = 2.5; // ekrandagi rulning eng katta burilishi (radian, ~145°)
 // ===== Telefon uchun ekrandagi boshqaruv: joystik, kamera, tugmalar =====
 const TouchUI = {
   root: null, running: false, aiming: false, _car: null,
+  wheelRot: 0, wheelId: null, tilt: 0, tiltT: -1e9, _tiltOn: false, _tiltAsked: false, _t: 0,
   detect() {
     const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
     Input.touch = !!(coarse || location.hash === '#touch');
@@ -56,6 +59,16 @@ const TouchUI = {
       joyId = t.identifier; cx = r.left + r.width / 2; cy = r.top + r.height / 2;
       move(t);
     }, { passive: false });
+    // Ekrandagi rul: barmoq bilan aylantiriladi (burchak yig'ilib boradi), qo'yib yuborilsa o'rtaga qaytadi
+    const wheel = document.getElementById('steerWheel');
+    let wLast = 0;
+    const wAng = t => { const r = wheel.getBoundingClientRect(); return Math.atan2(t.clientY - (r.top + r.height / 2), t.clientX - (r.left + r.width / 2)); };
+    wheel.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      this.wheelId = t.identifier; wLast = wAng(t);
+    }, { passive: false });
+    this._wheelMove = t => { const a = wAng(t); this.wheelRot = clamp(this.wheelRot + wrapAng(a - wLast), -WHEEL_MAX, WHEEL_MAX); wLast = a; };
     // Ekranning bo'sh joyini surish — kamerani burish
     Input.canvas.addEventListener('touchstart', e => {
       e.preventDefault();
@@ -65,6 +78,7 @@ const TouchUI = {
     addEventListener('touchmove', e => {
       for (const t of e.changedTouches) {
         if (t.identifier === joyId) move(t);
+        else if (t.identifier === this.wheelId) this._wheelMove(t);
         else if (t.identifier === camId) { Input.mdx += (t.clientX - lx) * 2.2; Input.mdy += (t.clientY - ly) * 2.2; lx = t.clientX; ly = t.clientY; }
       }
       if (Game.started && !Game.paused && !Game.shopOpen) e.preventDefault();
@@ -73,6 +87,7 @@ const TouchUI = {
       for (const t of e.changedTouches) {
         if (t.identifier === joyId) { joyId = null; Input.joy.active = false; Input.joy.x = Input.joy.y = 0; knob.style.transform = ''; }
         if (t.identifier === camId) camId = null;
+        if (t.identifier === this.wheelId) this.wheelId = null;
       }
     };
     addEventListener('touchend', end); addEventListener('touchcancel', end);
@@ -119,6 +134,52 @@ const TouchUI = {
     else if (act === 'taxi') { if (down) Input.pressed.KeyT = true; }
     else if (act === 'nitro') Input.keys.KeyN = down;
     else if (act === 'view') { if (down) Input.pressed.KeyV = true; }
+  },
+  // Qiyshaytirish: harakat sensoridan og'irlik yo'nalishi → telefon ekran tekisligida qancha burilgani
+  enableTilt(cb) {
+    const DM = window.DeviceMotionEvent, done = ok => cb && cb(ok);
+    const start = () => {
+      if (!this._tiltOn) { this._tiltOn = true; addEventListener('devicemotion', e => this.onMotion(e)); }
+      done(true);
+    };
+    if (!DM) return done(false);
+    if (typeof DM.requestPermission === 'function') DM.requestPermission().then(s => (s === 'granted' ? start() : done(false))).catch(() => done(false));
+    else start();
+  },
+  onMotion(e) {
+    const g = e.accelerationIncludingGravity;
+    if (!g || g.x == null) return;
+    // iPhone'da sensor qiymatlari Android'ga nisbatan teskari ishorada
+    const k = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? -1 : 1;
+    const ax = g.x * k, ay = g.y * k;
+    let a = screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle : (window.orientation || 0);
+    a = ((a % 360) + 360) % 360;
+    // "Yuqori" yo'nalishi ekran koordinatalarida (x — o'ngga, y — yuqoriga)
+    const sx = a === 90 ? -ay : a === 270 ? ay : a === 180 ? -ax : ax, sy = a === 90 ? ax : a === 270 ? -ax : a === 180 ? -ay : ay;
+    this.tilt = Math.hypot(sx, sy) < 2.5 ? 0 : Math.atan2(sx, sy) * 180 / Math.PI; // + — telefon soat miliga teskari (chapga) burilgan
+    this.tiltT = performance.now();
+  },
+  // Rul/qiyshaytirishdan Input.steer (chapga — musbat); strelka rejimida tugmalar ishlaydi
+  updateSteer() {
+    const now = performance.now(), dt = Math.min(0.1, (now - this._t) / 1000 || 0);
+    this._t = now;
+    const P = Player, driving = !!P.inCar && !P.passenger;
+    let mode = Settings.v.steer || 'arrows';
+    if (mode === 'tilt') {
+      if (!this._tiltOn && !this._tiltAsked && !(window.DeviceMotionEvent && DeviceMotionEvent.requestPermission)) { this._tiltAsked = true; this.enableTilt(); }
+      if (now - this.tiltT > 1500) mode = 'arrows'; // sensor ishlamasa — strelkalar
+    }
+    if (this.root.dataset.steer !== mode) this.root.dataset.steer = mode;
+    const S = Input.steer;
+    if (driving && mode === 'wheel') {
+      if (this.wheelId === null) this.wheelRot *= Math.exp(-dt * 7);
+      S.active = true; S.v = clamp(-this.wheelRot / (WHEEL_MAX * 0.8), -1, 1);
+      (this._wSvg || (this._wSvg = document.querySelector('#steerWheel svg'))).style.transform = `rotate(${this.wheelRot}rad)`;
+    } else if (driving && mode === 'tilt') {
+      const d = this.tilt, dz = 3;
+      S.active = true; S.v = Math.abs(d) < dz ? 0 : clamp((d - Math.sign(d) * dz) / 28, -1, 1);
+      (this._tSvg || (this._tSvg = document.querySelector('#tiltInd svg'))).style.transform = `rotate(${-S.v * 90}deg)`;
+    } else { S.active = false; S.v = 0; this.wheelRot = 0; this.wheelId = null; }
   },
   setIcon(b, k, label) {
     if (b._ic === k) return;
@@ -177,8 +238,9 @@ const TouchUI = {
     for (const b of this.doors || []) if (n-- <= 0) { b.hidden = true; b._car = null; }
   },
   update() {
-    if (!this.root || this.root.hidden) return;
+    if (!this.root || this.root.hidden) { Input.steer.active = false; return; }
     this.updateDoors();
+    this.updateSteer();
     // Tormoz pedali: mashina to'xtab turganda (yoki orqaga yurayotganda) — orqaga yurish strelkasi
     const dc = Player.inCar;
     if (dc && !Player.passenger) {

@@ -89,6 +89,7 @@ function onResize() {
 }
 function startGame() {
   goFullscreen();
+  if (Input.touch && Settings.v.steer === 'tilt') TouchUI.enableTilt(); // iPhone'da ruxsat faqat bosishda so'raladi
   if (isPortrait()) return; // tik holatda o'yin boshlanmaydi
   SFX.init();
   document.getElementById('menu').hidden = true;
@@ -197,7 +198,8 @@ function updatePlayerCar(dt) {
   const J = activeStick(), pad = Input.pad;
   c.thr = J.active ? (Math.abs(J.y) < 0.15 ? 0 : clamp(-J.y * 1.3, -1, 1)) : (kd('KeyW') || kd('ArrowUp') ? 1 : 0) - (kd('KeyS') || kd('ArrowDown') ? 1 : 0);
   if (pad.active && (pad.rt > 0.05 || pad.lt > 0.05)) c.thr = pad.rt - pad.lt;
-  const st = J.active ? -J.x : (kd('KeyA') || kd('ArrowLeft') ? 1 : 0) - (kd('KeyD') || kd('ArrowRight') ? 1 : 0);
+  // Rul: telefondagi rul/qiyshaytirish (Input.steer), joystik yoki tugmalar (chapga — musbat)
+  const st = Input.steer.active ? Input.steer.v : J.active ? -J.x : (kd('KeyA') || kd('ArrowLeft') ? 1 : 0) - (kd('KeyD') || kd('ArrowRight') ? 1 : 0);
   c.steer = lerp(c.steer, st, 1 - Math.exp(-7 * dt));
   c.hand = kd('Space');
 }
