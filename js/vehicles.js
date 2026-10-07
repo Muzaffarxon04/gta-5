@@ -38,6 +38,7 @@ class Car {
     this.onFire = false; this.burnT = 0; this.dead = false;
     this.ai = null; this.stuckT = 0; this.revT = 0; this.panic = 0; this.waitT = 0; this.shootT = rand(0.5, 2);
     World.scene.add(this.mesh); this.sync(0);
+    this.setPlate();
   }
   get speed() { return Math.hypot(this.vx, this.vz); }
   get fwd() { return this.vx * Math.sin(this.h) + this.vz * Math.cos(this.h); }
@@ -82,7 +83,7 @@ class Car {
       if (vn < 0) {
         this.vx -= vn * hit.nx * 1.3; this.vz -= vn * hit.nz * 1.3;
         this.vx *= 0.85; this.vz *= 0.85;
-        if (-vn > 6) { this.damage((-vn - 6) * 1.7); onCarImpact(this, -vn); }
+        if (-vn > 6) { this.damage((-vn - 6) * 1.7); this.dent(o.x - hit.nx * r, o.z - hit.nz * r, hit.nx, hit.nz, -vn); onCarImpact(this, -vn); }
       }
     }
   }
@@ -161,6 +162,8 @@ class Car {
   }
   remove() {
     if (this.driverHM && !this.driverHM.keep) this.driverHM.mesh.geometry.dispose();
+    this.disposePlate();
+    if (this.dented) this.body.traverse(o => { if (o.isMesh && o.userData.ownGeo) o.geometry.dispose(); });
     World.scene.remove(this.mesh);
   }
 }
@@ -205,7 +208,12 @@ function collideCars(cars) {
           if (rv < 0) {
             const j = -1.3 * rv / (1 / ma + 1 / mb);
             A.vx -= j * nx / ma; A.vz -= j * nz / ma; B.vx += j * nx / mb; B.vz += j * nz / mb;
-            if (-rv > 5) { A.damage((-rv - 5) * 2 * mb / tot); B.damage((-rv - 5) * 2 * ma / tot); onCarCrash(A, B, -rv); }
+            if (-rv > 5) {
+              A.damage((-rv - 5) * 2 * mb / tot); B.damage((-rv - 5) * 2 * ma / tot);
+              const px = ax + nx * ra, pz = az + nz * ra;
+              A.dent(px, pz, -nx, -nz, -rv); B.dent(px, pz, nx, nz, -rv);
+              onCarCrash(A, B, -rv);
+            }
           }
           done = true; break;
         }

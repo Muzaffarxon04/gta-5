@@ -85,6 +85,8 @@ function populate() {
   // Tashqi modellar yuklangan bo'lsa — yonida Mercedes va Charger ham turadi
   if (MODELS.gls) { const g = new Car('gls', roadPos(4) - 7.6, SPAWN.z + 40, 0, 'parked', 0x111214); g.persist = true; Game.cars.push(g); }
   if (MODELS.charger) { const g = new Car('charger', roadPos(4) - 7.6, SPAWN.z + 50, 0, 'parked'); g.persist = true; Game.cars.push(g); }
+  // Avtobus ishi uchun bo'sh avtobus
+  { const g = new Car('bus', roadPos(4) - 7.6, SPAWN.z + 62, 0, 'parked'); g.persist = true; Game.cars.push(g); }
   for (let k = 0; k < 24; k++) { const sp = randomRoadSpot(P.x, P.z, 20, 230, [2.5, 5.5]); if (sp) spawnCar(sp, randomCarType(), 'traffic'); }
   for (let k = 0; k < 12; k++) { const sp = randomRoadSpot(P.x, P.z, 12, 200, [7.6]); if (sp) spawnCar(sp, randomCarType(), 'parked'); }
   for (let k = 0; k < Game.maxPeds - 2; k++) spawnPed(P.x, P.z, 6, 140);
@@ -142,7 +144,7 @@ function honk(car) {
   if (dist2(car.x, car.z, Player.x, Player.z) < 3600) SFX.horn();
 }
 function onCarImpact(car, imp) {
-  if (car === Player.inCar) { SFX.crash(imp / 25); Game.shake = Math.max(Game.shake, Math.min(0.5, imp * 0.02)); Taxi.onCrash(imp); bikeCrash(car, imp); }
+  if (car === Player.inCar) { SFX.crash(imp / 25); Game.shake = Math.max(Game.shake, Math.min(0.5, imp * 0.02)); Taxi.onCrash(imp); BusJob.onCrash(imp); bikeCrash(car, imp); }
 }
 function bikeCrash(car, imp) {
   if (car.T.kind !== 'moto' || car !== Player.inCar || imp < 10 || Player.dead) return;
@@ -161,7 +163,7 @@ function onCarCrash(A, B, imp) {
   o.lastHitByPlayer = true;
   if (o.driver === 'traffic') o.panic = 6;
   if (o.driver === 'police' && Game.crashCd <= 0) { crime(0.6); Game.crashCd = 1.5; }
-  Taxi.onCrash(imp);
+  Taxi.onCrash(imp); BusJob.onCrash(imp);
   bikeCrash(pc, imp);
 }
 function onPlayerHurt() { HUD.hurtFlash(); }
@@ -219,7 +221,7 @@ function enterCar(c) {
     HUD.help(`<b>${c.remote.name}</b> mashinasida yo'lovchisiz. <kbd>F</kbd> — tushish`, 4);
     return;
   }
-  if (c.driver === 'traffic' || c.driver === 'police') {
+  if (c.driver === 'traffic' || c.driver === 'police' || c.driver === 'racer') {
     // Haydovchini tortib chiqarish
     const rx = -Math.cos(c.h), rz = Math.sin(c.h), b = blockAt(c.x, c.z) || nearestBlock(c.x, c.z);
     const d = new Ped(b, 0, c.driverOutfit || (c.driver === 'police' ? 'police' : null));

@@ -8,7 +8,7 @@ const Missions = {
   init(scene) {
     const defs = [
       { blk: [2, 5], who: 'Akmal aka', type: 'deliver', title: 'Yetkazib berish' },
-      { blk: [5, 5], who: 'Malika', type: 'race', title: 'Tungi poyga' },
+      { blk: [5, 5], who: 'Malika', type: 'race', title: 'Ko\'cha poygasi' },
       { blk: [5, 1], who: 'Bobur', type: 'escape', title: 'Katta ta\'qib' },
     ];
     for (const d of defs) {
@@ -40,19 +40,9 @@ const Missions = {
         text: `Mashinani <em>${place}</em>ga yetkazib bor` };
       HUD.help(`<b>${g.who}:</b> Menga mashina kerak, tezroq. Har qanday mashinani olib, ${place}ga olib bor.`, 7);
     } else if (g.type === 'race') {
-      let i = clamp(Math.round((g.x - CITY.OFF) / CITY.CELL), 0, CITY.N), j = clamp(Math.round((g.z - CITY.OFF) / CITY.CELL), 0, CITY.N), pi = -1, pj = -1;
-      const cps = []; let len = 0, lx = g.x, lz = g.z;
-      for (let n = 0; n < 7; n++) {
-        for (let s = 0; s < 2; s++) {
-          const opts = neighbors(i, j).filter(q => !(q[0] === pi && q[1] === pj)), nx = pick(opts);
-          pi = i; pj = j; i = nx[0]; j = nx[1];
-        }
-        const cp = { x: roadPos(i), z: roadPos(j) };
-        len += Math.hypot(cp.x - lx, cp.z - lz); lx = cp.x; lz = cp.z;
-        cps.push(cp);
-      }
-      this.active = { type: 'race', cps, idx: 0, r: 9, time: Math.round(len / 13 + 20), reward: 600 };
-      HUD.help(`<b>${g.who}:</b> Mashina top va barcha nazorat nuqtalaridan vaqt tugashidan oldin o'tib chiq!`, 7);
+      const m = Race.start(g);
+      if (!m) return;
+      this.active = { ...m, idx: 0 };
     } else {
       setWanted(Math.max(3, Game.wanted));
       this.active = { type: 'escape', time: null, reward: 750 };
@@ -81,13 +71,10 @@ const Missions = {
       this.showTarget(m.x, m.z);
       if (P.inCar && !P.inCar.dead && dist2(P.x, P.z, m.x, m.z) < m.r * m.r) this.pass();
     } else if (m.type === 'race') {
-      const cp = m.cps[m.idx];
-      HUD.objective(`Nazorat nuqtasi <em>${m.idx + 1}/${m.cps.length}</em>` + (P.inCar ? '' : ' — mashina top!'));
-      this.showTarget(cp.x, cp.z);
-      if (dist2(P.x, P.z, cp.x, cp.z) < m.r * m.r) {
-        m.idx++; SFX.coin();
-        if (m.idx >= m.cps.length) this.pass();
-      }
+      const res = Race.update(dt, m), cp = Race.target(m);
+      if (cp) this.showTarget(cp.x, cp.z);
+      if (res === 'win') { m.reward = Race.prize(Race.r.place); m.place = Race.r.place; this.pass(); }
+      else if (res === 'lose') this.fail(Player.inCar ? 'Raqiblar oldinroq keldi' : 'Mashinadan tushding');
     } else {
       HUD.objective(Game.wanted > 0 ? 'Politsiyadan qutul: ko\'zdan g\'oyib bo\'l' : '');
       if (Game.wanted === 0) this.pass();
@@ -96,19 +83,21 @@ const Missions = {
   target() {
     const m = this.active;
     if (!m || m.type === 'escape') return null;
-    return m.type === 'race' ? m.cps[m.idx] : m;
+    return m.type === 'race' ? Race.target(m) : m;
   },
   showTarget(x, z) { this.beacon.visible = true; this.beacon.position.set(x, 45, z); },
   pass() {
     const m = this.active;
     this.active = null; this.done++;
+    if (m.type === 'race') { Race.finish(); Stats.add('races'); if (m.place === 1) Stats.add('raceWins'); }
     Stats.add('missions'); Save.soon();
     addMoney(m.reward);
-    HUD.big('VAZIFA BAJARILDI', `+$${m.reward.toLocaleString('en-US')}`, 'passed');
+    HUD.big(m.type === 'race' ? `${m.place}-O'RIN!` : 'VAZIFA BAJARILDI', `+$${m.reward.toLocaleString('en-US')}`, 'passed');
     Game.bigT = 3.2; SFX.coin();
   },
   fail(reason, quiet) {
     if (!this.active) return;
+    if (this.active.type === 'race') Race.finish();
     this.active = null;
     if (!quiet) { HUD.big('VAZIFA BARBOD BO\'LDI', reason, 'wasted'); Game.bigT = 3; }
   },
@@ -117,6 +106,6 @@ const Missions = {
     for (const g of this.givers) if (g.ring.visible) out.push({ x: g.x, z: g.z, color: '#ffc83d', size: 9, label: '!' });
     const t = this.target();
     if (t) out.push({ x: t.x, z: t.z, color: '#ffc83d', size: 8, edge: true, shape: 'sq' });
-    return out;
+    return out.concat(Race.blips());
   },
 };

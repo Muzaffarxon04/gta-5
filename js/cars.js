@@ -4,33 +4,33 @@
 // uA — old oyna asosi, uB — tom boshi, uC — tom oxiri, uD — orqa oyna asosi, fa/ra — old/orqa o'q.
 const CAR_TYPES = {
   nexia:  { name: 'Nexia',  kind: 'sedan',  l: 4.48, w: 1.66, H: 1.39, belt: 0.86, hoodF: 0.78, nose: 0.6,  tail: 0.88, uA: 1.1,  uB: 0.35, uC: -0.7,  uD: -1.28, fa: 1.4,  ra: -1.12, wr: 0.3,  max: 40, acc: 12, grip: 7,   mass: 1.0,  hp: 100, model: 'nexia',
-    seat: { x: 0.34, y: 0.58, z: -0.26 } },
+    seat: { x: 0.34, y: 0.58, z: -0.26 }, plate: [0.44, 2.239, 0.51, -2.233] },
   cobalt: { name: 'Cobalt', kind: 'sedan',  l: 4.48, w: 1.73, H: 1.51, belt: 0.93, hoodF: 0.85, nose: 0.62, tail: 0.98, uA: 1.0,  uB: 0.3,  uC: -0.85, uD: -1.3,  fa: 1.38, ra: -1.24, wr: 0.31, max: 44, acc: 13, grip: 7.2, mass: 1.05, hp: 105, model: 'cobalt',
-    seat: { x: 0.37, y: 0.6, z: 0.16 }, roof: [1.43, -0.39] },
+    seat: { x: 0.37, y: 0.6, z: 0.16 }, roof: [1.43, -0.39], plate: [0.43, 2.239, 0.49, -2.219] },
   gentra: { name: 'Gentra', kind: 'sedan',  l: 4.52, w: 1.73, H: 1.45, belt: 0.9,  hoodF: 0.82, nose: 0.6,  tail: 0.94, uA: 1.05, uB: 0.28, uC: -0.8,  uD: -1.32, fa: 1.4,  ra: -1.2,  wr: 0.31, max: 46, acc: 14, grip: 7.4, mass: 1.05, hp: 105, model: 'gentra',
-    seat: { x: 0.35, y: 0.58, z: -0.06 } },
+    seat: { x: 0.35, y: 0.58, z: -0.06 }, plate: [0.4, 2.256, 0.46, -2.192] },
   malibu: { name: 'Malibu', kind: 'sedan',  l: 4.92, w: 1.85, H: 1.46, belt: 0.92, hoodF: 0.85, nose: 0.62, tail: 0.95, uA: 1.08, uB: 0.2,  uC: -0.95, uD: -1.6,  fa: 1.5,  ra: -1.33, wr: 0.33, max: 55, acc: 19, grip: 8.4, mass: 1.2,  hp: 120, model: 'malibu',
-    seat: { x: 0.35, y: 0.62, z: -0.25 } },
+    seat: { x: 0.35, y: 0.62, z: -0.25 }, plate: [0.47, 2.435, 0.77, -2.345] },
   spark:  { name: 'Spark',  kind: 'hatch',  l: 3.64, w: 1.6,  H: 1.52, belt: 0.95, hoodF: 0.85, nose: 0.6,  tail: 0.95, uA: 1.15, uB: 0.5,  uC: -1.55, uD: -1.72, fa: 1.15, ra: -1.2,  wr: 0.28, max: 38, acc: 13, grip: 7.5, mass: 0.75, hp: 80, model: 'spark',
-    seat: { x: 0.4, y: 0.64, z: -0.06 } },
+    seat: { x: 0.4, y: 0.64, z: -0.06 }, plate: [0.38, 1.817, 0.6, -1.808] },
   damas:  { name: 'Damas',  kind: 'van',    l: 3.23, w: 1.4,  H: 1.9,  belt: 1.0,  hoodF: 0.95, nose: 0.5,  tail: 1.0,  uA: 1.2,  uB: 0.98, uC: -1.53, uD: -1.58, fa: 1.0,  ra: -0.85, wr: 0.27, max: 30, acc: 9,  grip: 6,   mass: 0.95, hp: 90, model: 'damas',
-    seat: { x: 0.31, y: 0.8, z: 0.4 } },
+    seat: { x: 0.31, y: 0.8, z: 0.4 }, plate: [0.45, 1.6, 0.56, -1.544] },
 };
 // Lacetti — Gentra bilan bir kuzov (model bo'lmasa Gentra shakli chiziladi)
-CAR_TYPES.lacetti = { ...CAR_TYPES.gentra, name: 'Lacetti', model: 'lacetti', max: 45, acc: 13.5, hp: 110, seat: { x: 0.35, y: 0.54, z: -0.16 } };
+CAR_TYPES.lacetti = { ...CAR_TYPES.gentra, name: 'Lacetti', model: 'lacetti', max: 45, acc: 13.5, hp: 110, seat: { x: 0.35, y: 0.54, z: -0.16 }, plate: [0.42, 2.26, 0.47, -2.256] };
 CAR_TYPES.taxi = { ...CAR_TYPES.cobalt, name: 'Taksi (Cobalt)' };
 CAR_TYPES.police = { ...CAR_TYPES.malibu, name: 'Politsiya (Malibu)', max: 52, acc: 18, mass: 1.3, hp: 140 };
 CAR_TYPES.moto = { name: 'Mototsikl', kind: 'moto', model: 'moto', l: 2.07, w: 0.8, H: 1.18, wr: 0.32, fa: 0.72, ra: -0.72, max: 52, acc: 21, grip: 9.5, mass: 0.45, hp: 60,
-  palette: [0xc62828, 0x1b1c1f, 0x1565c0, 0xf3f3f0, 0x2e7d32, 0xff8f00], seat: { x: 0, y: 0.9, z: -0.3 }, grips: { x: 0.31, y: 0.94, z: 0.4 } };
+  palette: [0xc62828, 0x1b1c1f, 0x1565c0, 0xf3f3f0, 0x2e7d32, 0xff8f00], seat: { x: 0, y: 0.9, z: -0.3 }, grips: { x: 0.31, y: 0.94, z: 0.4 }, plate: [null, null, 0.62, -0.895] };
 // Faqat tashqi 3D modeldan iborat mashinalar (js/models.js yuklaydi). Yuqoridagilarda ham model bor,
 // lekin u yuklanmasa kod bilan yasalgan shakl chiqadi.
 CAR_TYPES.gls = { name: 'Mercedes-Benz GLS 580', kind: 'model', model: 'gls', l: 5.21, w: 1.98, H: 1.82, wr: 0.38, max: 60, acc: 20, grip: 8.2, mass: 1.7, hp: 160,
-  palette: [0x111214, 0x111214, 0xf2f2f0, 0xb9bcc0, 0x1d2a44, 0x5a5e63], seat: { x: 0.42, y: 0.75, z: 0.15 } };
+  palette: [0x111214, 0x111214, 0xf2f2f0, 0xb9bcc0, 0x1d2a44, 0x5a5e63], seat: { x: 0.42, y: 0.75, z: 0.15 }, plate: [0.5, 2.61, 0.55, -2.58] };
 CAR_TYPES.charger = { name: 'Fast Charger', kind: 'model', model: 'charger', l: 4.95, w: 2.1, H: 1.68, wr: 0.4, max: 64, acc: 25, grip: 8.8, mass: 1.15, hp: 110,
-  seat: { x: 0.42, y: 0.5, z: -0.25 } };
+  seat: { x: 0.42, y: 0.5, z: -0.25 }, plate: [0.5, 2.455, 0.5, -2.44] };
 // Shahar avtobusi (SamAuto Isuzu, oq)
 CAR_TYPES.bus = { name: 'Avtobus', kind: 'bus', model: 'bus', l: 7.6, w: 2.35, H: 3.0, wr: 0.48, max: 19, acc: 5.5, grip: 6.5, mass: 3.0, hp: 260,
-  palette: [0xf2f2f0], seat: { x: 0.8, y: 1.5, z: 2.47 } };
+  palette: [0xf2f2f0], seat: { x: 0.8, y: 1.5, z: 2.47 }, plate: [0.8, 3.53, 0.95, -3.80] };
 for (const T of Object.values(CAR_TYPES)) {
   T.roofZ = T.uB != null ? (T.uB + T.uC) / 2 : 0;
   // Haydovchi o'rindig'i (O'zbekistonda rul chap tomonda: +x)

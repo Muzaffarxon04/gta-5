@@ -5,7 +5,8 @@ let renderer, scene, camera, headlight;
 function init(data) {
   const canvas = document.getElementById('game');
   const touch = TouchUI.detect();
-  if (touch) { Game.maxTraffic = 18; Game.maxPeds = 28; Settings.v.quality = 'medium'; }
+  if (touch) { Game.maxTraffic = 18; Game.maxPeds = 28; }
+  AutoQuality.init(touch);
   Game.baseTraffic = Game.maxTraffic; Game.basePeds = Game.maxPeds;
   renderer = new THREE.WebGLRenderer({ canvas, antialias: !touch, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.25 : 1.5));
@@ -17,6 +18,7 @@ function init(data) {
   buildWorld(scene);
   if (touch) World.sun.shadow.mapSize.set(1024, 1024);
   FX.init(scene);
+  CarLights.init(scene);
   Weather.init(scene);
   headlight = new THREE.SpotLight(0xfff0d0, 0, 70, 0.55, 0.5, 1);
   scene.add(headlight, headlight.target);
@@ -118,12 +120,14 @@ function onLockLost() { if (Game.started && !Game.shopOpen) pauseGame(); }
 let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
-  const raw = Math.min(0.05, Math.max(0, (now - last) / 1000));
+  const real = (now - last) / 1000, raw = Math.min(0.05, Math.max(0, real));
   last = now;
+  if (Game.started && !Game.paused && !Game.shopOpen && document.visibilityState === 'visible') AutoQuality.sample(real);
   Pad.poll();
   if (!Game.started) menuDemo(raw);
   else if (!Game.paused && !Game.shopOpen) step(raw);
   MP.update(raw);
+  CarLights.update(Game.cars, camera.position.x, camera.position.z);
   if (!isPortrait()) renderer.render(scene, camera); // tik holatda chizish shart emas (batareya)
   endFrameInput();
 }
@@ -152,7 +156,7 @@ function step(raw) {
   policeShoot(dt);
   checkBusted(dt);
   Pickups.update(dt, Game.time);
-  if (!P.dead) { Missions.update(dt); Shops.update(dt); Taxi.update(dt); }
+  if (!P.dead) { Missions.update(dt); Shops.update(dt); Taxi.update(dt); BusJob.update(dt); }
   Garage.update(dt);
   MapUI.update(dt);
   PoliceAir.update(dt); Roadblocks.update(dt); deployCops(dt);
@@ -182,7 +186,7 @@ function handleActions() {
   if (Input.wheel && !P.inCar) cycleWeapon(Input.wheel > 0 ? 1 : -1);
   if (P.inCar && (kp('KeyH') || (Input.touch && Input.clickL))) SFX.horn();
   if (P.inCar && kp('KeyR')) Radio.cycle();
-  if (kp('KeyT')) Taxi.toggle();
+  if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
   if (kp('KeyO')) Weather.cycle();
   if (P.inCar && P.inCar.type === 'police' && kp('KeyG')) {
@@ -226,6 +230,7 @@ function simulateWorld(dt) {
       if (c.onFire && (c.driver === 'traffic' || c.driver === 'police')) bailOut(c);
       if (c.driver === 'traffic') updateTrafficAI(c, dt, cars, P);
       else if (c.driver === 'police') updatePoliceAI(c, dt, cars, P, Game.wanted);
+      else if (c.driver === 'racer') { /* Race.drive boshqaradi */ }
       else if (c.driver !== 'player') { c.thr = 0; c.steer *= 0.9; c.hand = false; }
     }
     if (c.driver || c.onFire || c.vx * c.vx + c.vz * c.vz > 0.01) c.physics(dt);
@@ -234,7 +239,7 @@ function simulateWorld(dt) {
       c.burnT -= dt;
       if (Math.random() < 0.6) FX.fire(c.x + ex, c.y + 1, c.z + ez);
       if (c.burnT <= 0) explodeCar(c);
-    } else if (!c.dead && c.hp < 35 && Math.random() < 0.15) FX.smoke(c.x + ex, c.y + 1, c.z + ez, c.hp < 20);
+    } else if (!c.dead && c.hp < c.maxHp * 0.5 && Math.random() < (c.hp < c.maxHp * 0.25 ? 0.35 : 0.12)) FX.smoke(c.x + ex, c.y + c.T.H * 0.6, c.z + ez, c.hp < c.maxHp * 0.25);
     else if (c.dead && Math.random() < 0.03) FX.smoke(c.x, c.y + 1, c.z, true);
     if (c.drift > 5 && c.speed > 8 && Math.random() < 0.5) FX.smoke(c.x - ex, 0.3, c.z - ez, false);
     c.sync(dt, Game.time);
@@ -397,7 +402,7 @@ function radarBlips() {
   for (const c of Game.cars) if (c.driver === 'police' && dist2(c.x, c.z, P.x, P.z) < 40000)
     out.push({ x: c.x, z: c.z, color: Game.wanted && Math.floor(Game.time * 4) % 2 ? '#ef4b46' : '#3d7bff', size: 5.5 });
   if (MapUI.wp) out.push({ x: MapUI.wp.x, z: MapUI.wp.z, color: '#b36bff', size: 7, edge: true, label: '★' });
-  return out.concat(Landmarks.blips(P.x, P.z), Shops.blips(), Garage.blips(), Missions.blips(), Taxi.blips(), MP.blips());
+  return out.concat(Landmarks.blips(P.x, P.z), Shops.blips(), Garage.blips(), Missions.blips(), Taxi.blips(), BusJob.blips(), MP.blips());
 }
 
 // ===== Ishga tushirish =====

@@ -1,6 +1,8 @@
 'use strict';
 // ===== Sozlamalar, geympad, menyudagi oynalar (sozlamalar va statistika) =====
 const QUALITY = {
+  auto: { name: 'Avto' }, // tezlikka qarab o'zi tanlaydi (AutoQuality)
+  min: { name: 'Juda past', ratio: 0.75, shadow: 0, traffic: 0.45, view: 220, auto: true },
   low: { name: 'Past', ratio: 1, shadow: 0, traffic: 0.6, view: 260 },
   medium: { name: 'O\'rta', ratio: 1.25, shadow: 1024, traffic: 0.8, view: 340 },
   high: { name: 'Yuqori', ratio: 1.5, shadow: 2048, traffic: 1, view: 420 },
@@ -8,10 +10,12 @@ const QUALITY = {
 // Telefonda mashinani burish usullari
 const STEER_MODES = [['arrows', 'Strelka'], ['wheel', 'Rul'], ['tilt', 'Qiyshaytirish']];
 const Settings = {
-  v: { quality: 'high', master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
-  viewDist() { return QUALITY[this.v.quality].view; },
+  v: { quality: 'auto', qv: 2, master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
+  // Amaldagi sifat: "Avto" bo'lsa — AutoQuality tanlagani
+  q() { const k = this.v.quality === 'auto' ? AutoQuality.level : this.v.quality; return QUALITY[k] && k !== 'auto' ? QUALITY[k] : QUALITY.high; },
+  viewDist() { return this.q().view; },
   apply() {
-    const q = QUALITY[this.v.quality] || QUALITY.high;
+    const q = this.q();
     if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.ratio));
     const sun = World.sun;
     if (sun) {
@@ -25,6 +29,31 @@ const Settings = {
     Game.maxPeds = Math.round(Game.basePeds * q.traffic);
     if (camera) { camera.far = q.view + 200; camera.updateProjectionMatrix(); }
     if (SFX.out) SFX.out.gain.value = 0.95 * this.v.master;
+  },
+};
+
+// ----- Avtomatik sifat: kadr tezligini o'lchab, qotsa pasaytiradi, bemalol bo'lsa oshiradi -----
+const AQ_ORDER = ['min', 'low', 'medium', 'high'];
+const AutoQuality = {
+  level: 'high', acc: 0, n: 0, slowT: 0, fastT: 0, holdT: 0,
+  init(touch) { this.level = touch ? 'medium' : 'high'; },
+  // dt — haqiqiy kadr vaqti (cheklanmagan); faqat o'yin ketayotganda chaqiriladi
+  sample(dt) {
+    if (Settings.v.quality !== 'auto' || dt <= 0 || dt > 0.5) return;
+    this.acc += dt; this.n++;
+    if (this.acc < 1) return;
+    const fps = this.n / this.acc;
+    this.acc = 0; this.n = 0;
+    this.holdT = Math.max(0, this.holdT - 1);
+    this.slowT = fps < 27 ? this.slowT + 1 : 0;
+    this.fastT = fps > 56 ? this.fastT + 1 : 0;
+    const i = AQ_ORDER.indexOf(this.level);
+    if (this.slowT >= 3 && i > 0) this.set(AQ_ORDER[i - 1], 20);
+    else if (this.fastT >= 10 && this.holdT <= 0 && i < AQ_ORDER.length - 1) this.set(AQ_ORDER[i + 1], 45);
+  },
+  set(level, hold) {
+    this.level = level; this.slowT = this.fastT = 0; this.holdT = hold;
+    Settings.apply();
   },
 };
 
@@ -91,13 +120,14 @@ const Panel = {
   },
   close() { this.el.root.hidden = true; },
   settings() {
-    const v = Settings.v, q = Object.entries(QUALITY).map(([k, d]) =>
+    // "Juda past" faqat avtomatik rejim uchun — tugmalar orasida yo'q
+    const v = Settings.v, q = Object.entries(QUALITY).filter(([, d]) => !d.auto).map(([k, d]) =>
       `<button type="button" class="seg${v.quality === k ? ' on' : ''}" data-q="${k}">${d.name}</button>`).join('');
     const range = (id, label, min, max, step, val, fmt) =>
       `<label class="set-row" for="${id}"><span>${label}</span><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"><output id="${id}Out">${fmt(val)}</output></label>`;
     this.open('O\'yin', 'Sozlamalar', `
       <div class="set-row"><span>Grafika sifati</span><div class="segs" id="setQuality">${q}</div></div>
-      <p class="set-note">Sekin kompyuter yoki telefonda «Past» ni tanlang: soyalar o'chadi, mashina va odamlar kamayadi.</p>
+      <p class="set-note">«Avto» — o'yin tezligini kuzatib, qotsa sifatni o'zi pasaytiradi, tez ishlasa oshiradi. Qo'lda tanlasangiz, o'sha sifat doim qoladi.</p>
       ${range('setMaster', 'Umumiy ovoz', 0, 1, 0.05, v.master, x => Math.round(x * 100) + '%')}
       ${range('setMusic', 'Radio musiqasi', 0, 1, 0.05, v.music, x => Math.round(x * 100) + '%')}
       ${range('setSens', 'Sichqoncha sezgirligi', 0.4, 2.5, 0.1, v.sens, x => (+x).toFixed(1) + '×')}
@@ -158,6 +188,7 @@ const Panel = {
         [['radio'], 'Radio stansiyasi'],
         [['siren'], 'Sirena (politsiya mashinasida)'],
         [['taxi'], 'Taksi ishi (sariq taksida)'],
+        [['bus'], 'Avtobus ishi (avtobusda): bekatma-bekat yo\'lovchi tashish'],
         [['nitro'], 'Nitro (garajda o\'rnatilgan bo\'lsa)'],
         [['pause'], 'Pauza (yuqori o\'ng burchakda)'],
       ])}
@@ -179,11 +210,11 @@ const Panel = {
       <ul>${li([
         'Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxonali shahar',
         'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Lacetti, Malibu, Spark, Damas, shuningdek Mercedes, SamAuto avtobusi va mototsikl',
-        'Vazifalar, taksi ishi, garaj va tyuning, qurol va kiyim do\'konlari',
+        'Vazifalar, taksi va avtobus haydovchisi ishi, ko\'cha poygalari, garaj va tyuning, qurol va kiyim do\'konlari',
         'Politsiya: 5 yulduzli qidiruv, yo\'l to\'siqlari va vertolyot',
         'Ob-havo (yomg\'ir, qor, tuman), kun va tun, mashinada radio',
         'Ko\'p o\'yinchi: xona kodi yoki QR-kod orqali, lokal tarmoqda',
-        'O\'yinni saqlash, statistika va 13 ta yutuq; telefon va geympad bilan boshqaruv',
+        `O'yinni saqlash, statistika va ${ACHIEVEMENTS.length} ta yutuq; telefon va geympad bilan boshqaruv`,
       ])}</ul>
       <h3>Asoschi</h3>
       <div class="info-founder">

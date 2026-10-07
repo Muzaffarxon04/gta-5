@@ -89,6 +89,24 @@ function prepModel(name, scene) {
     st.parent.add(pivot); pivot.add(st);
     M.steer = S;
   }
+  // Chiroqlar joyi: oldingi fara ("lens", old yarmi) va stop-chiroq ("red", orqa yarmi) — chap va o'ng markazlari
+  if (M.paint) {
+    const v = new THREE.Vector3(), near = scene.getObjectByName('lod0') || scene, lamps = { f: [], r: [] };
+    for (const [part, key, sgn] of [['lens', 'f', 1], ['red', 'r', -1]]) {
+      const mesh = near.getObjectByName(part);
+      if (!mesh) continue;
+      toFloatAttrs(mesh.geometry); mesh.updateMatrix();
+      const P = mesh.geometry.attributes.position, side = [[0, 0, 0, 0, -1e9 * sgn], [0, 0, 0, 0, -1e9 * sgn]];
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i).applyMatrix4(mesh.matrix);
+        if (v.z * sgn < 0.4) continue;
+        const S = side[v.x >= 0 ? 0 : 1];
+        S[0] += v.x; S[1] += v.y; S[2]++; S[4] = sgn > 0 ? Math.max(S[4], v.z) : Math.min(S[4], v.z);
+      }
+      for (const S of side) if (S[2] > 4) lamps[key].push([S[0] / S[2], S[1] / S[2], S[4] + 0.03 * sgn]);
+    }
+    if (lamps.f.length && lamps.r.length) M.lamps = lamps;
+  }
   // Uzoqdagi mashinalarda yengil nusxa ko'rinadi (ko'chada 20+ mashina bo'ladi)
   const near = scene.getObjectByName('lod0'), far = scene.getObjectByName('lod1');
   if (near && far) {
@@ -110,7 +128,7 @@ function prepModel(name, scene) {
     });
     const hw = (x1 - x0) / 2;
     M.bar = { x: hw / 2, y: top - 0.07, z: (z0 + z1) / 2, w: hw * 0.92, h: 0.15, d: (z1 - z0) * 1.05 };
-    Object.assign(CAR_TYPES.police, { model: 'police', kind: 'model', name: 'Politsiya', l: 4.8, w: 2.1, H: top, wr: 0.36, roofZ: M.bar.z, seat: { x: 0.45, y: 0.55, z: -0.1 } });
+    Object.assign(CAR_TYPES.police, { model: 'police', kind: 'model', name: 'Politsiya', l: 4.8, w: 2.1, H: top, wr: 0.36, roofZ: M.bar.z, seat: { x: 0.45, y: 0.55, z: -0.1 }, plate: [0.42, 2.4, 0.55, -2.4] });
   }
   return M;
 }

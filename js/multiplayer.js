@@ -61,6 +61,7 @@ class RemotePlayer {
     if (this.car && this.car.type === ty && !this.car.dead) return this.car;
     this.leaveCar();
     const c = new Car(ty, cs.x, cs.z, cs.h, 'parked', cs.co);
+    if (cs.pl) c.setPlate(cs.pl);
     c.driver = 'remote'; c.remote = this;
     Game.cars.push(c);
     this.unseatPass();
@@ -160,7 +161,7 @@ const MP = {
     return {
       t: 's', id: Net.id, n: Net.name, o: P.outfitId, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), h: +P.h.toFixed(3),
       sp: +Math.hypot(P.vx, P.vz).toFixed(2), w: P.weapon, aim: (Input.mouseR || P.aimT > 0) ? 1 : 0, d: P.dead ? 1 : 0,
-      car: own ? { ty: c.type, co: c.color, x: +c.x.toFixed(2), y: +c.y.toFixed(2), z: +c.z.toFixed(2), h: +c.h.toFixed(3), st: +c.steer.toFixed(2), si: c.siren ? 1 : 0, sp: +c.fwd.toFixed(1) } : null,
+      car: own ? { ty: c.type, co: c.color, pl: c.plate, x: +c.x.toFixed(2), y: +c.y.toFixed(2), z: +c.z.toFixed(2), h: +c.h.toFixed(3), st: +c.steer.toFixed(2), si: c.siren ? 1 : 0, sp: +c.fwd.toFixed(1) } : null,
       ride: P.passenger || null,
     };
   },

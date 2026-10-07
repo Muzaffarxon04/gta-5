@@ -49,22 +49,26 @@ const Garage = {
     const c = Player.inCar, out = [];
     if (c && !c.dead) {
       const m = carMods(c);
-      out.push({ id: 'repair', label: 'Ta\'mirlash', desc: `Holati: ${Math.round(c.hp / c.maxHp * 100)}%`, price: 50 });
+      out.push({ id: 'repair', label: 'Ta\'mirlash', desc: `Holati: ${Math.round(c.hp / c.maxHp * 100)}%${c.dented ? ', kuzov ezilgan' : ''}${c.lampBroken ? ', chiroq singan' : ''}`, price: 50 });
       if (paintable(c)) out.push({ id: 'paint', label: 'Bo\'yash', desc: 'Rangni tanlang', price: 120, colors: true });
       if (m.eng < 3) out.push({ id: 'eng', label: `Dvigatel · ${m.eng + 1}-daraja`, desc: 'Tezlik +12%, tezlanish +18%', price: [400, 800, 1400][m.eng] });
       if (m.grip < 2) out.push({ id: 'grip', label: `Sport shinalar · ${m.grip + 1}-daraja`, desc: 'Yo\'lni 12% yaxshiroq ushlaydi', price: [300, 600][m.grip] });
       if (!m.armor) out.push({ id: 'armor', label: 'Zirhli kuzov', desc: 'Mashina 60% chidamliroq', price: 600 });
       if (!m.nitro) out.push({ id: 'nitro', label: 'Nitro', desc: 'N tugmasi — 3 soniyalik kuchli tezlanish', price: 750 });
+      if (c.T.plate) {
+        out.push({ id: 'plate', label: 'Yangi davlat raqami', desc: `Hozirgi: ${c.plate || '—'}`, price: 60 });
+        out.push({ id: 'vip', label: 'Chiroyli raqam', desc: '«01 A 777 AA» kabi takrorlanuvchi raqam', price: 400 });
+      }
       if (c.type !== 'police' && c.type !== 'bus') out.push({ id: 'store', label: 'Garajda saqlash', desc: `${c.T.name} · joy ${this.slots.length}/4`, price: 0 });
     }
-    this.slots.forEach((s, k) => out.push({ id: 'take' + k, label: CAR_TYPES[s.type].name, desc: tuneDesc(s.mods), price: 0, take: k }));
+    this.slots.forEach((s, k) => out.push({ id: 'take' + k, label: CAR_TYPES[s.type].name, desc: (s.plate ? s.plate + ' · ' : '') + tuneDesc(s.mods), price: 0, take: k }));
     if (!out.length) out.push({ id: 'none', label: 'Garaj bo\'sh', desc: 'Mashinada keling: tyuning qilish yoki saqlash uchun', price: 0, info: true });
     return out;
   },
   state(it) {
     const c = Player.inCar, afford = Player.money >= it.price;
     if (it.info) return { text: '—', disabled: true, afford: true };
-    if (it.id === 'repair') return c.hp >= c.maxHp - 0.5 ? { text: 'Butun', disabled: true, afford: true } : { text: 'Ta\'mirlash', disabled: !afford, afford };
+    if (it.id === 'repair') return c.hp >= c.maxHp - 0.5 && !c.dented && !c.lampBroken ? { text: 'Butun', disabled: true, afford: true } : { text: 'Ta\'mirlash', disabled: !afford, afford };
     if (it.id === 'store') return this.slots.length >= 4 ? { text: 'Joy yo\'q', disabled: true, afford: true } : { text: 'Saqlash', disabled: false, afford: true };
     if (it.take != null) return { text: 'Olib chiqish', disabled: false, afford: true };
     return { text: 'O\'rnatish', disabled: !afford, afford };
@@ -82,18 +86,19 @@ const Garage = {
     if (id === 'store') { this.store(); return null; }
     addMoney(-it.price); SFX.coin();
     const m = c && carMods(c);
-    if (id === 'repair') { c.hp = c.maxHp; c.onFire = false; return 'Mashina ta\'mirlandi'; }
+    if (id === 'repair') { c.hp = c.maxHp; c.onFire = false; c.fixBody(); return 'Mashina ta\'mirlandi'; }
     if (id === 'eng') m.eng++;
     if (id === 'grip') m.grip++;
     if (id === 'armor') { m.armor = true; c.maxHp = c.T.hp * 1.6; c.hp = Math.min(c.maxHp, c.hp + c.T.hp * 0.6); }
     if (id === 'nitro') { m.nitro = true; this.nitro = 1; }
+    if (id === 'plate' || id === 'vip') { c.setPlate(id === 'vip' ? vipPlate() : randomPlate(c.type)); Save.soon(); return `Yangi raqam: ${c.plate}`; }
     if (m.eng === 3 && m.grip === 2 && m.armor && m.nitro && !c.fullTuned) { c.fullTuned = true; Stats.add('fullTune'); }
     Save.soon();
     return `${it.label} o'rnatildi`;
   },
   store() {
     const P = Player, c = P.inCar;
-    this.slots.push({ type: c.type, color: c.color, mods: carMods(c) });
+    this.slots.push({ type: c.type, color: c.color, mods: carMods(c), plate: c.plate });
     exitCar();
     c.remove(); Game.cars.splice(Game.cars.indexOf(c), 1);
     P.x = this.spot.x + 2.5; P.z = this.spot.z - 1;
@@ -108,6 +113,7 @@ const Garage = {
     for (const o of others) { o.x -= 6; }
     const c = new Car(s.type, this.spot.x, this.spot.z, Math.PI, 'parked', s.color);
     applyMods(c, s.mods);
+    if (s.plate) c.setPlate(s.plate);
     c.persist = true; c.mine = true; Game.cars.push(c);
     enterCar(c);
     Save.soon();

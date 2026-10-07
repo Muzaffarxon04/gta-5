@@ -7,6 +7,7 @@ const ACHIEVEMENTS = [
   { id: 'speed', name: 'Tezkor', desc: '200 km/soat tezlikka chiqish', test: s => s.topKmh >= 200 },
   { id: 'biker', name: 'Mototsiklchi', desc: 'Mototsiklda 150 km/soat', test: s => s.topBikeKmh >= 150 },
   { id: 'taxi', name: 'Taksichi', desc: '5 ta yo\'lovchini manziliga yetkazish', test: s => s.fares >= 5 },
+  { id: 'bus', name: 'Avtobus haydovchisi', desc: 'Bitta avtobus yo\'nalishini oxirigacha bosib o\'tish', test: s => (s.busRoutes || 0) >= 1 },
   { id: 'escape3', name: 'Qochqin', desc: '3 yulduzli qidiruvdan qutulish', test: s => s.maxEscape >= 3 },
   { id: 'escape5', name: 'Ilonday sirpanchiq', desc: '5 yulduzli qidiruvdan qutulish', test: s => s.maxEscape >= 5 },
   { id: 'rich', name: 'Boy-badavlat', desc: '$10 000 ga ega bo\'lish', test: () => Player.money >= 10000 },
@@ -15,6 +16,7 @@ const ACHIEVEMENTS = [
   { id: 'osh', name: 'Osh ishqibozi', desc: 'Choyxonada osh yeyish', test: s => s.osh >= 1 },
   { id: 'tuner', name: 'Tuning ustasi', desc: 'Bir mashinani to\'liq tuning qilish', test: s => s.fullTune >= 1 },
   { id: 'collector', name: 'Kolleksioner', desc: 'Garajda 4 ta mashina saqlash', test: () => Garage.slots.length >= 4 },
+  { id: 'racer', name: 'Ko\'cha qiroli', desc: 'Ko\'cha poygasida birinchi bo\'lish', test: s => (s.raceWins || 0) >= 1 },
   { id: 'missions', name: 'Ishonchli odam', desc: '10 ta vazifani bajarish', test: s => s.missions >= 10 },
 ];
 
@@ -85,6 +87,9 @@ const Save = {
     const OLD = { jiguli: 'lacetti', matiz: 'spark', labo: 'damas' };
     Garage.slots = (d.garage || []).map(s => OLD[s.type] ? { ...s, type: OLD[s.type] } : s).filter(s => CAR_TYPES[s.type]);
     if (d.settings) Object.assign(Settings.v, d.settings);
+    // Yangi "Avto" sifat: eski saqlashlarda bir marta avtomatikka o'tkaziladi
+    if (!d.settings || !d.settings.qv) Settings.v.quality = 'auto';
+    Settings.v.qv = 2;
     if (Number.isFinite(d.dayT)) World.dayT = d.dayT;
     if (d.pos && Number.isFinite(d.pos.x) && Math.abs(d.pos.x) < CITY.LIMIT && Math.abs(d.pos.z) < CITY.LIMIT) {
       P.x = d.pos.x; P.z = d.pos.z; P.y = groundH(P.x, P.z); P.h = d.pos.h || 0;
