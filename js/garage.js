@@ -50,7 +50,7 @@ const Garage = {
     if (c && !c.dead) {
       const m = carMods(c);
       out.push({ id: 'repair', label: 'Ta\'mirlash', desc: `Holati: ${Math.round(c.hp / c.maxHp * 100)}%${c.dented ? ', kuzov ezilgan' : ''}${c.lampBroken ? ', chiroq singan' : ''}`, price: 50 });
-      if (paintable(c)) out.push({ id: 'paint', label: 'Bo\'yash', desc: 'Rangni tanlang', price: 120, colors: true });
+      if (paintable(c)) out.push({ id: 'paint', label: 'Bo\'yash', desc: Game.wanted ? 'Rangni tanlang · politsiya ko\'rmayotgan bo\'lsa, yulduzlar o\'chadi' : 'Rangni tanlang', price: 120, colors: true });
       if (m.eng < 3) out.push({ id: 'eng', label: `Dvigatel · ${m.eng + 1}-daraja`, desc: 'Tezlik +12%, tezlanish +18%', price: [400, 800, 1400][m.eng] });
       if (m.grip < 2) out.push({ id: 'grip', label: `Sport shinalar · ${m.grip + 1}-daraja`, desc: 'Yo\'lni 12% yaxshiroq ushlaydi', price: [300, 600][m.grip] });
       if (!m.armor) out.push({ id: 'armor', label: 'Zirhli kuzov', desc: 'Mashina 60% chidamliroq', price: 600 });
@@ -76,6 +76,11 @@ const Garage = {
     if (id.startsWith('paint:')) {
       if (P.money < 120) return;
       addMoney(-120); paintCar(c, +id.slice(6)); SFX.coin();
+      // GTA'dagidek: qayta bo'yalgan mashinani politsiya tanimaydi (agar hozir ko'rib turmagan bo'lsa)
+      if (Game.wanted > 0) {
+        if (Game.evading) { clearWanted(); return 'Mashina bo\'yaldi — politsiya endi seni tanimaydi!'; }
+        return 'Mashina bo\'yaldi, lekin politsiya ko\'rib turibdi — yulduzlar o\'chmadi';
+      }
       return 'Mashina bo\'yaldi';
     }
     const it = this.items().find(i => i.id === id);

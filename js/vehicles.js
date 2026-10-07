@@ -57,6 +57,10 @@ class Car {
     if (thr > 0) { if (vF < -0.5) vF += brake * thr * dt; else if (vF < maxS) vF += acc * thr * dt * (1 - (vF / maxS) * 0.55); }
     else if (thr < 0) { if (vF > 0.5) vF += brake * thr * dt; else if (vF > -13) vF += acc * 0.7 * thr * dt; }
     vF -= vF * (thr === 0 ? 0.55 : 0.1) * dt;
+    // Qiyalik (estakada): mashina pastga sirpanadi, qo'l tormozi ushlab turadi
+    const gF = groundH(this.x + fx, this.z + fz), gB = groundH(this.x - fx, this.z - fz), slope = (gF - gB) / 2;
+    this.pitch = Math.abs(slope) < 0.4 ? Math.atan(slope) : 0;
+    if (this.pitch) vF -= 9.8 * slope * dt;
     if (this.hand || !this.driver || this.dead) vF -= Math.sign(vF) * Math.min(Math.abs(vF), (this.hand ? 10 : 7) * dt);
     this.vx = fx * vF + rx * vR; this.vz = fz * vF + rz * vR;
     // Rul: tezlikka qarab burilish
@@ -100,6 +104,7 @@ class Car {
       ? (this.driver ? -this.steer * clamp(this.speed / 14, 0, 1) * 0.45 : 0.14)
       : -this.steer * clamp(this.speed / 30, 0, 1) * 0.05;
     this.mesh.rotation.z = lerp(this.mesh.rotation.z, lean, 0.1);
+    this.mesh.rotation.x = lerp(this.mesh.rotation.x, -(this.pitch || 0), 0.2); // qiyalikda old tomoni ko'tariladi
     if (this.driverHM) this.driverHM.b.head.rotation.y = this.steer * 0.35;
     // Rul aylanadi, haydovchining qo'llari unga ergashadi (yaqindagi mashinalarda)
     const pv = this.steerPivot;
@@ -274,6 +279,8 @@ function aiFollowRoad(car, cruise, goal, reanchored) {
   if (st <= corner) { tx = ax + dx * st - dz * a.lane; tz = az + dz * st + dx * a.lane; }
   else { const s2 = sgn * a.lane + (st - corner); tx = bx + nx * s2 - nz * a.lane; tz = bz + nz * s2 + nx * a.lane; }
   if (sgn !== 0 && corner - s < 24) cruise = Math.min(cruise, 8 + (car.role === 'police' ? 6 : 0));
+  // Burilishdan oldin burilish chirog'i (sgn: +1 o'ngga, -1 chapga)
+  if (car.signal !== 2) car.signal = sgn !== 0 && corner - s < 32 && corner - s > -6 ? sgn : 0;
   steerTo(car, tx, tz, cruise);
 }
 function steerTo(car, tx, tz, cruise) {

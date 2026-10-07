@@ -22,6 +22,17 @@ function crime(amount) {
   Game.wanted = Math.max(Game.wanted, Math.min(5, Math.floor(Game.heat)));
   if (Game.wanted > 0) Game.evadeT = 0;
 }
+// Qidiruvni to'xtatish (garajda bo'yash, metro): yulduzlar o'chadi
+function clearWanted() {
+  if (!Game.wanted) return;
+  Stats.add('escapes'); Stats.max('maxEscape', Game.wanted); Save.soon();
+  Game.wanted = 0; Game.heat = 0; Game.evadeT = 0; Game.bustT = 0;
+}
+// Yulduzlarni n taga kamaytirish
+function lowerWanted(n) {
+  if (Game.wanted - n <= 0) return clearWanted();
+  Game.wanted -= n; Game.heat = Game.wanted + 0.01; Game.evadeT = 0;
+}
 function setWanted(n) {
   Game.heat = Math.max(Game.heat, n + 0.01);
   Game.wanted = Math.max(Game.wanted, n);
@@ -232,7 +243,7 @@ function enterCar(c) {
     crime(c.driver === 'police' ? 2 : 0.7);
   }
   if (!c.mine) { Stats.add('stolen'); c.mine = true; }
-  c.driver = 'player'; c.ai = null; c.panic = 0; c.siren = false;
+  c.driver = 'player'; c.ai = null; c.panic = 0; c.siren = false; c.signal = 0;
   P.inCar = c; P.punchT = 0; P.aimT = 0;
   c.seatHuman(P.hm, true);
   if (P.gun) P.gun.visible = false;

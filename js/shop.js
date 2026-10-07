@@ -94,7 +94,12 @@ function metroTravel(st) {
     const place = Shops.list.find(s => s.station === st);
     if (place) place.lock = true;
     fade.classList.remove('on');
-    HUD.help(`<b>${st.name}</b> bekati`, 3);
+    // Metro bilan ketgan odamni politsiya yo'qotib qo'yadi: 1–2 yulduz o'chadi, ko'prog'i 2 taga kamayadi
+    if (Game.wanted > 0) {
+      const was = Game.wanted;
+      lowerWanted(was <= 2 ? was : 2);
+      HUD.help(`<b>${st.name}</b> bekati. ` + (Game.wanted ? `Politsiya izingizni yo'qotdi: ${was} → ${Game.wanted} yulduz.` : 'Politsiya izingizni butunlay yo\'qotdi!'), 4);
+    } else HUD.help(`<b>${st.name}</b> bekati`, 3);
   }, 1100);
 }
 

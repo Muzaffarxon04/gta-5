@@ -76,8 +76,10 @@ const Pad = {
     const rise = i => now[i] && !was[i], fall = i => !now[i] && was[i];
     for (const [i, code] of Object.entries(PAD_HOLD)) { if (rise(i)) { Input.keys[code] = true; Input.pressed[code] = true; } if (fall(i)) Input.keys[code] = false; }
     for (const [i, code] of Object.entries(PAD_PRESS)) if (rise(i)) Input.pressed[code] = true;
-    if (rise(4)) Input.wheel -= 1;
-    if (rise(5)) Input.wheel += 1;
+    // LB/RB: piyodada — qurol, mashinada — burilish chiroqlari
+    const inCar = Player.inCar && !Player.passenger;
+    if (rise(4)) { if (inCar) Input.pressed.KeyZ = true; else Input.wheel -= 1; }
+    if (rise(5)) { if (inCar) Input.pressed.KeyC = true; else Input.wheel += 1; }
     if (btn(7) !== !!was.rt) { Input.mouseL = btn(7) || val(7) > 0.5; if (Input.mouseL) Input.clickL = true; }
     if (btn(6) !== !!was.lt) Input.mouseR = btn(6) || val(6) > 0.5;
     if (rise(9)) { if (!Game.started) startGame(); else togglePause(); }
@@ -188,6 +190,8 @@ const Panel = {
         [['horn'], 'Signal'],
         [['exit'], 'Mashinadan tushish'],
         [['view'], 'Mashina ichidan ko\'rish (rul va tablo) / orqadan ko\'rish'],
+        [['sigL', 'sigR'], 'Burilish chiroqlari (burilib bo\'lgach o\'zi o\'chadi)'],
+        [['hazard'], 'Avariya chirog\'i'],
         [['lights'], 'Faralarni yoqish / o\'chirish (yoniq bo\'lsa tugma sariq hoshiyali; kechasi o\'zi yonadi)'],
         [['radio'], 'Radio stansiyasi'],
         [['siren'], 'Sirena (politsiya mashinasida)'],
@@ -196,9 +200,23 @@ const Panel = {
         [['nitro'], 'Nitro (garajda o\'rnatilgan bo\'lsa)'],
         [['pause'], 'Pauza (yuqori o\'ng burchakda)'],
       ])}
+      <h3>Avtodrom (prava imtihoni)</h3>
+      <ul>${li([
+        'Xaritadagi yashil <b>P</b> belgisi — Yunusobod tumanidagi avtodrom. Imtihonchi yonidagi yashil halqaga kiring (haqi $50)',
+        'O\'quv mashinasida YIM tartibidagi 15 mashq: start, piyodalar o\'tish joyi, estakada, 90° burilishlar, svetoforli chorrahalar, ilon izi, boks, temir yo\'l, tezlashish, avariya to\'xtashi, parallel parkovka, finish',
+        'Tezlik 20 km/soatdan oshmasin (tezlashish bo\'lagida 40 gacha), har burilishda burilish chirog\'ini yoqing, chiziq va konuslarga tegmang',
+        '3 ta xato — «O\'tmadi». Qizil chiroqda o\'tish yoki piyodaga yo\'l bermaslik — darhol «O\'tmadi»',
+      ])}</ul>
+      <h3>Politsiyadan qochish</h3>
+      <ul>${li([
+        'Ko\'zdan yo\'qoling: bino orqasiga buriling, uzoqlashing. Hech kim ko\'rmasa yulduzlar miltillaydi va 14–30 soniyada o\'chadi',
+        'Garajda mashinani qayta bo\'yating — politsiya ko\'rmayotgan bo\'lsa, yulduzlar darhol o\'chadi',
+        'Metroda boshqa bekatga keting — 1–2 yulduz butunlay o\'chadi, ko\'prog\'i 2 taga kamayadi',
+        'Politsiya yoningizda turganda to\'xtamang — 2–4 soniyada qo\'lga olinasiz',
+      ])}</ul>
       <h3>Geympad</h3>
       <ul>${li([
-        'Chap tayoq — yurish va rul, o\'ng tayoq — kamera',
+        'Chap tayoq — yurish va rul, o\'ng tayoq — kamera; mashinada LB / RB — burilish chiroqlari',
         'RT — otish / gaz, LT — nishon / tormoz, A — sakrash / qo\'l tormozi, B — nitro, Y — mashinaga o\'tirish',
         'D-pad o\'ng — mashina ichidan ko\'rish, Back — xarita, Start — pauza',
       ])}</ul>
@@ -214,6 +232,7 @@ const Panel = {
       <ul>${li([
         'Teleminora, Amir Temur xiyoboni, Chorsu bozori, metro va choyxonali shahar',
         'O\'zbek mashinalari: Nexia, Cobalt, Gentra, Lacetti, Malibu, Spark, Damas, shuningdek Mercedes, SamAuto avtobusi va mototsikl',
+        'Avtodrom: YIM tartibidagi 15 mashqli prava imtihoni',
         'Vazifalar, taksi va avtobus haydovchisi ishi, ko\'cha poygalari, garaj va tyuning, qurol va kiyim do\'konlari',
         'Politsiya: 5 yulduzli qidiruv, yo\'l to\'siqlari va vertolyot',
         'Ob-havo (yomg\'ir, qor, tuman), kun va tun, mashinada radio',
@@ -251,6 +270,7 @@ const Panel = {
       ['Eng yuqori tezlik', Math.round(s.topKmh) + ' km/soat'], ['Olingan mashinalar', s.stolen], ['Bajarilgan vazifalar', s.missions],
       ['Taksi yo\'lovchilari', s.fares], ['Politsiyadan qochish', `${s.escapes} marta (eng ko'pi ${s.maxEscape} yulduz)`],
       ['Ishlab topilgan pul', '$' + Math.round(s.earned).toLocaleString('en-US')], ['Metro safarlari', s.metro],
+      ['Haydovchilik guvohnomasi', s.license ? 'Bor («B» toifasi)' : 'Yo\'q — avtodromda topshiring'],
     ].map(([a, b]) => `<div class="stat-row"><span>${a}</span><b>${b}</b></div>`).join('');
     const got = ACHIEVEMENTS.filter(a => Stats.ach[a.id]).length;
     const ach = ACHIEVEMENTS.map(a => `<div class="ach${Stats.ach[a.id] ? ' got' : ''}"><b>${a.name}</b><span>${a.desc}</span></div>`).join('');

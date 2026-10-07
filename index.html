@@ -67,6 +67,9 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .speedo { position: absolute; right: 22px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); text-align: right; }
 .speedo b { font-family: var(--f-display); font-weight: 400; font-size: 40px; font-variant-numeric: tabular-nums; }
 .speedo span { font-size: 16px; font-weight: 600; margin-left: 4px; color: var(--muted); }
+.sigs { display: flex; justify-content: flex-end; gap: 10px; font-style: normal; height: 18px; }
+.sigs i { font-style: normal; font-size: 18px; color: rgba(255,255,255,.18); line-height: 1; }
+.sigs i.on { color: #7ee0a1; text-shadow: 0 0 8px rgba(126,224,161,.8); }
 .car-hp { width: 120px; height: 5px; margin-left: auto; background: rgba(0,0,0,.55); border-radius: 2px; overflow: hidden; }
 .car-hp i { display: block; height: 100%; background: var(--sun); }
 
@@ -184,6 +187,12 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .pedal.brake { height: 104px; width: 96px; border-color: rgba(239, 75, 70, .8); }
 .sbtn.on, .pedal.on { background: rgba(255,255,255,.38); transform: translateY(3px); box-shadow: none; }
 .touch-ui:not(.driving) .steer-pad, .touch-ui:not(.driving) .pedals, .touch-ui.driving .joy { display: none; }
+.sig-pad { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(124px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; }
+.sig-pad .tbtn { width: 46px; height: 46px; }
+.sig-pad .tbtn svg { width: 24px; height: 24px; }
+.sig-pad .tbtn.lock { border-color: #7ee0a1; color: #7ee0a1; }
+.touch-ui[data-steer="wheel"] .sig-pad { bottom: calc(178px + env(safe-area-inset-bottom, 0px)); }
+.touch-ui:not(.driving) .sig-pad { display: none; }
 /* Burish usuli (Sozlamalar): strelka, ekrandagi rul yoki telefonni qiyshaytirish */
 .steer-wheel { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: 156px; height: 156px; pointer-events: auto; touch-action: none; color: rgba(255,255,255,.88); }
 .tilt-ind { position: absolute; left: calc(28px + env(safe-area-inset-left, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: 96px; height: 96px; pointer-events: none; color: rgba(255,255,255,.7); }
@@ -373,7 +382,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="cross" id="cross"></div>
   <div class="prompt" id="prompt" hidden></div>
   <div class="objective" id="objective" hidden></div>
-  <div class="speedo" id="speedo" hidden><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
+  <div class="speedo" id="speedo" hidden><div class="sigs"><i class="sig-l" id="sigL">◀</i><i class="sig-r" id="sigR">▶</i></div><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
   <div class="area"><b id="district">Chilonzor</b><span id="street">Amir Temur ko'chasi</span></div>
   <div class="radar-wrap">
     <canvas id="radar" width="420" height="300"></canvas>
@@ -469,6 +478,12 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 
 <div class="touch-ui" id="touchUI" hidden>
   <div class="joy" id="joy"><div class="joy-knob" id="joyKnob"></div></div>
+  <!-- Burilish chiroqlari: chap, avariya, o'ng -->
+  <div class="sig-pad">
+    <button class="tbtn" type="button" data-act="sigL">◀</button>
+    <button class="tbtn" type="button" data-act="sigH">!</button>
+    <button class="tbtn" type="button" data-act="sigR">▶</button>
+  </div>
   <div class="steer-pad">
     <button class="sbtn" type="button" data-key="ArrowLeft" aria-label="Chapga">&#9664;</button>
     <button class="sbtn" type="button" data-key="ArrowRight" aria-label="O'ngga">&#9654;</button>
@@ -541,6 +556,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Kamerani klaviatura bilan burish</dd>
     <dt><kbd>V</kbd></dt><dd>Mashina ichidan ko'rish (rul va tablo)</dd>
     <dt><kbd>L</kbd></dt><dd>Faralarni yoqish / o'chirish (kechasi o'zi yonadi)</dd>
+    <dt><kbd>Z</kbd> <kbd>C</kbd></dt><dd>Chapga / o'ngga burilish chirog'i (burilib bo'lgach o'zi o'chadi)</dd>
+    <dt><kbd>X</kbd></dt><dd>Avariya chirog'i</dd>
     <dt><kbd>I</kbd></dt><dd>Tugmalar ko'rsatmasini yashirish / ko'rsatish</dd>
     <dt><kbd>P</kbd></dt><dd>Pauza</dd>
   </dl>
@@ -589,6 +606,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 <script src="js/people.js"></script><script src="js/fx.js"></script>
 <script src="js/hud.js"></script>
 <script src="js/race.js"></script>
+<script src="js/autodrom.js"></script>
 <script src="js/missions.js"></script>
 <script src="js/shop.js"></script>
 <script src="js/touch.js"></script>

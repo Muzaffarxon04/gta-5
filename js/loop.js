@@ -35,6 +35,7 @@ function init(data) {
 }
 function finishInit(data) {
   Landmarks.useTemurModel();
+  Autodrom.placeInstructor();
   Player.money = Number.isFinite(data.money) ? data.money : 500;
   if (Number.isFinite(data.x) && Number.isFinite(data.z)) { Player.x = data.x; Player.z = data.z; Player.y = groundH(data.x, data.z); }
   if (Number.isFinite(data.dayT)) World.dayT = data.dayT;
@@ -158,12 +159,14 @@ function step(raw) {
   checkBusted(dt);
   Pickups.update(dt, Game.time);
   if (!P.dead) { Missions.update(dt); Shops.update(dt); Taxi.update(dt); BusJob.update(dt); }
+  Autodrom.update(dt);
   Garage.update(dt);
   MapUI.update(dt);
   PoliceAir.update(dt); Roadblocks.update(dt); deployCops(dt);
   Stats.tick(dt); Save.update(raw);
   TouchUI.update();
   KeyHints.update();
+  Signals.update(dt);
   Cockpit.update(raw);
   if (Cockpit.active()) Cockpit.camera(raw); else updateCamera(raw);
   updateAudio(raw);
@@ -192,6 +195,11 @@ function handleActions() {
   if (kp('KeyV')) Cockpit.toggle();
   if (kp('KeyI') && !Input.touch) KeyHints.toggle();
   if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
+  if (P.inCar && !P.passenger) {
+    if (kp('KeyZ')) setSignal(P.inCar, -1);
+    if (kp('KeyC')) setSignal(P.inCar, 1);
+    if (kp('KeyX')) setSignal(P.inCar, 2);
+  }
   if (kp('KeyO')) Weather.cycle();
   if (P.inCar && P.inCar.type === 'police' && kp('KeyG')) {
     P.inCar.siren = !P.inCar.siren;
@@ -393,6 +401,7 @@ function prompts() {
   const P = Player;
   if (P.dead) return HUD.prompt(null);
   if (Game.bustT > 0.3) return HUD.prompt('Politsiya seni ushlamoqda — qoch!');
+  if (Autodrom.hint) return HUD.prompt(Autodrom.hint);
   if (!P.inCar) {
     const c = nearestCar(4.2);
     if (c && !Input.touch) return HUD.prompt(`<kbd>F</kbd> ${c.driver ? 'haydovchini tushirish' : c.T.kind === 'moto' ? 'mototsiklga minish' : 'mashinaga o\'tirish'}`);
@@ -406,7 +415,7 @@ function radarBlips() {
   for (const c of Game.cars) if (c.driver === 'police' && dist2(c.x, c.z, P.x, P.z) < 40000)
     out.push({ x: c.x, z: c.z, color: Game.wanted && Math.floor(Game.time * 4) % 2 ? '#ef4b46' : '#3d7bff', size: 5.5 });
   if (MapUI.wp) out.push({ x: MapUI.wp.x, z: MapUI.wp.z, color: '#b36bff', size: 7, edge: true, label: '★' });
-  return out.concat(Landmarks.blips(P.x, P.z), Shops.blips(), Garage.blips(), Missions.blips(), Taxi.blips(), BusJob.blips(), MP.blips());
+  return out.concat(Landmarks.blips(P.x, P.z), Shops.blips(), Garage.blips(), Missions.blips(), Taxi.blips(), BusJob.blips(), Autodrom.blips(), MP.blips());
 }
 
 // ===== Ishga tushirish =====

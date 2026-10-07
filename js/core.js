@@ -32,6 +32,13 @@ function blockAt(x, z) {
 const HEIGHT_ZONES = [];
 function groundH(x, z) {
   for (const Z of HEIGHT_ZONES) {
+    // To'g'ri to'rtburchak zona (estakada): balandlik z bo'ylab profil [[z, h], ...]
+    if (Z.rect) {
+      if (x < Z.x0 || x > Z.x1 || z < Z.z0 || z > Z.z1) continue;
+      const P = Z.prof;
+      for (let i = 1; i < P.length; i++) if (z <= P[i][0]) return Z.base + P[i - 1][1] + (P[i][1] - P[i - 1][1]) * (z - P[i - 1][0]) / (P[i][0] - P[i - 1][0]);
+      continue;
+    }
     const dx = x - Z.x, dz = z - Z.z;
     if (dx > Z.r || dx < -Z.r || dz > Z.r || dz < -Z.r) continue;
     const r = Math.hypot(dx, dz);

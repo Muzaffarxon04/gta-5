@@ -16,6 +16,7 @@ const ACHIEVEMENTS = [
   { id: 'osh', name: 'Osh ishqibozi', desc: 'Choyxonada osh yeyish', test: s => s.osh >= 1 },
   { id: 'tuner', name: 'Tuning ustasi', desc: 'Bir mashinani to\'liq tuning qilish', test: s => s.fullTune >= 1 },
   { id: 'collector', name: 'Kolleksioner', desc: 'Garajda 4 ta mashina saqlash', test: () => Garage.slots.length >= 4 },
+  { id: 'prava', name: 'Haydovchilik guvohnomasi', desc: 'Avtodromda prava imtihonidan o\'tish', test: s => (s.license || 0) >= 1 },
   { id: 'racer', name: 'Ko\'cha qiroli', desc: 'Ko\'cha poygasida birinchi bo\'lish', test: s => (s.raceWins || 0) >= 1 },
   { id: 'missions', name: 'Ishonchli odam', desc: '10 ta vazifani bajarish', test: s => s.missions >= 10 },
 ];

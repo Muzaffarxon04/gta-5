@@ -17,6 +17,9 @@ const TOUCH_ICONS = {
   bus: '<rect x="4" y="3.5" width="16" height="14" rx="2"/><path d="M4 11h16M8 21v-3.5M16 21v-3.5"/><circle cx="8" cy="14.5" r=".8" fill="currentColor"/><circle cx="16" cy="14.5" r=".8" fill="currentColor"/>',
   taxi: '<path d="M4 17.5h16v-4.5L17.8 9H6.2L4 13z"/><path d="M9.5 9V6.5h5V9"/><circle cx="8" cy="17.5" r="1.8"/><circle cx="16" cy="17.5" r="1.8"/>',
   nitro: '<path d="M12 22c4 0 7-2.7 7-6.6 0-3.5-2.5-5.3-3.6-8.4-1.4 2-2.3 2.7-3.4 2.7.4-3-.8-5.7-3.5-7.7 0 4.3-4.5 6.6-4.5 12.6C4 19.3 8 22 12 22z"/>',
+  sigL: '<path d="M10 5 3 12l7 7v-4h9V9h-9z" fill="currentColor" fill-opacity=".3"/>',
+  sigR: '<path d="M14 5l7 7-7 7v-4H5V9h9z" fill="currentColor" fill-opacity=".3"/>',
+  hazard: '<path d="M12 3.5 21 19.5H3z"/><path d="M12 8.2 16.8 16.8H7.2z"/>',
   lights: '<path d="M11 5.5C6.6 5.5 3.5 8.4 3.5 12s3.1 6.5 7.5 6.5z" fill="currentColor" fill-opacity=".25"/><path d="M14 7h7M14 10.3h7M14 13.7h7M14 17h7"/>',
   view: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   left: '<path d="M16 4.5 6.5 12l9.5 7.5z" fill="currentColor" stroke="none"/>',
@@ -96,9 +99,9 @@ const TouchUI = {
     // Har bosishda to'liq ekran va albom qulfi (Android'da telefon tik tursa ham ekran yotiq bo'ladi)
     addEventListener('touchend', goFullscreen, { passive: true });
     // Tugmalarda yozuv o'rniga belgi (nomi aria-label'da — ekran o'quvchilar uchun)
-    const ICON_OF = { lights: 'lights', pause: 'pause', weapon: 'weapon', aim: 'aim', siren: 'siren', radio: 'radio', taxi: 'taxi', nitro: 'nitro', view: 'view', run: 'run',
+    const ICON_OF = { sigL: 'sigL', sigR: 'sigR', sigH: 'hazard', lights: 'lights', pause: 'pause', weapon: 'weapon', aim: 'aim', siren: 'siren', radio: 'radio', taxi: 'taxi', nitro: 'nitro', view: 'view', run: 'run',
       ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'gas', ArrowDown: 'brake' };
-    const NAME_OF = { lights: 'Faralarni yoqish/o\'chirish', pause: 'Pauza', weapon: 'Qurolni almashtirish', aim: 'Nishonga olish', siren: 'Sirena', radio: 'Radio', taxi: 'Taksi ishi', nitro: 'Nitro',
+    const NAME_OF = { sigL: 'Chapga burilish chirog\'i', sigR: 'O\'ngga burilish chirog\'i', sigH: 'Avariya chirog\'i', lights: 'Faralarni yoqish/o\'chirish', pause: 'Pauza', weapon: 'Qurolni almashtirish', aim: 'Nishonga olish', siren: 'Sirena', radio: 'Radio', taxi: 'Taksi ishi', nitro: 'Nitro',
       view: 'Mashina ichidan ko\'rish', run: 'Yugurish', ArrowLeft: 'Chapga', ArrowRight: 'O\'ngga', ArrowUp: 'Gaz', ArrowDown: 'Tormoz' };
     root.querySelectorAll('[data-act], [data-key]').forEach(b => {
       const k = b.dataset.act || b.dataset.key;
@@ -137,6 +140,9 @@ const TouchUI = {
     else if (act === 'nitro') Input.keys.KeyN = down;
     else if (act === 'view') { if (down) Input.pressed.KeyV = true; }
     else if (act === 'lights') { if (down) Input.pressed.KeyL = true; }
+    else if (act === 'sigL') { if (down) Input.pressed.KeyZ = true; }
+    else if (act === 'sigR') { if (down) Input.pressed.KeyC = true; }
+    else if (act === 'sigH') { if (down) Input.pressed.KeyX = true; }
   },
   // Qiyshaytirish: harakat sensoridan og'irlik yo'nalishi → telefon ekran tekisligida qancha burilgani
   enableTilt(cb) {
@@ -246,7 +252,11 @@ const TouchUI = {
     this.updateSteer();
     // Fara tugmasi yoniq holatda ajralib turadi
     const lc = Player.inCar;
-    if (lc && !Player.passenger) { const lb = this._lb || (this._lb = this.btn('lights')); lb.classList.toggle('lock', carLightsOn(lc)); }
+    if (lc && !Player.passenger) {
+      const lb = this._lb || (this._lb = this.btn('lights')); lb.classList.toggle('lock', carLightsOn(lc));
+      const sg = lc.signal || 0;
+      this.btn('sigL').classList.toggle('lock', sg === -1); this.btn('sigR').classList.toggle('lock', sg === 1); this.btn('sigH').classList.toggle('lock', sg === 2);
+    }
     // Tormoz pedali: mashina to'xtab turganda (yoki orqaga yurayotganda) — orqaga yurish strelkasi
     const dc = Player.inCar;
     if (dc && !Player.passenger) {

@@ -41,6 +41,7 @@ const CarLights = {
     const dot = glowTexture(64, 64, [[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(255,255,255,.8)'], [1, 'rgba(255,255,255,0)']]);
     this.front = pts(1.15, dot);
     this.rear = pts(0.6, dot);
+    this.amber = pts(0.75, dot);
     // Yo'lga tushgan fara yorug'ligi: cho'zinchoq dog'
     const pool = glowTexture(64, 128, [[0, 'rgba(255,240,200,.9)'], [0.55, 'rgba(255,230,180,.35)'], [1, 'rgba(255,220,160,0)']]);
     const geo = new THREE.PlaneGeometry(3.4, 9).rotateX(-Math.PI / 2).translate(0, 0, 4.5);
@@ -52,6 +53,23 @@ const CarLights = {
   update(cars, cx, cz) {
     if (!this.front) return;
     const k = clamp((1 - World.daylight - 0.35) / 0.3, 0, 1);
+    // Burilish chiroqlari (kunduzi ham ko'rinadi)
+    const blink = blinkOn(), aP = this.amber.geometry.attributes.position.array, aC = this.amber.geometry.attributes.color.array;
+    let na = 0;
+    if (blink) for (const c of cars) {
+      if (!c.signal || c.dead || !c.mesh.visible || na >= LIGHT_N * 2 - 4) continue;
+      const dx = c.x - cx, dz = c.z - cz;
+      if (dx * dx + dz * dz > 140 * 140) continue;
+      const L = carLamps(c), s = Math.sin(c.h), co = Math.cos(c.h), want = c.signal === 2 ? 0 : c.signal; // +x mahalliy — chap tomon
+      for (const p of [...L.f, ...L.r]) {
+        if (want && Math.sign(p[0]) !== -want) continue;
+        const ox = p[0] + Math.sign(p[0]) * 0.08;
+        aP[na * 3] = c.x + ox * co + p[2] * s; aP[na * 3 + 1] = c.y + p[1] + 0.05; aP[na * 3 + 2] = c.z - ox * s + p[2] * co;
+        aC[na * 3] = 1; aC[na * 3 + 1] = 0.55; aC[na * 3 + 2] = 0.05; na++;
+      }
+    }
+    this.amber.visible = na > 0;
+    if (na) { this.amber.geometry.setDrawRange(0, na); this.amber.geometry.attributes.position.needsUpdate = this.amber.geometry.attributes.color.needsUpdate = true; }
     // Kunduzi ham qo'lda yoqilgan faralar ko'rinadi (xira)
     const on = k > 0 || cars.some(c => c.lightsOn === true);
     this.front.visible = this.rear.visible = this.pools.visible = on;
@@ -88,5 +106,29 @@ const CarLights = {
     this.rear.geometry.attributes.position.needsUpdate = this.rear.geometry.attributes.color.needsUpdate = true;
     this.pools.count = np; this.pools.instanceMatrix.needsUpdate = true;
     this.pools.material.opacity = 0.8 * k;
+  },
+};
+
+// ===== Burilish chiroqlari (povorotnik): -1 chap, 1 o'ng, 2 avariya. Z / C / X, telefonda chap tomondagi tugmalar =====
+const SIGNAL_NAMES = { '-1': 'Chapga burilish chirog\'i', 1: 'O\'ngga burilish chirog\'i', 2: 'Avariya chirog\'i' };
+const blinkOn = () => Math.floor(performance.now() / 333) % 2 === 0;
+function setSignal(c, s) {
+  c.signal = c.signal === s ? 0 : s;
+  c.signalH0 = c.h; c.signalT = 0;
+  SFX.click();
+  if (c === Player.inCar) HUD.help(c.signal ? `${SIGNAL_NAMES[c.signal]} yoqildi` : 'Burilish chirog\'i o\'chirildi', 1.2);
+}
+// O'yinchining mashinasi: burilish tugagach chiroq o'zi o'chadi; yonib turganda "chiq-chiq" ovozi
+const Signals = {
+  _b: false,
+  update(dt) {
+    const c = Player.inCar;
+    if (!c || Player.passenger) return;
+    if (c.signal === 1 || c.signal === -1) {
+      c.signalT = (c.signalT || 0) + dt;
+      if (Math.abs(wrapAng(c.h - (c.signalH0 ?? c.h))) > 0.9 && Math.abs(c.steer) < 0.2) { c.signal = 0; }
+    }
+    const b = !!c.signal && blinkOn();
+    if (b !== this._b) { this._b = b; if (c.signal && SFX.ctx) SFX.burst(SFX.out, SFX.ctx.currentTime, 0.02, 'bandpass', b ? 2200 : 1700, 0.18, 6); }
   },
 };

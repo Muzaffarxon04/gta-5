@@ -63,6 +63,8 @@ const MapUI = {
     this.routeT -= dt;
     if (this.routeT > 0 && !force) return;
     this.routeT = 0.7;
+    // Avtodrom imtihonida — imtihon yo'li
+    if (Autodrom.active) { this.route = Autodrom.route(); this.routeColor = '#7ee0a1'; return; }
     const t = this.target();
     this.route = t ? gpsRoute(P.x, P.z, t.x, t.z) : [];
     this.routeColor = t ? t.color : '#b36bff';
@@ -95,7 +97,7 @@ const MapUI = {
       g.beginPath(); g.arc(u, w, r, 0, TAU); g.fill(); g.stroke();
       if (label) { g.fillStyle = '#111'; g.font = `bold ${Math.round(r * 1.3)}px sans-serif`; g.textBaseline = 'middle'; g.fillText(label, u, w + 1); }
     };
-    for (const b of [...Landmarks.blips(0, 0, true), ...Shops.blips(), ...Missions.blips(), ...Garage.blips(), ...Taxi.blips(), ...BusJob.blips(), ...MP.blips()]) icon(b.x, b.z, b.color, b.label, 8);
+    for (const b of [...Landmarks.blips(0, 0, true), ...Shops.blips(), ...Missions.blips(), ...Garage.blips(), ...Taxi.blips(), ...BusJob.blips(), ...Autodrom.blips(), ...MP.blips()]) icon(b.x, b.z, b.color, b.label, 8);
     for (const c of Game.cars) if (c.driver === 'police' && Game.wanted > 0) icon(c.x, c.z, '#3d7bff', '', 5);
     if (this.wp) icon(this.wp.x, this.wp.z, '#b36bff', '★', 10);
     // O'yinchi strelkasi

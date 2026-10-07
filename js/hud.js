@@ -58,6 +58,13 @@ const HUD = {
     e.arbar.style.width = clamp(P.armor, 0, 100) + '%';
     const car = P.inCar;
     e.speedo.hidden = !car;
+    if (car) {
+      // Burilish chiroqlari ko'rsatkichi (miltillaydi)
+      const sg = car.signal || 0, bl = blinkOn();
+      const L = bl && (sg === -1 || sg === 2), R = bl && (sg === 1 || sg === 2);
+      if (L !== this._sl) { this._sl = L; (this._eL || (this._eL = document.getElementById('sigL'))).classList.toggle('on', L); }
+      if (R !== this._sr) { this._sr = R; (this._eR || (this._eR = document.getElementById('sigR'))).classList.toggle('on', R); }
+    }
     if (car) { e.kmh.textContent = Math.round(car.speed * 3.6); e.carhp.style.width = clamp(car.hp / (car.maxHp || car.T.hp) * 100, 0, 100) + '%'; }
     e.cross.hidden = !!car || P.dead;
     e.cross.classList.toggle('aim', s.aiming);
