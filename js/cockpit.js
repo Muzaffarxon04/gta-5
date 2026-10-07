@@ -93,6 +93,7 @@ const Cockpit = {
     g.font = 'bold 16px Arial'; g.fillStyle = '#8fa1ad'; g.fillText(clockText(), W / 2, 140);
     if (c.hand) { g.fillStyle = '#ff3b30'; g.font = 'bold 16px Arial'; g.fillText('(P)', W / 2 - 52, 108); }
     if (c.boost) { g.fillStyle = '#4fc3f7'; g.font = 'bold 16px Arial'; g.fillText('NITRO', W / 2 + 58, 108); }
+    if (carLightsOn(c)) { g.fillStyle = '#4fa3ff'; g.font = 'bold 15px Arial'; g.fillText('FARA', W / 2, 24); }
     this.tex.needsUpdate = true;
   },
   // Kamera haydovchi ko'zida; sichqoncha/barmoq bilan atrofga qarash, qo'yib yuborilsa oldinga qaytadi

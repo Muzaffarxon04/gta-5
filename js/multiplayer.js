@@ -90,7 +90,7 @@ class RemotePlayer {
     if (b.car) {
       const c = this.ensureCar(b.car), ca = a.car || b.car;
       c.x = L(ca.x, b.car.x); c.y = L(ca.y, b.car.y); c.z = L(ca.z, b.car.z); c.h = LA(ca.h, b.car.h);
-      c.steer = b.car.st; c.siren = !!b.car.si;
+      c.steer = b.car.st; c.siren = !!b.car.si; c.lightsOn = b.car.li == null || b.car.li < 0 ? null : !!b.car.li;
       c.vx = Math.sin(c.h) * b.car.sp; c.vz = Math.cos(c.h) * b.car.sp;
       this.gun.visible = false;
       return;
@@ -161,7 +161,7 @@ const MP = {
     return {
       t: 's', id: Net.id, n: Net.name, o: P.outfitId, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), h: +P.h.toFixed(3),
       sp: +Math.hypot(P.vx, P.vz).toFixed(2), w: P.weapon, aim: (Input.mouseR || P.aimT > 0) ? 1 : 0, d: P.dead ? 1 : 0,
-      car: own ? { ty: c.type, co: c.color, pl: c.plate, x: +c.x.toFixed(2), y: +c.y.toFixed(2), z: +c.z.toFixed(2), h: +c.h.toFixed(3), st: +c.steer.toFixed(2), si: c.siren ? 1 : 0, sp: +c.fwd.toFixed(1) } : null,
+      car: own ? { ty: c.type, co: c.color, pl: c.plate, x: +c.x.toFixed(2), y: +c.y.toFixed(2), z: +c.z.toFixed(2), h: +c.h.toFixed(3), st: +c.steer.toFixed(2), si: c.siren ? 1 : 0, li: c.lightsOn == null ? -1 : +c.lightsOn, sp: +c.fwd.toFixed(1) } : null,
       ride: P.passenger || null,
     };
   },

@@ -552,6 +552,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="tbtn" type="button" data-act="taxi" hidden>Taksi</button>
     <button class="tbtn" type="button" data-act="nitro" hidden>Nitro</button>
     <button class="tbtn" type="button" data-act="view" hidden>Kamera</button>
+    <button class="tbtn" type="button" data-act="lights" hidden>Fara</button>
     <button class="tbtn" type="button" data-act="run">Yugurish</button>
     <button class="tbtn" type="button" data-act="enter">Minish</button>
     <button class="tbtn" type="button" data-act="fire">Otish</button>
@@ -601,6 +602,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <dt><kbd>N</kbd></dt><dd>Nitro (garajda o'rnatilgan bo'lsa)</dd>
     <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Kamerani klaviatura bilan burish</dd>
     <dt><kbd>V</kbd></dt><dd>Mashina ichidan ko'rish (rul va tablo)</dd>
+    <dt><kbd>L</kbd></dt><dd>Faralarni yoqish / o'chirish (kechasi o'zi yonadi)</dd>
     <dt><kbd>P</kbd></dt><dd>Pauza</dd>
   </dl>
 </template>
@@ -6673,6 +6675,14 @@ function carLamps(car) {
   return (T._lamps = moto ? { f: [[0, 0.9, L2 - 0.1]], r: [[0, 0.8, -L2 + 0.1]] }
     : { f: [[x, T.nose ? T.nose - 0.07 : 0.65, L2], [-x, T.nose ? T.nose - 0.07 : 0.65, L2]], r: [[x, T.tail ? T.tail - 0.1 : 0.75, -L2], [-x, T.tail ? T.tail - 0.1 : 0.75, -L2]] });
 }
+// Faralar yoniqmi: o'yinchi qo'lda yoqqan/o'chirgan bo'lsa — shu (c.lightsOn), aks holda kechasi o'zi yonadi
+const nightLights = () => 1 - World.daylight > 0.35;
+const carLightsOn = c => (c.lightsOn != null ? c.lightsOn : nightLights());
+function toggleCarLights(c) {
+  c.lightsOn = !carLightsOn(c);
+  SFX.click();
+  HUD.help(c.lightsOn ? 'Faralar yoqildi' : 'Faralar o\'chirildi', 1.5);
+}
 const CarLights = {
   init(scene) {
     const pts = (size, tex) => {
@@ -6698,7 +6708,8 @@ const CarLights = {
   update(cars, cx, cz) {
     if (!this.front) return;
     const k = clamp((1 - World.daylight - 0.35) / 0.3, 0, 1);
-    const on = k > 0;
+    // Kunduzi ham qo'lda yoqilgan faralar ko'rinadi (xira)
+    const on = k > 0 || cars.some(c => c.lightsOn === true);
     this.front.visible = this.rear.visible = this.pools.visible = on;
     if (!on) return;
     const fP = this.front.geometry.attributes.position.array, fC = this.front.geometry.attributes.color.array;
@@ -6711,16 +6722,17 @@ const CarLights = {
       const L = carLamps(c), s = Math.sin(c.h), co = Math.cos(c.h), br = c.lampBroken || 0;
       const put = (arr, col, n, p, rgb) => {
         arr[n * 3] = c.x + p[0] * co + p[2] * s; arr[n * 3 + 1] = c.y + p[1]; arr[n * 3 + 2] = c.z - p[0] * s + p[2] * co;
-        col[n * 3] = rgb[0] * k; col[n * 3 + 1] = rgb[1] * k; col[n * 3 + 2] = rgb[2] * k;
+        col[n * 3] = rgb[0] * kc; col[n * 3 + 1] = rgb[1] * kc; col[n * 3 + 2] = rgb[2] * kc;
       };
-      // Haydovchisiz turgan mashinalarning chiroqlari o'chiq
+      // Haydovchisiz turgan mashinalarning chiroqlari o'chiq; o'yinchi faralarni o'zi yoqib-o'chira oladi
       const lit = c.driver || c === Player.inCar;
-      if (!lit) continue;
+      const kc = !lit || c.lightsOn === false ? 0 : c.lightsOn === true ? Math.max(k, 0.55) : k;
+      if (kc <= 0) continue;
       L.f.forEach((p, i) => { if (!(br & (1 << i)) && nf < LIGHT_N * 2) put(fP, fC, nf++, p, [1, 0.93, 0.78]); });
       const braking = c.thr < -0.1 && c.fwd > 0.5;
       L.r.forEach((p, i) => { if (!(br & (4 << i)) && nr < LIGHT_N * 2) put(rP, rC, nr++, p, braking ? [1, 0.12, 0.08] : [0.55, 0.04, 0.03]); });
       // Yo'ldagi yorug'lik (o'yinchining mashinasida haqiqiy fara bor)
-      if (c !== Player.inCar && (br & 3) !== 3) {
+      if (c !== Player.inCar && (br & 3) !== 3 && k > 0) {
         const fz = L.f[0][2] + 0.3;
         this._p.set(c.x + fz * s, groundH(c.x + fz * 3 * s, c.z + fz * 3 * co) + 0.1, c.z + fz * co);
         this._q.setFromAxisAngle(this._Y, c.h);
@@ -6898,6 +6910,7 @@ const Cockpit = {
     g.font = 'bold 16px Arial'; g.fillStyle = '#8fa1ad'; g.fillText(clockText(), W / 2, 140);
     if (c.hand) { g.fillStyle = '#ff3b30'; g.font = 'bold 16px Arial'; g.fillText('(P)', W / 2 - 52, 108); }
     if (c.boost) { g.fillStyle = '#4fc3f7'; g.font = 'bold 16px Arial'; g.fillText('NITRO', W / 2 + 58, 108); }
+    if (carLightsOn(c)) { g.fillStyle = '#4fa3ff'; g.font = 'bold 15px Arial'; g.fillText('FARA', W / 2, 24); }
     this.tex.needsUpdate = true;
   },
   // Kamera haydovchi ko'zida; sichqoncha/barmoq bilan atrofga qarash, qo'yib yuborilsa oldinga qaytadi
@@ -8226,6 +8239,7 @@ const TOUCH_ICONS = {
   bus: '<rect x="4" y="3.5" width="16" height="14" rx="2"/><path d="M4 11h16M8 21v-3.5M16 21v-3.5"/><circle cx="8" cy="14.5" r=".8" fill="currentColor"/><circle cx="16" cy="14.5" r=".8" fill="currentColor"/>',
   taxi: '<path d="M4 17.5h16v-4.5L17.8 9H6.2L4 13z"/><path d="M9.5 9V6.5h5V9"/><circle cx="8" cy="17.5" r="1.8"/><circle cx="16" cy="17.5" r="1.8"/>',
   nitro: '<path d="M12 22c4 0 7-2.7 7-6.6 0-3.5-2.5-5.3-3.6-8.4-1.4 2-2.3 2.7-3.4 2.7.4-3-.8-5.7-3.5-7.7 0 4.3-4.5 6.6-4.5 12.6C4 19.3 8 22 12 22z"/>',
+  lights: '<path d="M11 5.5C6.6 5.5 3.5 8.4 3.5 12s3.1 6.5 7.5 6.5z" fill="currentColor" fill-opacity=".25"/><path d="M14 7h7M14 10.3h7M14 13.7h7M14 17h7"/>',
   view: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   left: '<path d="M16 4.5 6.5 12l9.5 7.5z" fill="currentColor" stroke="none"/>',
   right: '<path d="M8 4.5 17.5 12 8 19.5z" fill="currentColor" stroke="none"/>',
@@ -8304,9 +8318,9 @@ const TouchUI = {
     // Har bosishda to'liq ekran va albom qulfi (Android'da telefon tik tursa ham ekran yotiq bo'ladi)
     addEventListener('touchend', goFullscreen, { passive: true });
     // Tugmalarda yozuv o'rniga belgi (nomi aria-label'da — ekran o'quvchilar uchun)
-    const ICON_OF = { pause: 'pause', weapon: 'weapon', aim: 'aim', siren: 'siren', radio: 'radio', taxi: 'taxi', nitro: 'nitro', view: 'view', run: 'run',
+    const ICON_OF = { lights: 'lights', pause: 'pause', weapon: 'weapon', aim: 'aim', siren: 'siren', radio: 'radio', taxi: 'taxi', nitro: 'nitro', view: 'view', run: 'run',
       ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'gas', ArrowDown: 'brake' };
-    const NAME_OF = { pause: 'Pauza', weapon: 'Qurolni almashtirish', aim: 'Nishonga olish', siren: 'Sirena', radio: 'Radio', taxi: 'Taksi ishi', nitro: 'Nitro',
+    const NAME_OF = { lights: 'Faralarni yoqish/o\'chirish', pause: 'Pauza', weapon: 'Qurolni almashtirish', aim: 'Nishonga olish', siren: 'Sirena', radio: 'Radio', taxi: 'Taksi ishi', nitro: 'Nitro',
       view: 'Mashina ichidan ko\'rish', run: 'Yugurish', ArrowLeft: 'Chapga', ArrowRight: 'O\'ngga', ArrowUp: 'Gaz', ArrowDown: 'Tormoz' };
     root.querySelectorAll('[data-act], [data-key]').forEach(b => {
       const k = b.dataset.act || b.dataset.key;
@@ -8344,6 +8358,7 @@ const TouchUI = {
     else if (act === 'taxi') { if (down) Input.pressed.KeyT = true; }
     else if (act === 'nitro') Input.keys.KeyN = down;
     else if (act === 'view') { if (down) Input.pressed.KeyV = true; }
+    else if (act === 'lights') { if (down) Input.pressed.KeyL = true; }
   },
   // Qiyshaytirish: harakat sensoridan og'irlik yo'nalishi → telefon ekran tekisligida qancha burilgani
   enableTilt(cb) {
@@ -8451,6 +8466,9 @@ const TouchUI = {
     if (!this.root || this.root.hidden) { Input.steer.active = false; return; }
     this.updateDoors();
     this.updateSteer();
+    // Fara tugmasi yoniq holatda ajralib turadi
+    const lc = Player.inCar;
+    if (lc && !Player.passenger) { const lb = this._lb || (this._lb = this.btn('lights')); lb.classList.toggle('lock', carLightsOn(lc)); }
     // Tormoz pedali: mashina to'xtab turganda (yoki orqaga yurayotganda) — orqaga yurish strelkasi
     const dc = Player.inCar;
     if (dc && !Player.passenger) {
@@ -8473,6 +8491,7 @@ const TouchUI = {
     }
     if (driving) { Input.joy.active = false; Input.joy.x = Input.joy.y = 0; }
     this.btn('view').hidden = !car;
+    this.btn('lights').hidden = !driving;
     this.btn('siren').hidden = !pol;
     this.btn('radio').hidden = !car;
     this.btn('taxi').hidden = !taxi;
@@ -8807,6 +8826,7 @@ const Panel = {
         [['horn'], 'Signal'],
         [['exit'], 'Mashinadan tushish'],
         [['view'], 'Mashina ichidan ko\'rish (rul va tablo) / orqadan ko\'rish'],
+        [['lights'], 'Faralarni yoqish / o\'chirish (yoniq bo\'lsa tugma sariq hoshiyali; kechasi o\'zi yonadi)'],
         [['radio'], 'Radio stansiyasi'],
         [['siren'], 'Sirena (politsiya mashinasida)'],
         [['taxi'], 'Taksi ishi (sariq taksida)'],
@@ -22208,7 +22228,7 @@ class RemotePlayer {
     if (b.car) {
       const c = this.ensureCar(b.car), ca = a.car || b.car;
       c.x = L(ca.x, b.car.x); c.y = L(ca.y, b.car.y); c.z = L(ca.z, b.car.z); c.h = LA(ca.h, b.car.h);
-      c.steer = b.car.st; c.siren = !!b.car.si;
+      c.steer = b.car.st; c.siren = !!b.car.si; c.lightsOn = b.car.li == null || b.car.li < 0 ? null : !!b.car.li;
       c.vx = Math.sin(c.h) * b.car.sp; c.vz = Math.cos(c.h) * b.car.sp;
       this.gun.visible = false;
       return;
@@ -22279,7 +22299,7 @@ const MP = {
     return {
       t: 's', id: Net.id, n: Net.name, o: P.outfitId, x: +P.x.toFixed(2), y: +P.y.toFixed(2), z: +P.z.toFixed(2), h: +P.h.toFixed(3),
       sp: +Math.hypot(P.vx, P.vz).toFixed(2), w: P.weapon, aim: (Input.mouseR || P.aimT > 0) ? 1 : 0, d: P.dead ? 1 : 0,
-      car: own ? { ty: c.type, co: c.color, pl: c.plate, x: +c.x.toFixed(2), y: +c.y.toFixed(2), z: +c.z.toFixed(2), h: +c.h.toFixed(3), st: +c.steer.toFixed(2), si: c.siren ? 1 : 0, sp: +c.fwd.toFixed(1) } : null,
+      car: own ? { ty: c.type, co: c.color, pl: c.plate, x: +c.x.toFixed(2), y: +c.y.toFixed(2), z: +c.z.toFixed(2), h: +c.h.toFixed(3), st: +c.steer.toFixed(2), si: c.siren ? 1 : 0, li: c.lightsOn == null ? -1 : +c.lightsOn, sp: +c.fwd.toFixed(1) } : null,
       ride: P.passenger || null,
     };
   },
@@ -22774,7 +22794,7 @@ function enterCar(c) {
   SFX.door();
   // Telefonda klaviatura tugmalari ko'rsatilmaydi (belgilar Yo'riqnomada)
   HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? '' : `. <kbd>Probel</kbd> — tormoz, <kbd>F</kbd> — tushish` +
-    (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>R</kbd> — radio, <kbd>V</kbd> — ichidan ko\'rish'), Input.touch ? 2.5 : 5);
+    (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>R</kbd> — radio, <kbd>V</kbd> — ichidan ko\'rish, <kbd>L</kbd> — faralar'), Input.touch ? 2.5 : 5);
 }
 function exitCar() {
   const P = Player, c = P.inCar;
@@ -23136,6 +23156,7 @@ function handleActions() {
   if (P.inCar && kp('KeyR')) Radio.cycle();
   if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
+  if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
   if (kp('KeyO')) Weather.cycle();
   if (P.inCar && P.inCar.type === 'police' && kp('KeyG')) {
     P.inCar.siren = !P.inCar.siren;
@@ -23327,11 +23348,11 @@ function updateAudio(dt) {
 }
 function updateHeadlight() {
   const c = Player.inCar, night = 1 - World.daylight;
-  if (!c || c.dead || night < 0.3) { headlight.intensity = 0; return; }
+  if (!c || c.dead || !carLightsOn(c) || (c.lampBroken & 3) === 3) { headlight.intensity = 0; return; }
   const fx = Math.sin(c.h), fz = Math.cos(c.h);
   headlight.position.set(c.x + fx * 2.3, c.y + 1, c.z + fz * 2.3);
   headlight.target.position.set(c.x + fx * 25, c.y, c.z + fz * 25);
-  headlight.intensity = 2.2 * night;
+  headlight.intensity = 2.2 * Math.max(night, 0.25);
 }
 function prompts() {
   const P = Player;

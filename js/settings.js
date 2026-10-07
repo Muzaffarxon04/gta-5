@@ -185,6 +185,7 @@ const Panel = {
         [['horn'], 'Signal'],
         [['exit'], 'Mashinadan tushish'],
         [['view'], 'Mashina ichidan ko\'rish (rul va tablo) / orqadan ko\'rish'],
+        [['lights'], 'Faralarni yoqish / o\'chirish (yoniq bo\'lsa tugma sariq hoshiyali; kechasi o\'zi yonadi)'],
         [['radio'], 'Radio stansiyasi'],
         [['siren'], 'Sirena (politsiya mashinasida)'],
         [['taxi'], 'Taksi ishi (sariq taksida)'],

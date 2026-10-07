@@ -240,7 +240,7 @@ function enterCar(c) {
   SFX.door();
   // Telefonda klaviatura tugmalari ko'rsatilmaydi (belgilar Yo'riqnomada)
   HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? '' : `. <kbd>Probel</kbd> — tormoz, <kbd>F</kbd> — tushish` +
-    (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>R</kbd> — radio, <kbd>V</kbd> — ichidan ko\'rish'), Input.touch ? 2.5 : 5);
+    (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>R</kbd> — radio, <kbd>V</kbd> — ichidan ko\'rish, <kbd>L</kbd> — faralar'), Input.touch ? 2.5 : 5);
 }
 function exitCar() {
   const P = Player, c = P.inCar;

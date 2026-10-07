@@ -188,6 +188,7 @@ function handleActions() {
   if (P.inCar && kp('KeyR')) Radio.cycle();
   if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
+  if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
   if (kp('KeyO')) Weather.cycle();
   if (P.inCar && P.inCar.type === 'police' && kp('KeyG')) {
     P.inCar.siren = !P.inCar.siren;
@@ -379,11 +380,11 @@ function updateAudio(dt) {
 }
 function updateHeadlight() {
   const c = Player.inCar, night = 1 - World.daylight;
-  if (!c || c.dead || night < 0.3) { headlight.intensity = 0; return; }
+  if (!c || c.dead || !carLightsOn(c) || (c.lampBroken & 3) === 3) { headlight.intensity = 0; return; }
   const fx = Math.sin(c.h), fz = Math.cos(c.h);
   headlight.position.set(c.x + fx * 2.3, c.y + 1, c.z + fz * 2.3);
   headlight.target.position.set(c.x + fx * 25, c.y, c.z + fz * 25);
-  headlight.intensity = 2.2 * night;
+  headlight.intensity = 2.2 * Math.max(night, 0.25);
 }
 function prompts() {
   const P = Player;

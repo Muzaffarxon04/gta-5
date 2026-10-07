@@ -19,6 +19,14 @@ function carLamps(car) {
   return (T._lamps = moto ? { f: [[0, 0.9, L2 - 0.1]], r: [[0, 0.8, -L2 + 0.1]] }
     : { f: [[x, T.nose ? T.nose - 0.07 : 0.65, L2], [-x, T.nose ? T.nose - 0.07 : 0.65, L2]], r: [[x, T.tail ? T.tail - 0.1 : 0.75, -L2], [-x, T.tail ? T.tail - 0.1 : 0.75, -L2]] });
 }
+// Faralar yoniqmi: o'yinchi qo'lda yoqqan/o'chirgan bo'lsa — shu (c.lightsOn), aks holda kechasi o'zi yonadi
+const nightLights = () => 1 - World.daylight > 0.35;
+const carLightsOn = c => (c.lightsOn != null ? c.lightsOn : nightLights());
+function toggleCarLights(c) {
+  c.lightsOn = !carLightsOn(c);
+  SFX.click();
+  HUD.help(c.lightsOn ? 'Faralar yoqildi' : 'Faralar o\'chirildi', 1.5);
+}
 const CarLights = {
   init(scene) {
     const pts = (size, tex) => {
@@ -44,7 +52,8 @@ const CarLights = {
   update(cars, cx, cz) {
     if (!this.front) return;
     const k = clamp((1 - World.daylight - 0.35) / 0.3, 0, 1);
-    const on = k > 0;
+    // Kunduzi ham qo'lda yoqilgan faralar ko'rinadi (xira)
+    const on = k > 0 || cars.some(c => c.lightsOn === true);
     this.front.visible = this.rear.visible = this.pools.visible = on;
     if (!on) return;
     const fP = this.front.geometry.attributes.position.array, fC = this.front.geometry.attributes.color.array;
@@ -57,16 +66,17 @@ const CarLights = {
       const L = carLamps(c), s = Math.sin(c.h), co = Math.cos(c.h), br = c.lampBroken || 0;
       const put = (arr, col, n, p, rgb) => {
         arr[n * 3] = c.x + p[0] * co + p[2] * s; arr[n * 3 + 1] = c.y + p[1]; arr[n * 3 + 2] = c.z - p[0] * s + p[2] * co;
-        col[n * 3] = rgb[0] * k; col[n * 3 + 1] = rgb[1] * k; col[n * 3 + 2] = rgb[2] * k;
+        col[n * 3] = rgb[0] * kc; col[n * 3 + 1] = rgb[1] * kc; col[n * 3 + 2] = rgb[2] * kc;
       };
-      // Haydovchisiz turgan mashinalarning chiroqlari o'chiq
+      // Haydovchisiz turgan mashinalarning chiroqlari o'chiq; o'yinchi faralarni o'zi yoqib-o'chira oladi
       const lit = c.driver || c === Player.inCar;
-      if (!lit) continue;
+      const kc = !lit || c.lightsOn === false ? 0 : c.lightsOn === true ? Math.max(k, 0.55) : k;
+      if (kc <= 0) continue;
       L.f.forEach((p, i) => { if (!(br & (1 << i)) && nf < LIGHT_N * 2) put(fP, fC, nf++, p, [1, 0.93, 0.78]); });
       const braking = c.thr < -0.1 && c.fwd > 0.5;
       L.r.forEach((p, i) => { if (!(br & (4 << i)) && nr < LIGHT_N * 2) put(rP, rC, nr++, p, braking ? [1, 0.12, 0.08] : [0.55, 0.04, 0.03]); });
       // Yo'ldagi yorug'lik (o'yinchining mashinasida haqiqiy fara bor)
-      if (c !== Player.inCar && (br & 3) !== 3) {
+      if (c !== Player.inCar && (br & 3) !== 3 && k > 0) {
         const fz = L.f[0][2] + 0.3;
         this._p.set(c.x + fz * s, groundH(c.x + fz * 3 * s, c.z + fz * 3 * co) + 0.1, c.z + fz * co);
         this._q.setFromAxisAngle(this._Y, c.h);
