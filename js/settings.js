@@ -247,6 +247,7 @@ const Panel = {
         'Yoqilg\'i: benzin va metan zapravkalari (metanda navbat bor), bo\'sh bakka kanistr',
         'Vazifalar, taksi va avtobus haydovchisi ishi, ko\'cha poygalari, garaj va tyuning, qurol va kiyim do\'konlari',
         'Politsiya: 5 yulduzli qidiruv, yo\'l to\'siqlari va vertolyot',
+        'Jonli ko\'cha harakati: har xil fe\'lli haydovchilar, quvib o\'tish, chorrahada yo\'l berish, yo\'l chetiga to\'xtash va chiqib ketish',
         'Ob-havo (yomg\'ir, qor, tuman), kun va tun, mashinada radio',
         'Ko\'p o\'yinchi: xona kodi yoki QR-kod orqali, lokal tarmoqda',
         `O'yinni saqlash, statistika va ${ACHIEVEMENTS.length} ta yutuq; telefon va geympad bilan boshqaruv`,

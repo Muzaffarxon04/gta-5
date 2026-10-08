@@ -52,13 +52,16 @@ function randomRoadSpot(px, pz, minD, maxD, lanes) {
     const x = ax + dx * s - dz * lane, z = az + dz * s + dx * lane, d = Math.hypot(x - px, z - pz);
     if (d < minD || d > maxD) continue;
     if (Game.cars.some(c => dist2(c.x, c.z, x, z) < 100)) continue;
-    return { fi, fj, ti, tj, lane, x, z, h: Math.atan2(dx, dz) };
+    const sp = { fi, fj, ti, tj, lane, s, x, z, h: Math.atan2(dx, dz) };
+    if (lane > 7 && !parkSpotOk(sp)) continue; // bekat oldida mashina turmaydi
+    return sp;
   }
   return null;
 }
 function spawnCar(sp, type, role) {
   const c = new Car(type, sp.x, sp.z, sp.h, role);
-  if (role !== 'parked') {
+  if (role === 'parked') c.spot = sp; // keyinroq haydovchi kelib, chiqib ketishi mumkin
+  else {
     setRoute(c, sp.fi, sp.fj, sp.ti, sp.tj, sp.lane, null);
     c.vx = Math.sin(sp.h) * 8; c.vz = Math.cos(sp.h) * 8;
     c.setDriverModel(driverOutfit(c));
@@ -89,22 +92,22 @@ function populate() {
     const c = new Car(randomCarType(), s.x, s.z, s.h + rand(-0.05, 0.05), 'parked');
     c.persist = true; Game.cars.push(c);
   }
-  const starter = new Car('malibu', roadPos(4) - 7.6, SPAWN.z + 8, 0, 'parked', 0x1b1c1f);
+  const starter = new Car('malibu', roadPos(4) - LANE_P, SPAWN.z + 8, 0, 'parked', 0x1b1c1f);
   starter.persist = true; starter.fuel = 0.85; Game.cars.push(starter);
-  const bike = new Car('moto', roadPos(4) - 7.6, SPAWN.z + 16, 0, 'parked', 0xc62828);
+  const bike = new Car('moto', roadPos(4) - LANE_P, SPAWN.z + 16, 0, 'parked', 0xc62828);
   bike.persist = true; bike.fuel = 0.85; Game.cars.push(bike);
   // Tashqi modellar yuklangan bo'lsa — yonida Mercedes va Charger ham turadi (keyinroq yuklansa — onModelReady)
   placeShowcase('gls'); placeShowcase('charger');
-  // Avtobus ishi uchun bo'sh avtobus
-  { const g = new Car('bus', roadPos(4) - 7.6, SPAWN.z + 62, 0, 'parked'); g.persist = true; g.fuel = 1; Game.cars.push(g); }
-  for (let k = 0; k < 24; k++) { const sp = randomRoadSpot(P.x, P.z, 20, 230, [2.5, 5.5]); if (sp) spawnCar(sp, randomCarType(), 'traffic'); }
-  for (let k = 0; k < 12; k++) { const sp = randomRoadSpot(P.x, P.z, 12, 200, [7.6]); if (sp) spawnCar(sp, randomCarType(), 'parked'); }
+  // Avtobus ishi uchun bo'sh avtobus (chorrahadan uzoqroqda — burilayotgan mashinalarga xalaqit bermasin)
+  { const g = new Car('bus', roadPos(4) - LANE_P, SPAWN.z + 28, 0, 'parked'); g.persist = true; g.fuel = 1; Game.cars.push(g); }
+  for (let k = 0; k < 24; k++) { const sp = randomRoadSpot(P.x, P.z, 20, 230, [LANE_L, LANE_R]); if (sp) spawnCar(sp, randomCarType(), 'traffic'); }
+  for (let k = 0; k < 12; k++) { const sp = randomRoadSpot(P.x, P.z, 12, 200, [LANE_P]); if (sp) spawnCar(sp, randomCarType(), 'parked'); }
   for (let k = 0; k < Game.maxPeds - 2; k++) spawnPed(P.x, P.z, 6, 140);
   for (let k = 0; k < 4; k++) spawnBus(P.x, P.z);
 }
 const SHOWCASE = { gls: [40, 0x111214], charger: [50, null] };
 function placeShowcase(n) {
-  const S = SHOWCASE[n], x = roadPos(4) - 7.6, z = SPAWN.z + S[0];
+  const S = SHOWCASE[n], x = roadPos(4) - LANE_P, z = SPAWN.z + S[0];
   if (!MODELS[n] || Game.cars.some(c => c.showcase === n || dist2(c.x, c.z, x, z) < 9)) return;
   const g = new Car(n, x, z, 0, 'parked', S[1] != null ? S[1] : undefined); g.persist = true; g.showcase = n; Game.cars.push(g);
 }
@@ -152,14 +155,15 @@ function manageSpawns(dt) {
     if ((Math.hypot(p.x - px, p.z - pz) > 170 && !p.keep) || (!p.alive && p.deadT > 40)) { p.remove(); Game.peds.splice(i, 1); }
   }
   if (buses < 3) spawnBus(px, pz);
-  if (traffic < Math.round(Game.maxTraffic * trafficFactor())) { const sp = randomRoadSpot(px, pz, 90, 230, [2.5, 5.5]); if (sp) spawnCar(sp, randomCarType(), 'traffic'); }
+  if (traffic < Math.round(Game.maxTraffic * trafficFactor())) { const sp = randomRoadSpot(px, pz, 90, 230, [LANE_L, LANE_R]); if (sp) spawnCar(sp, randomCarType(), 'traffic'); }
   const wantCops = Game.wanted ? WANTED_COPS[Game.wanted] : 2;
   if (cops < wantCops) {
     const sp = randomRoadSpot(px, pz, Game.wanted ? 100 : 130, Game.wanted ? 190 : 230, [2.5]);
     if (sp) spawnCar(sp, 'police', 'police');
   }
-  if (parked < 14) { const sp = randomRoadSpot(px, pz, 80, 220, [7.6]); if (sp) spawnCar(sp, randomCarType(), 'parked'); }
+  if (parked < 14) { const sp = randomRoadSpot(px, pz, 80, 220, [LANE_P]); if (sp) spawnCar(sp, randomCarType(), 'parked'); }
   if (Game.peds.length < Game.maxPeds) spawnPed(px, pz, 55, 150);
+  trafficEvents(px, pz);
 }
 
 // ===== Hodisalar (boshqa fayllar chaqiradi) =====

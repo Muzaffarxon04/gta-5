@@ -315,34 +315,77 @@ function steerTo(car, tx, tz, cruise) {
   if (Math.abs(err) > 1.2) cruise = Math.min(cruise, 7);
   car.thr = cruise <= 0.1 ? (car.fwd > 0.3 ? -1 : 0) : clamp((cruise - car.fwd) * 0.45, -1, 1);
 }
-// Oldinda to'siq bormi (mashina yoki piyoda o'yinchi)
-function aiObstacle(car, range, cars, player) {
+// Oldinda to'siq bormi (mashina yoki piyoda o'yinchi). Topilgan narsa — AI_HIT (quvib o'tish uchun).
+// shift — yo'lak almashtirayotganda yangi yo'lakkacha yon masofa (o'ngga musbat): eski yo'lakdagi mashina
+// faqat juda yaqin bo'lsa to'siq hisoblanadi, aks holda quvib o'tayotgan mashina uning orqasida qotib qolardi
+// F — yo'l bo'lagi (traffic.js segFrame): to'g'ri yo'lda o'lchov yo'l bo'ylab olinadi, mashina burchagi emas —
+// aks holda yo'lakka qaytayotgan, biroz qiyshiq turgan mashina yo'l chetidagi mashinani "oldimda" deb qotib qolardi
+let AI_HIT = null;
+function aiObstacle(car, range, cars, player, shift = 0, near = 1e9, F = null) {
   let best = range;
+  AI_HIT = null;
   const fx = Math.sin(car.h), fz = Math.cos(car.h);
-  const test = (x, z, w) => {
-    const rx = x - car.x, rz = z - car.z, al = rx * fx + rz * fz;
-    if (al > 0 && al < best && Math.abs(rx * fz - rz * fx) < w) best = al;
+  const road = F && F.s > CITY.R / 2 && F.s < CITY.CELL - CITY.R / 2, edge = road ? CITY.CELL - CITY.R / 2 + 3 - F.s : 0;
+  const test = (x, z, w, o, near = 0) => {
+    const rx = x - car.x, rz = z - car.z;
+    let al = rx * F_dx(road, F, fx) + rz * F_dz(road, F, fz), l = -rx * F_dz(road, F, fz) + rz * F_dx(road, F, fx);
+    if (road && al > edge) { al = rx * fx + rz * fz; l = -rx * fz + rz * fx; } // chorrahadan nariga — mashina yo'nalishi bo'yicha
+    // Eski yo'lakdagi uchun zaxirasiz kenglik: yon tomonga o'tib bo'lgan mashina uni chetlab o'ta oladi
+    if (al > 0 && al < best && (Math.abs(l - shift) < w || (Math.abs(l) < w - 0.2 && al < near))) { best = al; AI_HIT = o; }
   };
-  for (const o of cars) if (o !== car) test(o.x, o.z, 2.3);
-  if (player && !player.inCar && !player.dead) test(player.x, player.z, 1.6);
+  // Kenglik ikkala mashinaga qarab: yonidagi yo'lakdagi va yo'l chetida turganlar to'siq emas
+  for (const o of cars) if (o !== car) test(o.x, o.z, (car.T.w + o.T.w) / 2 + 0.12, o, near);
+  if (player && !player.inCar && !player.dead) test(player.x, player.z, 1.6, player);
   // Yo'l kesib o'tayotgan piyodalarga yo'l berish
-  for (const p of Game.peds) if (p.onRoad && p.alive) test(p.x, p.z, 1.9);
+  for (const p of Game.peds) if (p.onRoad && p.alive) test(p.x, p.z, 1.9, p);
   return best;
 }
-// Oddiy yo'l harakati
+const F_dx = (road, F, fx) => (road ? F.dx : fx), F_dz = (road, F, fz) => (road ? F.dz : fz);
+// Oddiy yo'l harakati (haydovchi fe'li, yo'lak almashtirish, yo'l berish, to'xtash — js/traffic.js)
 function updateTrafficAI(car, dt, cars, player) {
   if (car.revT > 0) { car.revT -= dt; car.thr = -0.8; car.steer = -car.steer || 0.6; return; }
-  let cruise = car.panic > 0 ? 22 : 12 * (0.75 + 0.25 * Weather.grip);
-  if (car.type === 'bus') cruise = busCruise(car, Math.min(cruise, 11), dt);
+  if (car.leaveT > 0) { leaveWait(car, dt); return; }
+  const D = drvOf(car), a = car.ai;
+  car.holding = false;
+  stepLane(car, dt);
+  const F = segFrame(car);
+  // Chap yo'lakda biroz tezroq yuriladi
+  let cruise = car.panic > 0 ? 22 : 12 * (0.75 + 0.25 * Weather.grip) * D.k * (a.lane < 4 ? 1.08 : 1);
+  const free = car.type === 'bus' ? Math.min(cruise, 11) : cruise; // bekatsiz istagan tezlik (quvib o'tish uchun)
+  if (car.type === 'bus') cruise = busCruise(car, free, dt);
   car.panic = Math.max(0, car.panic - dt);
-  const obst = aiObstacle(car, 16, cars, player);
+  // Yo'lak almashtirayotganda: eski yo'lakdagi mashina gacha yon tomonga o'tib ulgurmasa — u ham to'siq
+  const shift = a.laneT - (-(car.x - F.ax) * F.dz + (car.z - F.az) * F.dx);
+  const near = Math.abs(shift) > 0.3 ? 5.5 + Math.abs(shift) / laneRate(car) * car.speed * 0.8 : 1e9;
+  const obst = aiObstacle(car, 30, cars, player, Math.abs(shift) > 0.3 ? shift : 0, near, F), lead = AI_HIT;
   let blocked = false;
-  if (obst < 16 && car.panic <= 0) { cruise = Math.min(cruise, Math.max(0, (obst - 6.5) * 0.9)); blocked = cruise < 0.5; }
-  if (car.panic <= 0) cruise = signalCruise(car, cruise);
+  car.leadObj = lead instanceof Car && obst < 12 ? lead : null;
+  if (obst < 30 && car.panic <= 0) {
+    const lim = Math.max(0, (obst - 5.2 - 1.6 * D.gap) * 0.9);
+    // Bir-birini to'sib qolgan doirada navbat bilan: bittasi sekin o'tib ketadi
+    car.glT = (car.glT || 0) - dt;
+    if (lim < 0.5 && car.speed < 1 && car.leadObj && gridlockFree(car)) cruise = Math.min(cruise, 2.5);
+    else { cruise = Math.min(cruise, lim); blocked = cruise < 0.5; }
+  }
+  if (car.panic <= 0) {
+    const sc = signalCruise(car, cruise, D);
+    if (sc < cruise - 0.05) car.holding = true;
+    cruise = crossCruise(car, yieldCruise(car, sc, F, D, dt), cars);
+    if (car.park) { cruise = parkCruise(car, cruise, F, obst); if (!car.ai) return; } // to'xtab bo'ldi — haydovchi tushib ketdi
+    // Oldindagi mashina sekin (svetoforda yoki yo'l berib turgani emas) — quvib o'tish mumkin
+    const slow = lead instanceof Car && !car.holding && !lead.holding && lead.speed < free - 3;
+    laneLogic(car, dt, F, D, slow, slow && lead.speed < 0.5 && obst < 20 && (!lead.driver || lead.dwell > 0 || lead.dead));
+    // Yo'lak almashtirmoqchi-yu, oldidagi mashinaga juda yaqin qolib ketdi — biroz orqaga yuradi
+    if (Math.abs(shift) > 0.8 && car.speed < 0.5 && lead instanceof Car && obst < 9) { car.lcStuck = (car.lcStuck || 0) + dt; if (car.lcStuck > 1.5) { car.lcStuck = 0; car.revT = 1.1; } }
+    else car.lcStuck = Math.max(0, (car.lcStuck || 0) - dt * 0.5);
+  }
   aiFollowRoad(car, cruise, null);
-  // Svetoforda emas, faqat yo'l to'silganda signal chaladi
-  if (blocked) { car.waitT += dt; if (car.waitT > 3 && Math.random() < dt * 0.5) honk(car); } else car.waitT = 0;
+  laneSignal(car);
+  // Svetofor yoki yo'l berib turganlarga emas, faqat yo'l to'silganda signal chaladi
+  const waiting = car.holding || (lead instanceof Car && lead.holding);
+  if (blocked && !waiting) { car.waitT += dt; if (car.waitT > D.honk && Math.random() < dt * 0.5) honk(car); } else car.waitT = 0;
   trackStuck(car, dt);
+  stuckGuard(car, dt);
 }
 // Avtobus bekatda 6 soniya to'xtaydi
 function busCruise(car, cruise, dt) {
@@ -356,7 +399,7 @@ function busCruise(car, cruise, dt) {
   return dist < 30 ? Math.min(cruise, Math.max(1.2, dist * 0.45)) : cruise;
 }
 // Svetofor: qizil yoki sariqda to'xtash chizig'i oldida to'xtaydi
-function signalCruise(car, cruise) {
+function signalCruise(car, cruise, D) {
   const a = car.ai;
   if (!a) return cruise;
   const ax = roadPos(a.fi), az = roadPos(a.fj), dx = Math.sign(roadPos(a.ti) - ax), dz = Math.sign(roadPos(a.tj) - az);
@@ -364,7 +407,7 @@ function signalCruise(car, cruise) {
   const dist = CITY.CELL - CITY.R / 2 - 3.2 - car.T.l / 2 - s;
   if (dist < -0.5 || dist > 35) return cruise;
   const st = signalFor(a.ti, a.tj, dx !== 0);
-  if (st === 'G' || (st === 'Y' && dist < 7)) return cruise;
+  if (st === 'G' || (st === 'Y' && dist < (D ? D.yellow : 7))) return cruise; // shoshqaloq haydovchi sariqda ham o'tadi
   return Math.min(cruise, Math.max(0, dist - 0.3) * 0.7);
 }
 function trackStuck(car, dt) {
