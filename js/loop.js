@@ -158,10 +158,12 @@ function step(raw) {
   if (Game.bigT > 0) { Game.bigT -= raw; if (Game.bigT <= 0 && !P.dead) HUD.hideBig(); }
   const dt = raw * Game.timeScale;
   Game.time += dt; Game.crashCd -= dt; Game.hitMark -= dt; P.shootCd -= dt;
-  if (!P.dead) handleActions();
-  if (P.inCar && !P.dead) updatePlayerCar(dt);
-  else if (!P.dead) updatePlayerFoot(dt, Game.camYaw, Game.cars);
-  else if (!P.inCar) deathAnim(dt);
+  if (!P.dead && !CarEntry.locked) handleActions();
+  else Game.enterReq = null;
+  CarEntry.update(dt);
+  if (P.dead) { if (!P.inCar) deathAnim(dt); }
+  else if (P.inCar) { if (!CarEntry.locked) updatePlayerCar(dt); }
+  else if (!CarEntry.locked) updatePlayerFoot(dt, Game.camYaw, Game.cars);
   simulateWorld(dt);
   if (P.inCar) { const c = P.inCar; P.x = c.x; P.z = c.z; P.y = c.y; P.h = c.h; P.vx = c.vx; P.vz = c.vz; }
   updateWanted(dt);
@@ -193,10 +195,11 @@ function handleActions() {
   // Telefonda bosilgan eshik belgisi — aynan o'sha mashinaga o'tirish
   const req = Game.enterReq;
   Game.enterReq = null;
-  if (req && !P.inCar && !req.dead && dist2(req.x, req.z, P.x, P.z) < 4.6 * 4.6) enterCar(req);
+  // O'tirish / tushish — eshik ochilib-yopiladigan ketma-ketlik bilan (js/doors.js)
+  if (req && !P.inCar && !req.dead && dist2(req.x, req.z, P.x, P.z) < 4.6 * 4.6) CarEntry.enter(req);
   else if (kp('KeyF') || kp('Enter')) {
-    if (P.inCar) exitCar();
-    else { const c = nearestCar(4.2); if (c) enterCar(c); }
+    if (P.inCar) CarEntry.exit();
+    else { const c = nearestCar(4.2); if (c) CarEntry.enter(c); }
   }
   WEAPON_ORDER.forEach((w, i) => { if (kp('Digit' + (i + 1))) selectWeapon(w); });
   if (Input.wheel && !P.inCar) cycleWeapon(Input.wheel > 0 ? 1 : -1);
@@ -425,7 +428,7 @@ function prompts() {
   if (Game.bustT > 0.3) return HUD.prompt('Politsiya seni ushlamoqda — qoch!');
   if (Autodrom.hint) return HUD.prompt(Autodrom.hint);
   if (Fuel.hint) return HUD.prompt(Fuel.hint);
-  if (!P.inCar) {
+  if (!P.inCar && !CarEntry.active) {
     const c = nearestCar(4.2);
     if (c && !Input.touch) return HUD.prompt(`<kbd>F</kbd> ${c.driver ? 'haydovchini tushirish' : c.T.kind === 'moto' ? 'mototsiklga minish' : 'mashinaga o\'tirish'}`);
   }

@@ -340,6 +340,14 @@ class Ped {
       hm.g.rotation.x = -this.fall;
       if (this.deadT === 0) poseDead(hm);
       this.deadT += dt;
+    } else if (this.state === 'down') {
+      // Yiqilgan (mashinadan otib yuborilgan): biroz yotadi, so'ng turib qochadi
+      this.downT -= dt;
+      this.fall = this.downT > 0.45 ? Math.min(Math.PI / 2, this.fall + dt * 7) : Math.max(0, this.fall - dt * 4);
+      hm.g.rotation.x = -this.fall;
+      if (this.fall > 1.2) poseDead(hm); else poseHuman(hm, 0, 0, 0);
+      this.y = groundH(this.x, this.z) + (this.fall > 1.2 ? 0.11 : 0);
+      if (this.downT <= 0 && this.fall <= 0) { hm.g.rotation.x = 0; this.scare(this.fx, this.fz); }
     } else if (this.state === 'flee') {
       this.fleeT -= dt;
       const tgt = Math.atan2(this.x - this.fx, this.z - this.fz) + Math.sin(this.phase * 0.3) * 0.5;
@@ -403,7 +411,7 @@ class Ped {
     const umb = this.umb && this.alive && this.state !== 'flee' && Weather.rain > 0.35;
     this.umbrella(umb);
     if (umb) { hm.b.uaL.rotation.set(-0.45, 0, -0.3); hm.b.faL.rotation.set(-1.45, 0, 0); }
-    if (this.state !== 'dead') this.y = lerp(this.y, groundH(this.x, this.z), 0.3);
+    if (this.state !== 'dead' && this.state !== 'down') this.y = lerp(this.y, groundH(this.x, this.z), 0.3);
     hm.g.position.set(this.x, this.y, this.z);
     hm.g.rotation.y = this.h;
   }
@@ -425,6 +433,10 @@ class Ped {
       this.hm.g.add(g); this.umbMesh = g;
     }
     if (this.umbMesh) this.umbMesh.visible = on;
+  }
+  // Yerga yiqitish: t soniya yotadi, keyin (sx, sz) dan qochadi
+  knockDown(t, sx, sz) {
+    this.state = 'down'; this.downT = t; this.fall = Math.PI / 2; this.fx = sx; this.fz = sz; this.onRoad = false;
   }
   scare(sx, sz) {
     if (!this.alive) return;

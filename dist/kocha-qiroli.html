@@ -17661,6 +17661,8 @@ const SFX = {
     }
   },
   door() { if (this.ctx) this.burst(this.out, this.ctx.currentTime, 0.12, 'lowpass', 300, 0.45); },
+  // Eshik ochilishi: qulf "chiq" etadi, keyin yengil g'ijirlash
+  doorOpen() { if (this.ctx) { const t = this.ctx.currentTime; this.burst(this.out, t, 0.04, 'bandpass', 2400, 0.25, 4); this.burst(this.out, t + 0.05, 0.22, 'bandpass', 900, 0.08, 6); } },
   // Uzatma richagi: qisqa mexanik "chiq"
   gear() { if (this.ctx) { const t = this.ctx.currentTime; this.burst(this.out, t, 0.05, 'bandpass', 1800, 0.18, 3); this.burst(this.out, t + 0.04, 0.07, 'lowpass', 420, 0.22); } },
   // mode: 'wail' — sekin ko'tarilib-tushadi, 'yelp' — tez (yaqin ta'qibda)
@@ -18995,6 +18997,8 @@ function prepModel(name, scene) {
     }
     if (lamps.f.length && lamps.r.length) M.lamps = lamps;
   }
+  // Haydovchi eshigi alohida (ochilib-yopiladi) — js/doors.js
+  if (M.paint) prepDoor(name, scene, M);
   // Uzoqdagi mashinalarda yengil nusxa ko'rinadi (ko'chada 20+ mashina bo'ladi)
   const near = scene.getObjectByName('lod0'), far = scene.getObjectByName('lod1');
   if (near && far) {
@@ -19056,12 +19060,13 @@ class Car {
       this.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(this.color); });
       if (type === 'taxi' && T.roof) this.body.add(new THREE.Mesh(taxiSignGeo(T), CAR_MAT));
       this.steerPivot = this.body.getObjectByName('steerPivot') || null;
+      this.doorBox = M.doorBox || null;
       this.lights = new THREE.Object3D();
     } else {
       const g = codeType(type);
       this.body = new THREE.Mesh(carGeo(g, this.color), CAR_MAT); this.body.castShadow = true;
       this.lights = new THREE.Mesh(lightGeo(g), LIGHT_MAT);
-      this.steerPivot = null;
+      this.steerPivot = null; this.doorBox = null;
       const gg = glassGeo(g);
       if (gg) { this.glass = new THREE.Mesh(gg, GLASS_MAT); this.mesh.add(this.glass); }
     }
@@ -19080,6 +19085,7 @@ class Car {
     const T = this.T;
     if (this.dead || !T.model || !MODELS[T.model] || this.bodyModel === T.model) return;
     if (Cockpit.car === this) Cockpit.detach();
+    if (this.doorFx) clearDoor(this);
     this.disposePlate();
     if (this.dented) this.body.traverse(o => { if (o.isMesh && o.userData.ownGeo) o.geometry.dispose(); });
     this.mesh.remove(this.body, this.lights);
@@ -19183,6 +19189,7 @@ class Car {
     }
   }
   wreck() {
+    if (this.doorFx) clearDoor(this);
     this.dead = true; this.onFire = false; this.driver = null;
     this.body.traverse(o => { if (o.isMesh) { if (o.userData.glass) o.visible = false; else o.material = WRECK_MAT; } });
     this.lights.visible = false;
@@ -19230,6 +19237,7 @@ class Car {
     return hm;
   }
   remove() {
+    if (this.doorFx) clearDoor(this);
     if (this.driverHM && !this.driverHM.keep) this.driverHM.mesh.geometry.dispose();
     this.disposePlate();
     if (this.dented) this.body.traverse(o => { if (o.isMesh && o.userData.ownGeo) o.geometry.dispose(); });
@@ -19837,6 +19845,239 @@ function gearHints(c, gas, brk, dt) {
 }
 // Mashinada Q / E — uzatma, shuning uchun kamera ular bilan burilmaydi (sichqoncha bilan buriladi)
 const camKeysFree = () => !(Player.inCar && !Player.passenger);
+
+</script>
+<script>
+'use strict';
+// ===== Eshiklar: haydovchi eshigi ochilib-yopiladi. Mashinaga o'tirish va tushish ketma-ketligi,
+// ichida odam bo'lsa — eshikni ochib, uni ko'tarib tashqariga otib yuborish.
+// Haydovchi chap tomonda o'tiradi — mashina fazosida +x tomon.
+const DOOR_OPEN = 1.12; // eshik ochilish burchagi (radian, ~64°)
+const _dv = new THREE.Vector3();
+const easeIO = t => t * t * (3 - 2 * t);
+
+// Model tayyorlanganda (prepModel): haydovchi eshigi egallagan quti (mashina fazosida). Eshik ochilganda kuzovdan shu
+// quti ichi "kesib" yashiriladi va xuddi shu quti ichidagi kuzov nusxasi oshiq-moshiq atrofida buriladi (WebGL kesish
+// tekisliklari) — model qanday uchburchaklardan iborat bo'lishidan qat'i nazar eshik shakli aniq chiqadi.
+function prepDoor(name, scene, M) {
+  const near = scene.getObjectByName('lod0'), T = Object.values(CAR_TYPES).find(t => t.model === name);
+  if (!near || !T || T.kind === 'moto' || T.kind === 'bus' || !T.seat) return;
+  const S = T.seat, zr = S.z - 0.38, zf = zr + (T.kind === 'van' ? 1.0 : 1.12), yb = T.kind === 'van' ? T.wr * 2 + 0.02 : T.wr + 0.06, yt = T.H - 0.2;
+  // Eshik sirtining tashqi chegarasi — shu oraliqdagi eng chetki nuqta
+  let xOut = 0;
+  near.children.forEach(o => {
+    if (!o.isMesh) return;
+    o.updateMatrix(); toFloatAttrs(o.geometry);
+    const P = o.geometry.attributes.position;
+    for (let i = 0; i < P.count; i++) {
+      _dv.fromBufferAttribute(P, i).applyMatrix4(o.matrix);
+      if (_dv.z > zr && _dv.z < zf && _dv.y > 0.45 && _dv.y < 1.0 && _dv.x > xOut) xOut = _dv.x;
+    }
+  });
+  if (xOut > 0.4) M.doorBox = { x0: xOut - 0.26, x1: xOut + 0.3, y0: yb, y1: yt, z0: zr, z1: zf, xOut };
+}
+
+// Eshikni ochish darajasi a (0 — yopiq … 1 — to'liq ochiq). Faqat yaqindan (o'yinchi o'tirayotganda) ishlatiladi
+function setDoor(c, a) {
+  if (!c.doorBox || !c.body.isLOD) return;
+  if (a <= 0.001) { if (c.doorFx) clearDoor(c); return; }
+  const F = c.doorFx || (c.doorFx = makeDoorFx(c));
+  F.pivot.rotation.y = -DOOR_OPEN * a;
+  c.mesh.updateMatrixWorld(true);
+  // Kuzov: quti ichi kesiladi (normallar tashqariga, clipIntersection) — eshik nusxasi: faqat burilgan quti ichi
+  F.m.copy(F.pivot.matrixWorld).multiply(F.p0inv);
+  for (let i = 0; i < 6; i++) {
+    F.bodyPlanes[i].copy(F.local[i]).applyMatrix4(F.near.matrixWorld);
+    F.doorPlanes[i].copy(F.local[i]).negate().applyMatrix4(F.m);
+  }
+}
+function makeDoorFx(c) {
+  renderer.localClippingEnabled = true;
+  const B = c.doorBox, near = c.body.getObjectByName('lod0');
+  const F = { near, orig: new Map(), mats: [], bodyPlanes: [], doorPlanes: [], local: [], m: new THREE.Matrix4() };
+  // Quti yoqlari (normallar tashqariga): n·p − d = 0
+  for (const [nx, ny, nz, d] of [[1, 0, 0, B.x1], [-1, 0, 0, -B.x0], [0, 1, 0, B.y1], [0, -1, 0, -B.y0], [0, 0, 1, B.z1], [0, 0, -1, -B.z0]]) {
+    F.local.push(new THREE.Plane(new THREE.Vector3(nx, ny, nz), -d));
+    F.bodyPlanes.push(new THREE.Plane()); F.doorPlanes.push(new THREE.Plane());
+  }
+  F.pivot = new THREE.Group(); F.pivot.position.set(B.xOut - 0.04, 0, B.z1); near.add(F.pivot);
+  F.pivot.updateMatrix(); F.p0inv = new THREE.Matrix4().copy(F.pivot.matrix).invert();
+  const clip = (mat, planes, inter) => { const m = mat.clone(); m.clippingPlanes = planes; m.clipIntersection = inter; m.clipShadows = true; F.mats.push(m); return m; };
+  const tmp = new THREE.Matrix4();
+  for (const o of near.children) {
+    if (!o.isMesh || o === c.plateMesh) continue;
+    F.orig.set(o, o.material);
+    o.material = clip(o.material, F.bodyPlanes, true);
+    const d = new THREE.Mesh(o.geometry, clip(F.orig.get(o), F.doorPlanes, false));
+    o.updateMatrix(); tmp.multiplyMatrices(F.p0inv, o.matrix).decompose(d.position, d.quaternion, d.scale);
+    d.userData = { ...o.userData };
+    F.pivot.add(d);
+  }
+  return F;
+}
+function clearDoor(c) {
+  const F = c.doorFx;
+  if (!F) return;
+  for (const [o, mat] of F.orig) if (F.mats.includes(o.material)) o.material = mat;
+  F.near.remove(F.pivot);
+  for (const m of F.mats) m.dispose();
+  c.doorFx = null;
+}
+
+// Mashina fazosidagi nuqtani dunyoga (lx — chapga, lz — oldinga)
+const carToWorld = (c, lx, lz) => ({ x: c.x + lx * Math.cos(c.h) + lz * Math.sin(c.h), z: c.z - lx * Math.sin(c.h) + lz * Math.cos(c.h) });
+// Eshik tashqi chegarasi (eshigi yo'q mashinada — kuzov yarmi)
+const doorX = c => (c.doorBox && c.doorBox.xOut) || c.T.w / 2;
+
+const CarEntry = {
+  job: null,
+  get active() { return !!this.job; },
+  // O'yinchi F bosdi yoki telefonda eshik belgisini bosdi
+  enter(c) {
+    if (this.job || Player.dead) return;
+    if (c.driver === 'remote' || c.dead) { enterCar(c); return; } // boshqa o'yinchi mashinasi — yo'lovchi
+    const role = c.driver === 'traffic' || c.driver === 'police' || c.driver === 'racer' ? c.driver : null;
+    if (role) { c.driver = null; c.ai = null; c.thr = 0; } // haydovchi to'xtaydi (tormoz)
+    const P = Player, dx = doorX(c), S = c.T.seat;
+    // Yo'l: yo'lovchi tomonda yoki old/orqada turgan bo'lsa — mashinani yaqin uchidan aylanib o'tadi
+    const ox = P.x - c.x, oz = P.z - c.z, lx = ox * Math.cos(c.h) - oz * Math.sin(c.h), lz = ox * Math.sin(c.h) + oz * Math.cos(c.h);
+    const path = [];
+    if (lx < dx * 0.6) {
+      const zEnd = (lz >= 0 ? 1 : -1) * (c.T.l / 2 + 0.7);
+      if (lx < -dx * 0.6) path.push([-(dx + 0.6), zEnd]);
+      path.push([dx + 0.6, zEnd]);
+    }
+    path.push([dx + 0.5, S.z - 0.05]);
+    this.job = { c, kind: 'in', phase: 'walk', t: 0, role, path, seg: 0 };
+    if (P.gun) P.gun.visible = false;
+  },
+  // O'yinchi boshqara olmaydigan payt (eshik yopilayotganda — boshqarsa bo'ladi)
+  get locked() { return !!this.job && this.job.phase !== 'close'; },
+  // F mashinada: sekin yurayotgan bo'lsa — eshikni ochib tushadi, tez bo'lsa — darhol (sakrab) tushadi
+  exit() {
+    const P = Player, c = P.inCar;
+    if (this.job || !c) return;
+    if (P.passenger || !c.doorBox || c.speed > 3 || c.T.kind === 'moto') { exitCar(); return; }
+    if (Cockpit.on) Cockpit.toggle(); // tushayotganini orqadan ko'ramiz
+    this.job = { c, kind: 'out', phase: 'open', t: 0 };
+    SFX.doorOpen();
+  },
+  cancel() {
+    const J = this.job;
+    if (!J) return;
+    setDoor(J.c, 0);
+    if (J.pull) { World.scene.remove(J.pull.g); J.pull.mesh.geometry.dispose(); }
+    if (J.kind === 'in' && Player.hm.g.parent === J.c.mesh) { World.scene.attach(Player.hm.g); Player.hm.g.rotation.set(0, Player.h, 0); }
+    this.job = null;
+  },
+  update(dt) {
+    const J = this.job;
+    if (!J) return;
+    const P = Player, c = J.c, hm = P.hm, S = c.T.seat, dx = doorX(c);
+    if (P.dead || c.dead) { this.cancel(); return; }
+    J.t += dt;
+    const door = a => setDoor(c, a);
+    const stand = carToWorld(c, dx + 0.5, S.z - 0.05), faceCar = Math.atan2(-Math.cos(c.h), Math.sin(c.h));
+    const next = (ph) => { J.phase = ph; J.t = 0; };
+    if (J.kind === 'in') {
+      if (J.phase === 'walk') {
+        // Eshik oldiga yurib boradi (kerak bo'lsa mashinani aylanib)
+        let step = 4 * dt, done = false;
+        while (step > 0) {
+          const [wx, wz] = J.path[J.seg], w = carToWorld(c, wx, wz), ddx = w.x - P.x, ddz = w.z - P.z, d = Math.hypot(ddx, ddz);
+          if (d > 0.01) P.h = Math.atan2(ddx, ddz);
+          if (d <= step) { P.x = w.x; P.z = w.z; step -= d; if (++J.seg >= J.path.length) { done = true; break; } }
+          else { P.x += ddx / d * step; P.z += ddz / d * step; step = 0; }
+        }
+        if (J.t > 4) done = true; // biror narsaga tiqilib qolsa ham
+        P.y = groundH(P.x, P.z);
+        P.phase = (P.phase || 0) + dt * 11; poseHuman(hm, P.phase, 0.85, 0.2);
+        if (done) { P.h = faceCar; poseHuman(hm, 0, 0, 0); next(c.doorBox ? 'open' : J.role ? 'pull' : 'in'); if (c.doorBox) SFX.doorOpen(); }
+        hm.g.position.set(P.x, P.y, P.z); hm.g.rotation.set(0, P.h, 0);
+        return;
+      }
+      // Turgan joyida mashina bilan birga (mashina sirpanib ketsa ham eshik yonida)
+      if (J.phase === 'open' || J.phase === 'pull') { P.x = stand.x; P.z = stand.z; P.h = faceCar; hm.g.position.set(P.x, groundH(P.x, P.z), P.z); hm.g.rotation.set(0, P.h, 0); }
+      if (J.phase === 'open') {
+        const k = Math.min(1, J.t / 0.35);
+        door(easeIO(k));
+        poseHuman(hm, 0, 0, 0); hm.b.uaR.rotation.set(-1.2 * k, 0, -0.1); hm.b.faR.rotation.set(-0.3, 0, 0);
+        if (k >= 1) next(J.role && c.driverHM ? 'pull' : 'in');
+        return;
+      }
+      if (J.phase === 'pull') {
+        // Haydovchini ko'tarib, tashqariga otib yuboradi
+        if (!J.pull) {
+          const d = c.driverHM; c.driverHM = null;
+          World.scene.attach(d.g); J.pull = d;
+          J.from = d.g.position.clone(); J.fromH = d.g.rotation.y;
+          const to = carToWorld(c, dx + 2.4, S.z + 0.5); J.to = new THREE.Vector3(to.x, groundH(to.x, to.z) + 0.15, to.z);
+          SFX.punch();
+          crime(J.role === 'police' ? 2 : 0.7);
+        }
+        const k = Math.min(1, J.t / 0.65), e = easeIO(k), d = J.pull;
+        d.g.position.lerpVectors(J.from, J.to, e); d.g.position.y += Math.sin(Math.PI * k) * 0.7;
+        d.g.rotation.set(-Math.PI / 2 * e, faceCar + Math.PI, 0);
+        poseHuman(d, 0, 0, 0); d.b.uaL.rotation.set(-2.4, 0, 0.6); d.b.uaR.rotation.set(-2.4, 0, -0.6);
+        poseHuman(hm, 0, 0, 0); hm.b.uaL.rotation.set(-1.4 * (1 - k), 0, 0.2); hm.b.uaR.rotation.set(-1.4 * (1 - k), 0, -0.2); hm.b.spine.rotation.x = 0.35 * Math.sin(Math.PI * k);
+        if (k >= 1) {
+          // Yerga tushgan haydovchi: biroz yotib, turib qochadi
+          const b = blockAt(J.to.x, J.to.z) || nearestBlock(J.to.x, J.to.z), p = new Ped(b, 0, c.driverOutfit || (J.role === 'police' ? 'police' : null));
+          p.x = J.to.x; p.z = J.to.z; p.h = faceCar + Math.PI; p.knockDown(1.3, P.x, P.z);
+          Game.peds.push(p);
+          World.scene.remove(d.g); d.mesh.geometry.dispose(); J.pull = null;
+          c.driverOutfit = null;
+          next('in');
+        }
+        return;
+      }
+      if (J.phase === 'in') {
+        // Eshikdan ichkariga: oyoqni qo'yib, o'rindiqqa o'tiradi
+        const lx0 = dx + 0.5, ly0 = groundH(stand.x, stand.z) - c.y, lz0 = S.z - 0.05;
+        if (hm.g.parent !== c.mesh) { c.mesh.add(hm.g); }
+        const k = Math.min(1, J.t / (c.T.kind === 'moto' ? 0.35 : 0.55)), e = easeIO(k), sy = S.y - 0.95 * hm.mesh.scale.y;
+        hm.g.position.set(lerp(lx0, S.x, e), lerp(ly0, sy, e) + Math.sin(Math.PI * k) * 0.08, lerp(lz0, S.z, e));
+        hm.g.rotation.set(0, lerp(-Math.PI / 2, 0, e), 0);
+        if (k < 0.45) { poseHuman(hm, 0, 0, 0); hm.b.spine.rotation.x = 0.5 * k / 0.45; } else if (c.T.kind === 'moto') poseRider(hm); else poseSeated(hm);
+        if (k >= 1) {
+          enterCar(c, true);
+          if (c.doorBox) next('close'); else this.job = null;
+        }
+        return;
+      }
+      if (J.phase === 'close') {
+        const k = Math.min(1, J.t / 0.3);
+        door(1 - easeIO(k));
+        if (k >= 1) { SFX.door(); this.job = null; }
+      }
+      return;
+    }
+    // ----- Tushish -----
+    if (P.inCar === c) { c.thr = 0; c.brk = 1; }
+    if (J.phase === 'open') {
+      const k = Math.min(1, J.t / 0.3);
+      door(easeIO(k));
+      if (k >= 1) next('out');
+    } else if (J.phase === 'out') {
+      const k = Math.min(1, J.t / 0.45), e = easeIO(k), sy = S.y - 0.95 * hm.mesh.scale.y, ly0 = groundH(stand.x, stand.z) - c.y;
+      if (P.inCar === c && hm.g.parent === c.mesh) {
+        hm.g.position.set(lerp(S.x, dx + 0.5, e), lerp(sy, ly0, e) + Math.sin(Math.PI * k) * 0.08, lerp(S.z, S.z - 0.05, e));
+        hm.g.rotation.set(0, lerp(0, -Math.PI / 2, e), 0);
+        if (k > 0.5) { poseHuman(hm, 0, 0, 0); hm.b.spine.rotation.x = 0.5 * (1 - k) / 0.5; }
+      }
+      if (k >= 1) {
+        exitCar(true);
+        P.x = stand.x; P.z = stand.z; P.y = groundH(P.x, P.z); P.h = faceCar + Math.PI;
+        hm.g.position.set(P.x, P.y, P.z); hm.g.rotation.set(0, P.h, 0);
+        next('close');
+      }
+    } else if (J.phase === 'close') {
+      const k = Math.min(1, J.t / 0.3);
+      door(1 - easeIO(k));
+      if (k >= 1) { SFX.door(); this.job = null; }
+    }
+  },
+};
 
 </script>
 <script>
@@ -20612,6 +20853,14 @@ class Ped {
       hm.g.rotation.x = -this.fall;
       if (this.deadT === 0) poseDead(hm);
       this.deadT += dt;
+    } else if (this.state === 'down') {
+      // Yiqilgan (mashinadan otib yuborilgan): biroz yotadi, so'ng turib qochadi
+      this.downT -= dt;
+      this.fall = this.downT > 0.45 ? Math.min(Math.PI / 2, this.fall + dt * 7) : Math.max(0, this.fall - dt * 4);
+      hm.g.rotation.x = -this.fall;
+      if (this.fall > 1.2) poseDead(hm); else poseHuman(hm, 0, 0, 0);
+      this.y = groundH(this.x, this.z) + (this.fall > 1.2 ? 0.11 : 0);
+      if (this.downT <= 0 && this.fall <= 0) { hm.g.rotation.x = 0; this.scare(this.fx, this.fz); }
     } else if (this.state === 'flee') {
       this.fleeT -= dt;
       const tgt = Math.atan2(this.x - this.fx, this.z - this.fz) + Math.sin(this.phase * 0.3) * 0.5;
@@ -20675,7 +20924,7 @@ class Ped {
     const umb = this.umb && this.alive && this.state !== 'flee' && Weather.rain > 0.35;
     this.umbrella(umb);
     if (umb) { hm.b.uaL.rotation.set(-0.45, 0, -0.3); hm.b.faL.rotation.set(-1.45, 0, 0); }
-    if (this.state !== 'dead') this.y = lerp(this.y, groundH(this.x, this.z), 0.3);
+    if (this.state !== 'dead' && this.state !== 'down') this.y = lerp(this.y, groundH(this.x, this.z), 0.3);
     hm.g.position.set(this.x, this.y, this.z);
     hm.g.rotation.y = this.h;
   }
@@ -20697,6 +20946,10 @@ class Ped {
       this.hm.g.add(g); this.umbMesh = g;
     }
     if (this.umbMesh) this.umbMesh.visible = on;
+  }
+  // Yerga yiqitish: t soniya yotadi, keyin (sx, sz) dan qochadi
+  knockDown(t, sx, sz) {
+    this.state = 'down'; this.downT = t; this.fall = Math.PI / 2; this.fx = sx; this.fz = sz; this.onRoad = false;
   }
   scare(sx, sz) {
     if (!this.alive) return;
@@ -22487,7 +22740,7 @@ const TouchUI = {
   },
   updateDoors() {
     const P = Player, near = [];
-    if (!P.inCar && !P.dead) for (const c of Game.cars) {
+    if (!P.inCar && !P.dead && !CarEntry.active) for (const c of Game.cars) {
       const d = dist2(c.x, c.z, P.x, P.z);
       if (!c.dead && d < 4.2 * 4.2) near.push([d, c]);
     }
@@ -24583,7 +24836,8 @@ function nearestCar(maxD) {
   }
   return best;
 }
-function enterCar(c) {
+// quiet — eshik ovozisiz (eshik animatsiyasi o'zi chaladi, js/doors.js)
+function enterCar(c, quiet = false) {
   const P = Player;
   // Boshqa o'yinchining mashinasi — yo'lovchi bo'lib o'tirish
   if (c.driver === 'remote') {
@@ -24612,12 +24866,12 @@ function enterCar(c) {
   c.seatHuman(P.hm, true);
   if (P.gun) P.gun.visible = false;
   Game.mouseIdle = 9;
-  SFX.door();
+  if (!quiet) SFX.door();
   // Telefonda klaviatura tugmalari ko'rsatilmaydi (belgilar Yo'riqnomada)
   HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? (Settings.v.gearbox === 'manual' ? ' · uzatma <b>1</b> da, orqaga yurish uchun ▼ bilan <b>R</b>' : ' · uzatma <b>D</b> da, orqaga yurish uchun selektorda <b>R</b>') : `. <kbd>W</kbd> — gaz, <kbd>S</kbd> — tormoz, <kbd>Q</kbd> <kbd>E</kbd> — uzatma (orqaga — <b>R</b>), <kbd>F</kbd> — tushish` +
     (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>V</kbd> — ichidan ko\'rish'), Input.touch ? 3 : 5);
 }
-function exitCar() {
+function exitCar(quiet = false) {
   const P = Player, c = P.inCar;
   const rx = -Math.cos(c.h), rz = Math.sin(c.h), off = c.T.w / 2 + 0.7;
   let spot = null;
@@ -24638,7 +24892,8 @@ function exitCar() {
     leaveSeat();
   }
   Game.camYaw = c.h;
-  SFX.door(); SFX.setEngine(false, 0);
+  if (!quiet) SFX.door();
+  SFX.setEngine(false, 0);
 }
 
 // O'yinchi modelini mashinadan sahnaga qaytarish
@@ -24948,10 +25203,12 @@ function step(raw) {
   if (Game.bigT > 0) { Game.bigT -= raw; if (Game.bigT <= 0 && !P.dead) HUD.hideBig(); }
   const dt = raw * Game.timeScale;
   Game.time += dt; Game.crashCd -= dt; Game.hitMark -= dt; P.shootCd -= dt;
-  if (!P.dead) handleActions();
-  if (P.inCar && !P.dead) updatePlayerCar(dt);
-  else if (!P.dead) updatePlayerFoot(dt, Game.camYaw, Game.cars);
-  else if (!P.inCar) deathAnim(dt);
+  if (!P.dead && !CarEntry.locked) handleActions();
+  else Game.enterReq = null;
+  CarEntry.update(dt);
+  if (P.dead) { if (!P.inCar) deathAnim(dt); }
+  else if (P.inCar) { if (!CarEntry.locked) updatePlayerCar(dt); }
+  else if (!CarEntry.locked) updatePlayerFoot(dt, Game.camYaw, Game.cars);
   simulateWorld(dt);
   if (P.inCar) { const c = P.inCar; P.x = c.x; P.z = c.z; P.y = c.y; P.h = c.h; P.vx = c.vx; P.vz = c.vz; }
   updateWanted(dt);
@@ -24983,10 +25240,11 @@ function handleActions() {
   // Telefonda bosilgan eshik belgisi — aynan o'sha mashinaga o'tirish
   const req = Game.enterReq;
   Game.enterReq = null;
-  if (req && !P.inCar && !req.dead && dist2(req.x, req.z, P.x, P.z) < 4.6 * 4.6) enterCar(req);
+  // O'tirish / tushish — eshik ochilib-yopiladigan ketma-ketlik bilan (js/doors.js)
+  if (req && !P.inCar && !req.dead && dist2(req.x, req.z, P.x, P.z) < 4.6 * 4.6) CarEntry.enter(req);
   else if (kp('KeyF') || kp('Enter')) {
-    if (P.inCar) exitCar();
-    else { const c = nearestCar(4.2); if (c) enterCar(c); }
+    if (P.inCar) CarEntry.exit();
+    else { const c = nearestCar(4.2); if (c) CarEntry.enter(c); }
   }
   WEAPON_ORDER.forEach((w, i) => { if (kp('Digit' + (i + 1))) selectWeapon(w); });
   if (Input.wheel && !P.inCar) cycleWeapon(Input.wheel > 0 ? 1 : -1);
@@ -25215,7 +25473,7 @@ function prompts() {
   if (Game.bustT > 0.3) return HUD.prompt('Politsiya seni ushlamoqda — qoch!');
   if (Autodrom.hint) return HUD.prompt(Autodrom.hint);
   if (Fuel.hint) return HUD.prompt(Fuel.hint);
-  if (!P.inCar) {
+  if (!P.inCar && !CarEntry.active) {
     const c = nearestCar(4.2);
     if (c && !Input.touch) return HUD.prompt(`<kbd>F</kbd> ${c.driver ? 'haydovchini tushirish' : c.T.kind === 'moto' ? 'mototsiklga minish' : 'mashinaga o\'tirish'}`);
   }

@@ -30,12 +30,13 @@ class Car {
       this.body.traverse(o => { if (o.isMesh && o.userData.paint) o.material = paintMat(this.color); });
       if (type === 'taxi' && T.roof) this.body.add(new THREE.Mesh(taxiSignGeo(T), CAR_MAT));
       this.steerPivot = this.body.getObjectByName('steerPivot') || null;
+      this.doorBox = M.doorBox || null;
       this.lights = new THREE.Object3D();
     } else {
       const g = codeType(type);
       this.body = new THREE.Mesh(carGeo(g, this.color), CAR_MAT); this.body.castShadow = true;
       this.lights = new THREE.Mesh(lightGeo(g), LIGHT_MAT);
-      this.steerPivot = null;
+      this.steerPivot = null; this.doorBox = null;
       const gg = glassGeo(g);
       if (gg) { this.glass = new THREE.Mesh(gg, GLASS_MAT); this.mesh.add(this.glass); }
     }
@@ -54,6 +55,7 @@ class Car {
     const T = this.T;
     if (this.dead || !T.model || !MODELS[T.model] || this.bodyModel === T.model) return;
     if (Cockpit.car === this) Cockpit.detach();
+    if (this.doorFx) clearDoor(this);
     this.disposePlate();
     if (this.dented) this.body.traverse(o => { if (o.isMesh && o.userData.ownGeo) o.geometry.dispose(); });
     this.mesh.remove(this.body, this.lights);
@@ -157,6 +159,7 @@ class Car {
     }
   }
   wreck() {
+    if (this.doorFx) clearDoor(this);
     this.dead = true; this.onFire = false; this.driver = null;
     this.body.traverse(o => { if (o.isMesh) { if (o.userData.glass) o.visible = false; else o.material = WRECK_MAT; } });
     this.lights.visible = false;
@@ -204,6 +207,7 @@ class Car {
     return hm;
   }
   remove() {
+    if (this.doorFx) clearDoor(this);
     if (this.driverHM && !this.driverHM.keep) this.driverHM.mesh.geometry.dispose();
     this.disposePlate();
     if (this.dented) this.body.traverse(o => { if (o.isMesh && o.userData.ownGeo) o.geometry.dispose(); });

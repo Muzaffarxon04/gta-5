@@ -480,6 +480,8 @@ const SFX = {
     }
   },
   door() { if (this.ctx) this.burst(this.out, this.ctx.currentTime, 0.12, 'lowpass', 300, 0.45); },
+  // Eshik ochilishi: qulf "chiq" etadi, keyin yengil g'ijirlash
+  doorOpen() { if (this.ctx) { const t = this.ctx.currentTime; this.burst(this.out, t, 0.04, 'bandpass', 2400, 0.25, 4); this.burst(this.out, t + 0.05, 0.22, 'bandpass', 900, 0.08, 6); } },
   // Uzatma richagi: qisqa mexanik "chiq"
   gear() { if (this.ctx) { const t = this.ctx.currentTime; this.burst(this.out, t, 0.05, 'bandpass', 1800, 0.18, 3); this.burst(this.out, t + 0.04, 0.07, 'lowpass', 420, 0.22); } },
   // mode: 'wail' — sekin ko'tarilib-tushadi, 'yelp' — tez (yaqin ta'qibda)

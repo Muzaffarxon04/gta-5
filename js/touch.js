@@ -234,7 +234,7 @@ const TouchUI = {
   },
   updateDoors() {
     const P = Player, near = [];
-    if (!P.inCar && !P.dead) for (const c of Game.cars) {
+    if (!P.inCar && !P.dead && !CarEntry.active) for (const c of Game.cars) {
       const d = dist2(c.x, c.z, P.x, P.z);
       if (!c.dead && d < 4.2 * 4.2) near.push([d, c]);
     }
