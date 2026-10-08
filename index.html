@@ -218,6 +218,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .pedal.brake { height: 86px; width: 80px; border-color: rgba(239, 75, 70, .8); }
 .sbtn.on, .pedal.on { background: rgba(255,255,255,.38); transform: translateY(3px); box-shadow: none; }
 .touch-ui:not(.driving) .steer-pad, .touch-ui:not(.driving) .pedals, .touch-ui.driving .joy { display: none; }
+.gearbox-ui { position: absolute; right: calc(22px + env(safe-area-inset-right, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); display: none; }
+.touch-ui.driving .gearbox-ui { display: flex; }
 .gear-pad { display: none; flex-direction: column; align-items: center; gap: 6px; }
 .touch-ui.manual .gear-pad { display: flex; }
 .gear-pad .tbtn { width: 50px; height: 50px; font-size: 18px; }
@@ -236,7 +238,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .touch-ui.driving:not([data-steer="arrows"]) .steer-pad,
 .touch-ui:not(.driving) .steer-wheel, .touch-ui:not([data-steer="wheel"]) .steer-wheel,
 .touch-ui:not(.driving) .tilt-ind, .touch-ui:not([data-steer="tilt"]) .tilt-ind { display: none; }
-.touch-ui.driving .tbtns { right: calc(260px + env(safe-area-inset-right, 0px)); grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 8px; }
+.touch-ui.driving .tbtns { right: calc(192px + env(safe-area-inset-right, 0px)); grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 8px; }
 .touch-ui.driving .tbtn[data-act="fire"] svg { width: 30px; height: 30px; }
 .tbtn[data-act="view"] { font-size: 13px; }
 .door-btn { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; pointer-events: auto; touch-action: none; padding: 0;
@@ -250,8 +252,12 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .touch #radar { width: 150px; height: 108px; }
 .touch .help { top: calc(146px + env(safe-area-inset-top, 0px)); left: 10px; max-width: min(300px, calc(100vw - 20px)); font-size: 15px; }
 .touch .area { display: none; }
-.touch .speedo { bottom: auto; top: calc(62px + env(safe-area-inset-top, 0px)); }
-.touch .objective { bottom: auto; top: calc(58px + env(safe-area-inset-top, 0px)); font-size: 17px; max-width: min(420px, calc(100vw - 340px)); }
+/* Telefonda tezlik — xaritaning o'ng tomonida (uning joyida uzatmalar qutisi) */
+.touch .speedo { top: calc(8px + env(safe-area-inset-top, 0px)); bottom: auto; left: calc(172px + env(safe-area-inset-left, 0px)); right: auto; text-align: left; }
+.touch .speedo b { font-size: 34px; }
+.touch .sigs, .touch .fuel { justify-content: flex-start; }
+.touch .car-hp, .touch .nitro { margin-left: 0; width: 120px; }
+.touch .objective { bottom: auto; top: calc(62px + env(safe-area-inset-top, 0px)); left: calc(330px + env(safe-area-inset-left, 0px)); right: calc(96px + env(safe-area-inset-right, 0px)); transform: none; font-size: 17px; max-width: none; }
 .touch .prompt { bottom: 48%; }
 .act-pill { position: absolute; left: 50%; bottom: calc(48% + 48px); transform: translateX(-50%); pointer-events: auto; touch-action: none; display: flex; align-items: center; gap: 8px;
   height: 50px; padding: 0 20px 0 14px; border-radius: 25px; background: rgba(38,166,154,.85); border: 2px solid rgba(255,255,255,.6); color: #fff; font: 700 17px var(--f-ui); }
@@ -532,7 +538,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <!-- Rul rejimi: ekrandagi rul (barmoq bilan aylantiriladi); qiyshaytirish rejimi: rul holati ko'rsatkichi -->
   <div class="steer-wheel" id="steerWheel" role="slider" aria-label="Rul"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="50" cy="50" r="42" stroke-width="10" fill="rgba(20,16,30,.35)"/><path d="M12 54 38 52M88 54 62 52M50 64v26" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="52" r="12" fill="currentColor" stroke="none"/><path d="M50 4v12" stroke="#ffb238" stroke-width="7" stroke-linecap="round"/></svg></div>
   <div class="tilt-ind" id="tiltInd" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="50" cy="50" r="42" stroke-width="10" fill="rgba(20,16,30,.35)"/><path d="M12 54 38 52M88 54 62 52M50 64v26" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="52" r="12" fill="currentColor" stroke="none"/><path d="M50 4v12" stroke="#ffb238" stroke-width="7" stroke-linecap="round"/></svg></div>
-  <div class="pedals">
+  <!-- Uzatmalar qutisi: o'ng tomonda, yuqori panel ostida -->
+  <div class="gearbox-ui">
     <!-- Avtomat selektori: P (park), R (orqaga), N (neytral), D (oldinga) -->
     <div class="shifter" id="shifter" role="radiogroup" aria-label="Uzatmalar selektori">
       <button type="button" data-sel="P" aria-label="P — park">P</button>
@@ -546,6 +553,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
       <b id="gearPadInd">1</b>
       <button class="tbtn" type="button" data-act="gearDown" aria-label="Past uzatma">▼</button>
     </div>
+  </div>
+  <div class="pedals">
     <button class="pedal brake" type="button" data-key="ArrowDown">TORMOZ</button>
     <button class="pedal gas" type="button" data-key="ArrowUp">GAZ</button>
   </div>

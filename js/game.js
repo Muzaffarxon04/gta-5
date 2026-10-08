@@ -271,7 +271,7 @@ function enterCar(c) {
   Game.mouseIdle = 9;
   SFX.door();
   // Telefonda klaviatura tugmalari ko'rsatilmaydi (belgilar Yo'riqnomada)
-  HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? ' · uzatma <b>D</b> da, orqaga yurish uchun selektorda <b>R</b>' : `. <kbd>W</kbd> — gaz, <kbd>S</kbd> — tormoz, <kbd>Q</kbd> <kbd>E</kbd> — uzatma (orqaga — <b>R</b>), <kbd>F</kbd> — tushish` +
+  HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? (Settings.v.gearbox === 'manual' ? ' · uzatma <b>1</b> da, orqaga yurish uchun ▼ bilan <b>R</b>' : ' · uzatma <b>D</b> da, orqaga yurish uchun selektorda <b>R</b>') : `. <kbd>W</kbd> — gaz, <kbd>S</kbd> — tormoz, <kbd>Q</kbd> <kbd>E</kbd> — uzatma (orqaga — <b>R</b>), <kbd>F</kbd> — tushish` +
     (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>V</kbd> — ichidan ko\'rish'), Input.touch ? 3 : 5);
 }
 function exitCar() {
