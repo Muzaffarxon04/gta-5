@@ -68,6 +68,9 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .speedo { position: absolute; right: 22px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); text-align: right; }
 .speedo b { font-family: var(--f-display); font-weight: 400; font-size: 40px; font-variant-numeric: tabular-nums; }
 .speedo span { font-size: 16px; font-weight: 600; margin-left: 4px; color: var(--muted); }
+.gear-ind { display: inline-block; font-style: normal; font-family: var(--f-display); font-size: 22px; line-height: 1; min-width: 30px; text-align: center; padding: 4px 6px 3px; margin-right: 10px; border: 2px solid rgba(255,255,255,.5); border-radius: 6px; vertical-align: 9px; }
+.gear-ind.shift { border-color: var(--sun); color: var(--sun); }
+.gear-ind.rev { border-color: var(--danger); color: var(--danger); }
 .sigs { display: flex; justify-content: flex-end; gap: 10px; font-style: normal; height: 18px; }
 .sigs i { font-style: normal; font-size: 18px; color: rgba(255,255,255,.18); line-height: 1; }
 .sigs i.on { color: #7ee0a1; text-shadow: 0 0 8px rgba(126,224,161,.8); }
@@ -201,6 +204,12 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .pedal.brake { height: 104px; width: 96px; border-color: rgba(239, 75, 70, .8); }
 .sbtn.on, .pedal.on { background: rgba(255,255,255,.38); transform: translateY(3px); box-shadow: none; }
 .touch-ui:not(.driving) .steer-pad, .touch-ui:not(.driving) .pedals, .touch-ui.driving .joy { display: none; }
+.gear-pad { display: none; flex-direction: column; align-items: center; gap: 6px; }
+.touch-ui.manual .gear-pad { display: flex; }
+.gear-pad .tbtn { width: 50px; height: 50px; font-size: 18px; }
+.gear-pad b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--ink); text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+.gear-pad b.shift { color: var(--sun); }
+.touch-ui.driving.manual .tbtns { right: calc(284px + env(safe-area-inset-right, 0px)); }
 .sig-pad { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(124px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; }
 .sig-pad .tbtn { width: 46px; height: 46px; }
 .sig-pad .tbtn svg { width: 24px; height: 24px; }
@@ -400,7 +409,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="cross" id="cross"></div>
   <div class="prompt" id="prompt" hidden></div>
   <div class="objective" id="objective" hidden></div>
-  <div class="speedo" id="speedo" hidden><div class="sigs"><i class="sig-l" id="sigL">◀</i><i class="sig-r" id="sigR">▶</i></div><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="fuel" id="fuelWrap" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 14 5v16M3 21h12M6.5 7h5v4h-5z"/><path d="M14 9.5h2a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/></svg><span><i id="fuelBar"></i></span></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
+  <div class="speedo" id="speedo" hidden><div class="sigs"><i class="sig-l" id="sigL">◀</i><i class="sig-r" id="sigR">▶</i></div><i class="gear-ind" id="gearInd" title="Uzatma">D1</i><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="fuel" id="fuelWrap" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 14 5v16M3 21h12M6.5 7h5v4h-5z"/><path d="M14 9.5h2a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/></svg><span><i id="fuelBar"></i></span></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
   <div class="area"><b id="district">Chilonzor</b><span id="street">Amir Temur ko'chasi</span></div>
   <div class="radar-wrap">
     <canvas id="radar" width="420" height="300"></canvas>
@@ -511,6 +520,12 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="steer-wheel" id="steerWheel" role="slider" aria-label="Rul"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="50" cy="50" r="42" stroke-width="10" fill="rgba(20,16,30,.35)"/><path d="M12 54 38 52M88 54 62 52M50 64v26" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="52" r="12" fill="currentColor" stroke="none"/><path d="M50 4v12" stroke="#ffb238" stroke-width="7" stroke-linecap="round"/></svg></div>
   <div class="tilt-ind" id="tiltInd" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="50" cy="50" r="42" stroke-width="10" fill="rgba(20,16,30,.35)"/><path d="M12 54 38 52M88 54 62 52M50 64v26" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="52" r="12" fill="currentColor" stroke="none"/><path d="M50 4v12" stroke="#ffb238" stroke-width="7" stroke-linecap="round"/></svg></div>
   <div class="pedals">
+    <!-- Mexanik uzatmalar (Sozlamalar → Uzatmalar qutisi → Mexanika) -->
+    <div class="gear-pad">
+      <button class="tbtn" type="button" data-act="gearUp" aria-label="Yuqori uzatma">▲</button>
+      <b id="gearPadInd">1</b>
+      <button class="tbtn" type="button" data-act="gearDown" aria-label="Past uzatma">▼</button>
+    </div>
     <button class="pedal brake" type="button" data-key="ArrowDown">TORMOZ</button>
     <button class="pedal gas" type="button" data-key="ArrowUp">GAZ</button>
   </div>
@@ -611,6 +626,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 <script src="js/models.js"></script>
 <script src="js/vehicles.js"></script>
 <script src="js/traffic.js"></script>
+<script src="js/gearbox.js"></script>
 <script src="js/plates.js"></script>
 <script src="js/carlights.js"></script>
 <script src="js/damage.js"></script>

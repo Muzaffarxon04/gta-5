@@ -10,7 +10,7 @@ const QUALITY = {
 // Telefonda mashinani burish usullari
 const STEER_MODES = [['arrows', 'Strelka'], ['wheel', 'Rul'], ['tilt', 'Qiyshaytirish']];
 const Settings = {
-  v: { quality: 'auto', qv: 2, keyHints: true, fuel: true, master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
+  v: { quality: 'auto', qv: 2, keyHints: true, fuel: true, gearbox: 'auto', master: 0.8, music: 0.6, sens: 1, invertY: false, fov: 65, steer: 'arrows' },
   // Amaldagi sifat: "Avto" bo'lsa — AutoQuality tanlagani
   q() { const k = this.v.quality === 'auto' ? AutoQuality.level : this.v.quality; return QUALITY[k] && k !== 'auto' ? QUALITY[k] : QUALITY.high; },
   viewDist() { return this.q().view; },
@@ -78,8 +78,10 @@ const Pad = {
     for (const [i, code] of Object.entries(PAD_PRESS)) if (rise(i)) Input.pressed[code] = true;
     // LB/RB: piyodada — qurol, mashinada — burilish chiroqlari
     const inCar = Player.inCar && !Player.passenger;
-    if (rise(4)) { if (inCar) Input.pressed.KeyZ = true; else Input.wheel -= 1; }
-    if (rise(5)) { if (inCar) Input.pressed.KeyC = true; else Input.wheel += 1; }
+    // Mexanik uzatmada LB/RB — uzatma (past/yuqori)
+    const manual = inCar && Settings.v.gearbox === 'manual';
+    if (rise(4)) { if (manual) Input.pressed.KeyQ = true; else if (inCar) Input.pressed.KeyZ = true; else Input.wheel -= 1; }
+    if (rise(5)) { if (manual) Input.pressed.KeyE = true; else if (inCar) Input.pressed.KeyC = true; else Input.wheel += 1; }
     if (btn(7) !== !!was.rt) { Input.mouseL = btn(7) || val(7) > 0.5; if (Input.mouseL) Input.clickL = true; }
     if (btn(6) !== !!was.lt) Input.mouseR = btn(6) || val(6) > 0.5;
     if (rise(13)) Input.pressed[Fuel.action ? 'KeyB' : 'KeyO'] = true; // D-pad pastga: zapravkada quyish, aks holda ob-havo
@@ -136,6 +138,9 @@ const Panel = {
       ${range('setSens', 'Sichqoncha sezgirligi', 0.4, 2.5, 0.1, v.sens, x => (+x).toFixed(1) + '×')}
       ${range('setFov', 'Ko\'rish burchagi', 55, 85, 1, v.fov, x => x + '°')}
       <label class="set-row" for="setInvert"><span>Kamerani teskari (yuqori/past)</span><input type="checkbox" id="setInvert"${v.invertY ? ' checked' : ''}></label>
+      <div class="set-row"><span>Uzatmalar qutisi</span><div class="segs" id="setGear">${[['auto', 'Avtomat'], ['manual', 'Mexanika']].map(([k, n]) =>
+        `<button type="button" class="seg${(v.gearbox || 'auto') === k ? ' on' : ''}" data-gear="${k}">${n}</button>`).join('')}</div></div>
+      <p class="set-note">Mexanikada uzatmani o'zingiz almashtirasiz: ${Input.touch ? 'pedallar yonidagi ▲ ▼ tugmalari' : '<kbd>E</kbd> — yuqori, <kbd>Q</kbd> — past'} (geympadda RB / LB). Aylanish ko'rsatkichi sariq bo'lsa — yuqoriga o'ting.</p>
       <label class="set-row" for="setFuel"><span>Yoqilg'i sarflanadi (zapravkada quyish kerak)</span><input type="checkbox" id="setFuel"${v.fuel !== false ? ' checked' : ''}></label>
       ${Input.touch ? '' : `<label class="set-row" for="setHints"><span>Tugmalar ko'rsatmasi o'yin ichida (I)</span><input type="checkbox" id="setHints"${v.keyHints !== false ? ' checked' : ''}></label>`}
       ${Input.touch ? `<div class="set-row"><span>Mashinani burish (telefonda)</span><div class="segs" id="setSteer">${STEER_MODES.map(([k, n]) =>
@@ -156,6 +161,9 @@ const Panel = {
     bind('setFov', 'fov', x => x + '°');
     document.getElementById('setInvert').addEventListener('change', e => { v.invertY = e.target.checked; Save.soon(); });
     document.getElementById('setFuel').addEventListener('change', e => { v.fuel = e.target.checked; Save.soon(); });
+    b.querySelectorAll('[data-gear]').forEach(el => el.addEventListener('click', () => {
+      v.gearbox = el.dataset.gear; b.querySelectorAll('[data-gear]').forEach(x => x.classList.toggle('on', x === el)); KeyHints._k = null; Save.soon();
+    }));
     const sh = document.getElementById('setHints');
     if (sh) sh.addEventListener('change', e => { v.keyHints = e.target.checked; KeyHints._k = null; Save.soon(); });
     b.querySelectorAll('[data-steer]').forEach(el => el.addEventListener('click', () => {
@@ -191,6 +199,7 @@ const Panel = {
         [['reverse'], 'Mashina to\'xtab turganda tormoz pedali shu belgiga aylanadi — bosib tursangiz orqaga yurasiz'],
         [['handbrake'], 'Qo\'l tormozi (drift)'],
         [['horn'], 'Signal (bosib tursangiz uzun chaladi)'],
+        [['gearUp', 'gearDown'], 'Mexanik uzatmalar (Sozlamalar → Uzatmalar qutisi → Mexanika): yuqori / past'],
         [['fuel'], 'Zapravkada kolonka yonida to\'xtasangiz chiqadi — benzin yoki metan quyish; bak bo\'shasa — kanistr chaqirish', 'ic-fuel'],
         [['exit'], 'Mashinadan tushish'],
         [['view'], 'Mashina ichidan ko\'rish (rul va tablo) / orqadan ko\'rish'],
@@ -211,6 +220,13 @@ const Panel = {
         'Tezlik 20 km/soatdan oshmasin (tezlashish bo\'lagida 40 gacha), har burilishda burilish chirog\'ini yoqing, chiziq va konuslarga tegmang',
         '3 ta xato — «O\'tmadi». Qizil chiroqda o\'tish yoki piyodaga yo\'l bermaslik — darhol «O\'tmadi»',
       ])}</ul>
+      <h3>Uzatmalar qutisi</h3>
+      <ul>${li([
+        'Avtomat (odatiy): uzatmalar o\'zi almashadi. Gaz oxirigacha bosilsa — pastroq uzatmaga tushib, tezroq tezlanadi',
+        'Mexanika: Sozlamalar → Uzatmalar qutisi. <kbd>E</kbd> — yuqori, <kbd>Q</kbd> — past (telefonda pedallar yonidagi ▲ ▼). Mashinalarda 5 ta, kuchli mashinalar, avtobus va mototsiklda 6 ta uzatma',
+        'Har uzatmaning o\'z eng yuqori tezligi bor: aylanish oxiriga yetsa, dvigatel cheklovchiga uriladi — ko\'rsatkich sariq bo\'lganda yuqoriga o\'ting. Past uzatmada tezroq tezlanasiz, baland uzatmada joyidan sekin qo\'zg\'alasiz',
+        'Orqaga: to\'xtab turganda tormozni bosib turing (R)',
+      ])}</ul>
       <h3>Yoqilg'i va zapravka</h3>
       <ul>${li([
         'Haydaganingiz sari bak bo\'shaydi (spidometr ostidagi yashil chiziq). 15% dan kam qolsa, eng yaqin zapravka xaritada belgilanadi',
@@ -227,7 +243,7 @@ const Panel = {
       ])}</ul>
       <h3>Geympad</h3>
       <ul>${li([
-        'Chap tayoq — yurish va rul, o\'ng tayoq — kamera; mashinada LB / RB — burilish chiroqlari',
+        'Chap tayoq — yurish va rul, o\'ng tayoq — kamera; mashinada LB / RB — burilish chiroqlari (mexanik uzatmada — uzatma past / yuqori)',
         'RT — otish / gaz, LT — nishon / tormoz, A — sakrash / qo\'l tormozi, B — nitro, Y — mashinaga o\'tirish',
         'D-pad o\'ng — mashina ichidan ko\'rish, D-pad past — zapravkada yoqilg\'i quyish, Back — xarita, Start — pauza',
       ])}</ul>

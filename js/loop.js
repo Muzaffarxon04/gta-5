@@ -206,6 +206,8 @@ function handleActions() {
   if (P.inCar && kp('KeyR')) Radio.cycle();
   if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
+  // Mexanik uzatmalar: E — yuqori, Q — past
+  if (P.inCar && !P.passenger && Settings.v.gearbox === 'manual') { if (kp('KeyE')) shiftGear(P.inCar, 1); if (kp('KeyQ')) shiftGear(P.inCar, -1); }
   if (kp('KeyB')) Fuel.act();
   if (kp('KeyI') && !Input.touch) KeyHints.toggle();
   if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
@@ -331,11 +333,11 @@ function checkBusted(dt) {
 // ===== Kamera =====
 function updateCamera(dt) {
   const P = Player, sens = 0.0024 * Settings.v.sens, c = P.inCar;
-  const moved = Input.mdx !== 0 || Input.mdy !== 0 || kd('KeyQ') || kd('KeyE');
+  const ck = camKeysFree(), moved = Input.mdx !== 0 || Input.mdy !== 0 || (ck && (kd('KeyQ') || kd('KeyE')));
   Game.camYaw -= Input.mdx * sens;
   Game.camPitch = clamp(Game.camPitch + Input.mdy * sens * (Settings.v.invertY ? -1 : 1), -0.45, 1.15);
-  if (kd('KeyQ')) Game.camYaw += 2.2 * dt;
-  if (kd('KeyE')) Game.camYaw -= 2.2 * dt;
+  if (ck && kd('KeyQ')) Game.camYaw += 2.2 * dt;
+  if (ck && kd('KeyE')) Game.camYaw -= 2.2 * dt;
   Game.mouseIdle = moved ? 0 : Game.mouseIdle + dt;
   let px, py, pz, dist, fov;
   if (c) {
@@ -373,15 +375,8 @@ function updateCamera(dt) {
 }
 
 // Uzatmalar: tezlik oshganda aylanish ko'tariladi, keyingi uzatmaga o'tganda pasayadi
-const GEARS = [0, 0.16, 0.33, 0.52, 0.74, 1.01];
-// Uzatmali aylanish (0.1 — salt yurish … 1 — eng yuqori): tezlik oshganda ko'tariladi, keyingi uzatmada pasayadi
-function gearRpm(c) {
-  const ratio = clamp(Math.abs(c.fwd) / c.T.max, 0, 1);
-  let g = 0;
-  while (g < 4 && ratio >= GEARS[g + 1]) g++;
-  if (Math.abs(c.fwd) < 1.5) return c.thr > 0 ? 0.6 : 0.1; // joyida gaz bosilsa — "gazlab" turadi
-  return 0.18 + 0.82 * (ratio - GEARS[g]) / (GEARS[g + 1] - GEARS[g]);
-}
+// Dvigatel aylanishi (0.1 — salt yurish … 1 — eng yuqori) — uzatmalar qutisi hisoblaydi (js/gearbox.js)
+const gearRpm = c => (c.gb ? c.gb.rpm : 0.1);
 function updateAudio(dt) {
   const P = Player, c = P.inCar;
   if (c && !c.dead && !P.dead && !fuelEmpty(c)) {

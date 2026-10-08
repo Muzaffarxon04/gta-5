@@ -31,6 +31,8 @@ const TOUCH_ICONS = {
   // Mashina eshigi belgilari: rul, mototsikl, haydovchini tortib chiqarish
   car: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6"/><path d="M3.4 10.6 9.5 11.5M14.5 11.5l6.1-.9M12 14.6V21"/>',
   moto: '<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5 9 11h5l2.5 5.5M14 11l1.5-4H18M9 11 7.5 8H5"/>',
+  gearUp: '<path d="M12 5 4.5 15.5h15z" fill="currentColor" stroke="none"/><path d="M8 19.5h8"/>',
+  gearDown: '<path d="M12 19 4.5 8.5h15z" fill="currentColor" stroke="none"/><path d="M8 4.5h8"/>',
   fuel: '<path d="M4 21V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 14 5v16M3 21h12M6.5 7h5v4h-5z"/><path d="M14 9.5h2a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/>',
   taken: '<circle cx="9" cy="5" r="2.2"/><path d="M9 8v6l-3 6M9 14l3 6M6 11h6M14 12h7M18 9l3 3-3 3"/>',
 };
@@ -101,9 +103,9 @@ const TouchUI = {
     addEventListener('touchend', goFullscreen, { passive: true });
     // Tugmalarda yozuv o'rniga belgi (nomi aria-label'da — ekran o'quvchilar uchun)
     const ICON_OF = { sigL: 'sigL', sigR: 'sigR', sigH: 'hazard', lights: 'lights', pause: 'pause', weapon: 'weapon', aim: 'aim', siren: 'siren', radio: 'radio', taxi: 'taxi', nitro: 'nitro', view: 'view', run: 'run',
-      ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'gas', ArrowDown: 'brake' };
+      ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'gas', ArrowDown: 'brake', gearUp: 'gearUp', gearDown: 'gearDown' };
     const NAME_OF = { sigL: 'Chapga burilish chirog\'i', sigR: 'O\'ngga burilish chirog\'i', sigH: 'Avariya chirog\'i', lights: 'Faralarni yoqish/o\'chirish', pause: 'Pauza', weapon: 'Qurolni almashtirish', aim: 'Nishonga olish', siren: 'Sirena', radio: 'Radio', taxi: 'Taksi ishi', nitro: 'Nitro',
-      view: 'Mashina ichidan ko\'rish', run: 'Yugurish', ArrowLeft: 'Chapga', ArrowRight: 'O\'ngga', ArrowUp: 'Gaz', ArrowDown: 'Tormoz' };
+      view: 'Mashina ichidan ko\'rish', run: 'Yugurish', ArrowLeft: 'Chapga', ArrowRight: 'O\'ngga', ArrowUp: 'Gaz', ArrowDown: 'Tormoz', gearUp: 'Yuqori uzatma', gearDown: 'Past uzatma' };
     root.querySelectorAll('[data-act], [data-key]').forEach(b => {
       const k = b.dataset.act || b.dataset.key;
       if (ICON_OF[k]) this.setIcon(b, ICON_OF[k], NAME_OF[k]);
@@ -140,6 +142,8 @@ const TouchUI = {
     else if (act === 'taxi') { if (down) Input.pressed.KeyT = true; }
     else if (act === 'nitro') Input.keys.KeyN = down;
     else if (act === 'fuel') { if (down) Input.pressed.KeyB = true; }
+    else if (act === 'gearUp') { if (down) Input.pressed.KeyE = true; }
+    else if (act === 'gearDown') { if (down) Input.pressed.KeyQ = true; }
     else if (act === 'view') { if (down) Input.pressed.KeyV = true; }
     else if (act === 'lights') { if (down) Input.pressed.KeyL = true; }
     else if (act === 'sigL') { if (down) Input.pressed.KeyZ = true; }
@@ -278,9 +282,11 @@ const TouchUI = {
     const driving = car && !Player.passenger;
     // Nishonga olish faqat o'qotar qurolda ishlaydi (musht va bitada kerak emas)
     const gun = !car && !WEAPONS[Player.weapon].melee;
-    const key = [car, pol, taxi, nitro, driving, gun].join('|');
+    const manual = driving && Settings.v.gearbox === 'manual';
+    const key = [car, pol, taxi, nitro, driving, gun, manual].join('|');
     if (key === this._car) return;
     this._car = key;
+    this.root.classList.toggle('manual', manual);
     // Haydaganda joystik o'rniga chap/o'ng tugmalari va gaz/tormoz pedallari
     this.root.classList.toggle('driving', driving);
     if (!driving) {

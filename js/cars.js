@@ -33,6 +33,8 @@ CAR_TYPES.bus = { name: 'Avtobus', kind: 'bus', model: 'bus', l: 7.6, w: 2.35, H
   palette: [0xf2f2f0], seat: { x: 0.8, y: 1.5, z: 2.47 }, plate: [0.8, 3.53, 0.95, -3.80] };
 for (const T of Object.values(CAR_TYPES)) {
   T.roofZ = T.uB != null ? (T.uB + T.uC) / 2 : 0;
+  // Uzatmalar soni: kuchli mashinalar, avtobus va mototsiklda 6 ta, qolganlarida 5 ta
+  T.gears = T.gears || (T.max >= 50 || T.kind === 'bus' || T.kind === 'moto' ? 6 : 5);
   // Haydovchi o'rindig'i (O'zbekistonda rul chap tomonda: +x)
   T.seat = T.seat || (T.kind === 'moto' ? { x: 0, y: 0.9, z: -0.22 } : { x: T.w * 0.22, y: T.wr + 0.3, z: T.uB - 0.35 });
 }

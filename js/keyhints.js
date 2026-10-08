@@ -30,6 +30,7 @@ const KeyHints = {
     if (c) {
       const out = [k(['W', 'S'], 'gaz / tormoz, orqaga'), k(['A', 'D'], 'rul'), k(['Probel'], 'qo\'l tormozi'), k(['F'], 'tushish'),
         k(['Z', 'C'], 'burilish chirog\'i'), k(['X'], 'avariya chirog\'i'), k(['H'], 'signal'), k(['B'], 'yoqilg\'i (zapravkada)'), k(['L'], 'faralar'), k(['V'], 'ichidan ko\'rish'), k(['R'], 'radio')];
+      if (Settings.v.gearbox === 'manual') out.splice(2, 0, k(['E', 'Q'], 'uzatma yuqori / past'));
       if (c.mods && c.mods.nitro) out.push(k(['N'], 'nitro'));
       if (c.type === 'police') out.push(k(['G'], 'sirena'));
       if (c.type === 'taxi') out.push(k(['T'], 'taksi ishi'));
@@ -45,7 +46,7 @@ const KeyHints = {
   update() {
     if (!this.el) return;
     const on = this.on() && !Player.dead, P = Player, c = P.inCar;
-    const key = on ? [c ? c.type : '', P.passenger ? 1 : 0, c && c.mods && c.mods.nitro ? 1 : 0, P.weapon].join('|') : 'off';
+    const key = on ? [c ? c.type : '', P.passenger ? 1 : 0, c && c.mods && c.mods.nitro ? 1 : 0, P.weapon, Settings.v.gearbox].join('|') : 'off';
     if (key === this._k) return;
     this._k = key;
     this.el.hidden = !on;

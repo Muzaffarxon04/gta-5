@@ -80,7 +80,9 @@ class Car {
     // Ob-havo: ho'l yoki qorli yo'lda tezlanish va tormoz sustroq
     const wg = Weather.grip * (md ? 1 + 0.12 * md.grip : 1), brake = 30 * (0.5 + 0.5 * Weather.grip);
     const acc = T.acc * (md ? 1 + 0.18 * md.eng : 1) * (bo ? 2.2 : 1) * (0.7 + 0.3 * Weather.grip);
-    if (thr > 0) { if (vF < -0.5) vF += brake * thr * dt; else if (vF < maxS) vF += acc * thr * dt * (1 - (vF / maxS) * 0.55); }
+    // Uzatmalar qutisi (js/gearbox.js): uzatmaga va dvigatel aylanishiga qarab tortish kuchi
+    const drive = gearDrive(this, vF, maxS, Math.max(0, thr), dt);
+    if (thr > 0) { if (vF < -0.5) vF += brake * thr * dt; else if (vF < maxS) vF += acc * thr * dt * drive; }
     else if (thr < 0) { if (vF > 0.5) vF += brake * thr * dt; else if (vF > -13) vF += acc * 0.7 * thr * dt; }
     vF -= vF * (thr === 0 ? 0.55 : 0.1) * dt;
     // Qiyalik (estakada): mashina pastga sirpanadi, qo'l tormozi ushlab turadi

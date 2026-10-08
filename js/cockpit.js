@@ -88,8 +88,8 @@ const Cockpit = {
     // O'rtada: raqamli tezlik, uzatma, soat
     g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillStyle = '#e8f1f5'; g.font = 'bold 44px Arial'; g.fillText(String(Math.round(kmh)), W / 2, 66);
-    const gear = c.fwd < -0.5 ? 'R' : Math.abs(c.fwd) < 0.5 && !c.thr ? 'N' : 'D';
-    g.font = 'bold 26px Arial'; g.fillStyle = gear === 'R' ? '#ff6b6b' : '#7ee0a1'; g.fillText(gear, W / 2, 108);
+    const gear = gearLabel(c), shiftNow = manualBox(c) && (Game.rpm || 0) > 0.92;
+    g.font = 'bold 26px Arial'; g.fillStyle = gear === 'R' ? '#ff6b6b' : shiftNow && blinkOn() ? '#ffb238' : '#7ee0a1'; g.fillText(gear, W / 2, 108);
     g.font = 'bold 16px Arial'; g.fillStyle = '#8fa1ad'; g.fillText(clockText(), W / 2, 136);
     // Yoqilg'i: E — bo'sh, F — to'la; kam qolsa qizil
     if (fuelOn() && c.fuel != null) {
@@ -111,8 +111,8 @@ const Cockpit = {
   // Kamera haydovchi ko'zida; sichqoncha/barmoq bilan atrofga qarash, qo'yib yuborilsa oldinga qaytadi
   camera(dt) {
     const c = Player.inCar, hm = Player.hm, sens = 0.0024 * Settings.v.sens;
-    const moved = Input.mdx !== 0 || Input.mdy !== 0 || kd('KeyQ') || kd('KeyE');
-    this.yaw = clamp(this.yaw - Input.mdx * sens + (kd('KeyQ') ? 2 * dt : 0) - (kd('KeyE') ? 2 * dt : 0), -1.5, 1.5);
+    const ck = camKeysFree(), q = ck && kd('KeyQ'), e = ck && kd('KeyE'), moved = Input.mdx !== 0 || Input.mdy !== 0 || q || e;
+    this.yaw = clamp(this.yaw - Input.mdx * sens + (q ? 2 * dt : 0) - (e ? 2 * dt : 0), -1.5, 1.5);
     this.pitch = clamp(this.pitch - Input.mdy * sens * (Settings.v.invertY ? -1 : 1), -0.7, 0.45);
     this.idle = moved ? 0 : this.idle + dt;
     if (this.idle > 1.5) { const k = 1 - Math.exp(-dt * 3); this.yaw = lerp(this.yaw, 0, k); this.pitch = lerp(this.pitch, this.rest(), k); }
