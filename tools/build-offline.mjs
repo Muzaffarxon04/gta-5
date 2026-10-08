@@ -14,7 +14,7 @@ let loader = read('js/loader.js');
 const models = [...loader.matchAll(/\['([a-z]+)', \d+, ([12])\]/g)].map(m => m[1]);
 for (const n of models) loader = loader.replace(new RegExp(`\\['${n}', \\d+,`), `['${n}', ${statSync(join(root, `models/${n}.js`)).size},`);
 writeFileSync(join(root, 'js/loader.js'), loader);
-const lazy = [...loader.matchAll(/\['(lib\/[^']+\.js)', '[^']+'\]/g)].map(m => m[1]);
+const lazy = [...loader.matchAll(/\['((?:lib|sounds)\/[^']+\.js)', '[^']+'\]/g)].map(m => m[1]);
 const extra = [...models.map(n => `models/${n}.js`), ...lazy];
 console.log(`js/loader.js — ${models.length} ta model, ${lazy.length} ta kutubxona`);
 

@@ -9,8 +9,8 @@ const MODEL_FILES = [
   ['malibu', 429938, 2], ['moto', 372642, 2], ['bus', 543871, 2], ['damas', 423635, 2], ['lacetti', 393947, 2],
   ['police', 431977, 2], ['timur', 854555, 2], ['person', 923718, 2], ['gls', 1242204, 2], ['charger', 630887, 2],
 ];
-// Kerak bo'lganda yuklanadigan kutubxonalar (ko'p o'yinchi QR-kodi) — [fayl, global nomi]
-const LAZY_LIBS = [['lib/qrcode.js', 'qrcode'], ['lib/jsQR.js', 'jsQR']];
+// Kerak bo'lganda yuklanadigan fayllar (ko'p o'yinchi QR-kodi, dvigatel ovozlari) — [fayl, global nomi]
+const LAZY_LIBS = [['lib/qrcode.js', 'qrcode'], ['lib/jsQR.js', 'jsQR'], ['sounds/engines.js', 'ENGINE_SOUNDS']];
 
 const Loader = {
   got: {}, state: {}, subs: [], waits: [], active: 0, stage2: false, libs: {},

@@ -57,6 +57,7 @@ function finishInit(data) {
   Panel.init();
   MPUI.init();
   ModelQueue.start();
+  Loader.lib('sounds/engines.js', () => {}); // dvigatel ovozlari menyuda oldindan yuklanib turadi
   // Saytdan ochilganda (GitHub Pages) internetsiz ishlash uchun keshni yoqamiz — hamma modellar kelgandan keyin
   // (aks holda kesh ularni ikkinchi marta yuklab, o'yinning o'zini sekinlashtiradi)
   Loader.wait(2, () => {
@@ -373,16 +374,19 @@ function updateCamera(dt) {
 
 // Uzatmalar: tezlik oshganda aylanish ko'tariladi, keyingi uzatmaga o'tganda pasayadi
 const GEARS = [0, 0.16, 0.33, 0.52, 0.74, 1.01];
+// Uzatmali aylanish (0.1 — salt yurish … 1 — eng yuqori): tezlik oshganda ko'tariladi, keyingi uzatmada pasayadi
+function gearRpm(c) {
+  const ratio = clamp(Math.abs(c.fwd) / c.T.max, 0, 1);
+  let g = 0;
+  while (g < 4 && ratio >= GEARS[g + 1]) g++;
+  if (Math.abs(c.fwd) < 1.5) return c.thr > 0 ? 0.6 : 0.1; // joyida gaz bosilsa — "gazlab" turadi
+  return 0.18 + 0.82 * (ratio - GEARS[g]) / (GEARS[g + 1] - GEARS[g]);
+}
 function updateAudio(dt) {
   const P = Player, c = P.inCar;
   if (c && !c.dead && !P.dead && !fuelEmpty(c)) {
-    const ratio = clamp(Math.abs(c.fwd) / c.T.max, 0, 1);
-    let g = 0;
-    while (g < 4 && ratio >= GEARS[g + 1]) g++;
-    let rpm = 0.18 + 0.82 * (ratio - GEARS[g]) / (GEARS[g + 1] - GEARS[g]);
-    if (Math.abs(c.fwd) < 1.5) rpm = c.thr ? 0.6 : 0.1;
-    Game.rpm = lerp(Game.rpm || 0.1, rpm, 1 - Math.exp(-dt * 9));
-    SFX.setEngine(true, Game.rpm, Math.abs(c.thr), engineProfile(c));
+    Game.rpm = lerp(Game.rpm || 0.1, gearRpm(c), 1 - Math.exp(-dt * 9));
+    SFX.setEngine(true, Game.rpm, Math.abs(c.thr), engineProfile(c), Cockpit.active());
   } else SFX.setEngine(false);
   // Yaqinda o'tayotgan boshqa mashina dvigateli
   let best = null, bd = 32;
@@ -391,8 +395,11 @@ function updateAudio(dt) {
     const d = Math.hypot(k.x - P.x, k.z - P.z);
     if (d < bd) { bd = d; best = k; }
   }
-  if (best) SFX.setTraffic(clamp(1 - bd / 32, 0, 1) * clamp(0.35 + best.speed / 18, 0, 1), clamp(best.speed / best.T.max, 0, 1), engineProfile(best));
-  else SFX.setTraffic(0);
+  if (best) {
+    if (best !== Game.trafCar) { Game.trafCar = best; Game.trafRpm = gearRpm(best); }
+    Game.trafRpm = lerp(Game.trafRpm, gearRpm(best), 1 - Math.exp(-dt * 6));
+    SFX.setTraffic(clamp(1 - bd / 32, 0, 1) * clamp(0.35 + best.speed / 18, 0, 1), Game.trafRpm, engineProfile(best), clamp(best.thr, 0, 1));
+  } else SFX.setTraffic(0);
   // Eng yaqin sirena ovozi: uzoqdan "wail", yaqinda "yelp"; o'z mashinangizda — to'liq ovoz
   let sv = 0, near = Infinity;
   for (const k of Game.cars) {

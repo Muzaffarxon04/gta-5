@@ -271,6 +271,7 @@ const Panel = {
         'QR-kod: <b>qrcode-generator</b> — Kazuhiko Arase (MIT), <b>jsQR</b> (Apache 2.0); modellarni ochish: <b>meshoptimizer</b> (MIT)',
         'Xona kodi orqali ulanish: <b>ntfy.sh</b> xizmati',
         'Mashina signali ovozi: <b>Mixkit</b> (Mixkit Sound Effects Free License)',
+        'Dvigatel ovozlari (Freesound, CC0): <i>lovretta</i> — Renault 19 yozuvi; <i>FreeCarSoundsGaming</i> — V8; <i>qubodup</i> va <i>Mihacappy</i> — avtobus',
         '3D modellar (Sketchfab, o\'yin uchun soddalashtirilgan): Nexia, Cobalt, Gentra, Spark va Lacetti — <a href="https://sketchfab.com/uzbek_supra" target="_blank" rel="noopener"><i>uzb_rx7</i></a> (CC BY 4.0); Malibu — <i>Ddiaz Design</i> (CC BY 4.0); Damas — <i>own.guest</i> (CC BY 4.0); SamAuto avtobusi — <i>ItsDiyor</i> (CC BY 4.0); BMW S1000RR mototsikli — <i>VTX</i> (CC BY-NC-SA 4.0); Amir Temur haykali skani — <i>Global Digital Heritage</i> (CC BY-NC 4.0)',
         'Boshqa 3D modellar: Fast Charger — <i>ergoninane</i>; politsiya mashinasi — <i>arunangshubanerjee</i>; skanerlangan odam — <i>Renderpeople</i> (rp_posed_00178_29); Mercedes-Benz GLS 580 modeli',
       ])}</ul>

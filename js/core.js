@@ -189,17 +189,29 @@ function endFrameInput() { Input.pressed = {}; Input.mdx = 0; Input.mdy = 0; Inp
 
 // ===== Ovoz (WebAudio sintez, fayllarsiz) =====
 // Dvigatel profillari: base/top — salt va maksimal aylanishdagi chastota (Gs)
+// Dvigatel ovozi. Yozuvlar (sounds/engines.js) yuklangan bo'lsa — haqiqiy dvigatel qatlamlari (s: to'plam,
+// salt yurish va eng yuqori aylanish — yozuvdagi benzinli dvigatel RPM ida, pitch — ohang, lp — tiniqlik,
+// low — past chastota kuchaytirish dB); yuklanmaguncha — eski sintez (base…cut)
 const ENGINE_PROFILES = {
-  car:   { base: 34, top: 165, sub: 0.35, hi: 0.18, cut: 1 },
-  v8:    { base: 25, top: 118, sub: 0.62, hi: 0.1, cut: 0.75 },
-  small: { base: 44, top: 205, sub: 0.18, hi: 0.26, cut: 1.25 },
-  moto:  { base: 52, top: 310, sub: 0.22, hi: 0.32, cut: 1.6 },
-  truck: { base: 20, top: 85, sub: 0.75, hi: 0.08, cut: 0.6 },
+  car:   { base: 34, top: 165, sub: 0.35, hi: 0.18, cut: 1,    s: { set: 'petrol', idle: 780, max: 6000, pitch: 1, lp: 1, low: 0 } },
+  big4:  { base: 30, top: 150, sub: 0.45, hi: 0.15, cut: 0.9,  s: { set: 'petrol', idle: 760, max: 5800, pitch: 0.9, lp: 0.85, low: 3 } },
+  v8:    { base: 25, top: 118, sub: 0.62, hi: 0.1, cut: 0.75,  s: { set: 'v8', idle: 780, max: 5600, pitch: 0.74, lp: 0.8, low: 6 } },
+  small: { base: 44, top: 205, sub: 0.18, hi: 0.26, cut: 1.25, s: { set: 'petrol', idle: 860, max: 6200, pitch: 1.12, lp: 1.15, low: -3 } },
+  moto:  { base: 52, top: 310, sub: 0.22, hi: 0.32, cut: 1.6,  s: { set: 'petrol', idle: 780, max: 6200, pitch: 1.5, lp: 1.4, low: -4 } },
+  truck: { base: 20, top: 85, sub: 0.75, hi: 0.08, cut: 0.6,   s: { set: 'bus', idle: 600, max: 2200, pitch: 1, lp: 0.7, low: 4 } },
+};
+// Qatlamlar to'plami: [nom, sikl chastotasi (bo'lmasa — yozuvdagi), o'z ohangi (bo'lmasa — profildagi)].
+// O't olish chastotasi = RPM / 30. V8 salt yurishi — haqiqiy V8 yozuvi, aylanish oshgach — pastroq ohangdagi 4 silindr
+const ENGINE_SETS = {
+  petrol: [['p0'], ['p1'], ['p2'], ['p3'], ['p4'], ['p5'], ['p6']],
+  v8: [['v0', 26.7, 1], ['p1'], ['p2'], ['p3'], ['p4'], ['p5'], ['p6']],
+  bus: [['b0', 20], ['b1', 54.7]],
 };
 function engineProfile(car) {
   if (car.T.kind === 'moto') return ENGINE_PROFILES.moto;
   if (car.T.kind === 'bus') return ENGINE_PROFILES.truck;
-  if (['gls', 'charger', 'malibu', 'police'].includes(car.type)) return ENGINE_PROFILES.v8;
+  if (['gls', 'charger'].includes(car.type)) return ENGINE_PROFILES.v8;
+  if (['malibu', 'police'].includes(car.type)) return ENGINE_PROFILES.big4;
   if (['damas', 'spark'].includes(car.type)) return ENGINE_PROFILES.small;
   return ENGINE_PROFILES.car;
 }
@@ -208,6 +220,21 @@ const SHOT_PROFILES = {
   smg:     { crack: 0.65, body: 0.5, len: 0.13, low: 190, lp: 3800 },
   shotgun: { crack: 0.9, body: 0.85, len: 0.5, low: 105, lp: 2100 },
 };
+// MP3 dan ochilgan halqaning aniq chegaralari: n — halqa uzunligi (rate Hz da). Fayl oxirida halqa boshi takrorlangan —
+// qaysi joydan boshlab ma'lumot n namunadan keyin aynan takrorlanishini qidiramiz (kodlovchi kechikishi har xil bo'ladi)
+function findLoop(b, n, rate) {
+  const d = b.getChannelData(0), k = b.sampleRate / rate, L = n * k, W = Math.round(384 * k), max = Math.round(2600 * k);
+  let best = -2, bs = 0;
+  for (let s = 0; s < max; s += 2) {
+    const e = Math.round(s + L);
+    if (e + W >= d.length) break;
+    let num = 0, a2 = 0, b2 = 0;
+    for (let i = 0; i < W; i += 3) { const p = d[s + i], q = d[e + i]; num += p * q; a2 += p * p; b2 += q * q; }
+    const cor = num / Math.sqrt(a2 * b2 + 1e-12);
+    if (cor > best) { best = cor; bs = s; }
+  }
+  return { start: bs / b.sampleRate, end: (bs + L) / b.sampleRate };
+}
 const SFX = {
   ctx: null, samples: {}, hornSrc: null,
   init() {
@@ -257,6 +284,7 @@ const SFX = {
       sf.connect(this.sirG).connect(this.out);
       this.sir.start(); this.sir2.start();
       this.decodeSamples();
+      this.loadEngines();
     } catch (e) { this.ctx = null; }
   },
   // Dvigatel ovozi: asosiy ohang, past "gurillash", yuqori garmonika, havo so'rish shovqini va titrash
@@ -293,15 +321,93 @@ const SFX = {
     E.ng.gain.setTargetAtTime(0.12 * thr * (0.3 + rpm), t, 0.08);
     E.nf.frequency.setTargetAtTime(600 + rpm * 1800, t, 0.05);
   },
-  setEngine(on, rpm = 0, thr = 0, prof = ENGINE_PROFILES.car) {
+  // inside — mashina ichidan (kokpit): ovoz bo'g'iqroq
+  setEngine(on, rpm = 0, thr = 0, prof = ENGINE_PROFILES.car, inside = false) {
     if (!this.ctx) return;
-    if (!on) { this.engine.out.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1); return; }
-    this.driveEngine(this.engine, 1, rpm, thr, prof);
+    const real = this.engReady;
+    if (!on || real) this.engine.out.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+    if (real) { if (!on) this.driveReal(this.eng, 0); else this.driveReal(this.eng, 1, rpm, thr, prof, inside); return; }
+    if (on) this.driveEngine(this.engine, 1, rpm, thr, prof);
   },
-  setTraffic(vol, rpm = 0.3, prof = ENGINE_PROFILES.car) {
+  // Yaqindagi boshqa mashina: rpm — uzatmali aylanish (0…1)
+  setTraffic(vol, rpm = 0.3, prof = ENGINE_PROFILES.car, thr = 0.4) {
     if (!this.ctx) return;
-    if (vol <= 0.001) { this.traffic.out.gain.setTargetAtTime(0, this.ctx.currentTime, 0.15); return; }
-    this.driveEngine(this.traffic, vol, 0.15 + rpm * 0.7, 0.3, prof);
+    const real = this.engReady;
+    if (vol <= 0.001 || real) this.traffic.out.gain.setTargetAtTime(0, this.ctx.currentTime, 0.15);
+    if (real) { this.driveReal(this.trafEng, vol > 0.001 ? vol * 0.8 : 0, rpm, thr, prof, false, vol); return; }
+    if (vol > 0.001) this.driveEngine(this.traffic, vol, 0.15 + rpm * 0.7, 0.3, prof);
+  },
+  // ----- Haqiqiy yozuvlardan dvigatel -----
+  // sounds/engines.js: har bir qatlam MP3, oxirida halqa boshi takrorlangan — kodlovchi kechikishini shu bo'yicha topamiz
+  loadEngines() {
+    if (this.engLoading || !this.ctx) return;
+    this.engLoading = true;
+    Loader.lib('sounds/engines.js', () => {
+      const all = window.ENGINE_SOUNDS || {}, names = Object.keys(all);
+      let left = names.length;
+      this.engBufs = {};
+      for (const n of names) {
+        const S = all[n], bin = atob(S.data), u = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        const done = () => { if (--left === 0) this.engineSetup(); };
+        try {
+          this.ctx.decodeAudioData(u.buffer, b => { this.engBufs[n] = { buf: b, hz: S.hz, ...findLoop(b, S.n, S.rate) }; done(); }, done);
+        } catch (e) { done(); }
+      }
+    });
+  },
+  engineSetup() {
+    if (!Object.keys(this.engBufs).length) return;
+    this.eng = this.makeReal(1); this.trafEng = this.makeReal(0.75);
+    this.engReady = true;
+  },
+  // Bitta dvigatel: qatlamlar → past chastota kuchaytirgich → tiniqlik filtri → ovoz balandligi
+  makeReal(level) {
+    const c = this.ctx, E = { level, set: null, layers: [] };
+    E.out = c.createGain(); E.out.gain.value = 0;
+    E.lp = c.createBiquadFilter(); E.lp.type = 'lowpass'; E.lp.frequency.value = 4000; E.lp.Q.value = 0.5;
+    E.low = c.createBiquadFilter(); E.low.type = 'lowshelf'; E.low.frequency.value = 160;
+    E.bus = c.createGain();
+    E.bus.connect(E.low).connect(E.lp).connect(E.out).connect(this.out);
+    return E;
+  },
+  useSet(E, name) {
+    if (E.set === name) return;
+    const t = this.ctx.currentTime;
+    for (const L of E.layers) { L.g.gain.setTargetAtTime(0, t, 0.05); try { L.src.stop(t + 0.3); } catch (e) { /* to'xtagan */ } }
+    E.set = name; E.layers = [];
+    for (const [n, hz, pitch] of ENGINE_SETS[name] || []) {
+      const B = this.engBufs[n];
+      if (!B) continue;
+      const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
+      src.buffer = B.buf; src.loop = true; src.loopStart = B.start; src.loopEnd = B.end;
+      g.gain.value = 0;
+      src.connect(g).connect(E.bus);
+      src.start(t, B.start + Math.random() * (B.end - B.start));
+      E.layers.push({ src, g, hz: hz || B.hz, pitch });
+    }
+  },
+  // rpm 0.1 (salt) … 1 (eng yuqori), thr — gaz (0…1). Joriy aylanishga eng yaqin ikki qatlam ohangi moslab aralashadi
+  driveReal(E, vol, rpm = 0.1, thr = 0, prof = ENGINE_PROFILES.car, inside = false, dist = 1) {
+    const c = this.ctx, t = c.currentTime;
+    if (!vol) { E.out.gain.setTargetAtTime(0, t, 0.12); return; }
+    const P = prof.s;
+    this.useSet(E, P.set);
+    const k = clamp((rpm - 0.1) / 0.9, 0, 1), f = (P.idle + (P.max - P.idle) * k) / 30, Ls = E.layers;
+    let i = 0;
+    while (i < Ls.length - 2 && f > Ls[i + 1].hz) i++;
+    const lo = Ls[i], hi = Ls[i + 1] || lo, w = hi === lo ? 0 : clamp(Math.log(f / lo.hz) / Math.log(hi.hz / lo.hz), 0, 1);
+    Ls.forEach((L, j) => {
+      const g = j === i ? Math.cos(w * Math.PI / 2) : L === hi ? Math.sin(w * Math.PI / 2) : 0;
+      L.g.gain.setTargetAtTime(g, t, 0.03);
+      L.src.playbackRate.setTargetAtTime(clamp(f / L.hz * (L.pitch || P.pitch), 0.25, 3), t, 0.03);
+    });
+    const load = clamp(thr, 0, 1);
+    // Cheklovchiga tegsa (eng yuqori aylanishda gaz bosilgan) — ovoz uzilib-uzilib turadi
+    const limiter = rpm > 0.97 && load > 0.5 && Math.floor(t * 15) % 2 ? 0.6 : 1;
+    E.out.gain.setTargetAtTime(vol * E.level * (0.42 + 0.3 * k) * (0.62 + 0.38 * load) * limiter * 2, t, 0.05);
+    E.lp.frequency.setTargetAtTime(clamp((700 + 5200 * (0.3 + 0.7 * load) * (0.35 + 0.65 * k)) * P.lp * (inside ? 0.62 : 1) * (0.5 + 0.5 * dist), 300, 11000), t, 0.06);
+    E.low.gain.setTargetAtTime(P.low + (inside ? 4 : 0), t, 0.2);
   },
   // Qisqa shovqin portlashi (filtr bilan)
   burst(dest, t, dur, type, freq, vol, q = 0.7) {

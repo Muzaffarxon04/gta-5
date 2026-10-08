@@ -10,3 +10,6 @@ tools/node_modules/
 
 # Asl ovoz fayllari (o'yin sounds/*.js dagi siqilgan nusxani ishlatadi)
 *.wav
+
+# Dvigatel ovozlari manbalari (tools/prep-engines.py yuklab oladi)
+tools/engine-src/
