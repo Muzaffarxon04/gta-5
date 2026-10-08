@@ -240,8 +240,7 @@ function nearestCar(maxD) {
   }
   return best;
 }
-// quiet — eshik ovozisiz (eshik animatsiyasi o'zi chaladi, js/doors.js)
-function enterCar(c, quiet = false) {
+function enterCar(c) {
   const P = Player;
   // Boshqa o'yinchining mashinasi — yo'lovchi bo'lib o'tirish
   if (c.driver === 'remote') {
@@ -270,12 +269,12 @@ function enterCar(c, quiet = false) {
   c.seatHuman(P.hm, true);
   if (P.gun) P.gun.visible = false;
   Game.mouseIdle = 9;
-  if (!quiet) SFX.door();
+  SFX.door();
   // Telefonda klaviatura tugmalari ko'rsatilmaydi (belgilar Yo'riqnomada)
   HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? (Settings.v.gearbox === 'manual' ? ' · uzatma <b>1</b> da, orqaga yurish uchun ▼ bilan <b>R</b>' : ' · uzatma <b>D</b> da, orqaga yurish uchun selektorda <b>R</b>') : `. <kbd>W</kbd> — gaz, <kbd>S</kbd> — tormoz, <kbd>Q</kbd> <kbd>E</kbd> — uzatma (orqaga — <b>R</b>), <kbd>F</kbd> — tushish` +
     (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>V</kbd> — ichidan ko\'rish'), Input.touch ? 3 : 5);
 }
-function exitCar(quiet = false) {
+function exitCar() {
   const P = Player, c = P.inCar;
   const rx = -Math.cos(c.h), rz = Math.sin(c.h), off = c.T.w / 2 + 0.7;
   let spot = null;
@@ -296,8 +295,7 @@ function exitCar(quiet = false) {
     leaveSeat();
   }
   Game.camYaw = c.h;
-  if (!quiet) SFX.door();
-  SFX.setEngine(false, 0);
+  SFX.door(); SFX.setEngine(false, 0);
 }
 
 // O'yinchi modelini mashinadan sahnaga qaytarish

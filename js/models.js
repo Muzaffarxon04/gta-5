@@ -134,8 +134,6 @@ function prepModel(name, scene) {
     }
     if (lamps.f.length && lamps.r.length) M.lamps = lamps;
   }
-  // Haydovchi eshigi alohida (ochilib-yopiladi) — js/doors.js
-  if (M.paint) prepDoor(name, scene, M);
   // Uzoqdagi mashinalarda yengil nusxa ko'rinadi (ko'chada 20+ mashina bo'ladi)
   const near = scene.getObjectByName('lod0'), far = scene.getObjectByName('lod1');
   if (near && far) {
