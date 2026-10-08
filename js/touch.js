@@ -125,6 +125,19 @@ const TouchUI = {
       btn.addEventListener('touchend', up, { passive: false });
       btn.addEventListener('touchcancel', up, { passive: false });
     });
+    // Avtomat selektori (P R N D): harfni bosing yoki barmoqni dastak bo'ylab suring
+    const sh = document.getElementById('shifter');
+    if (sh) {
+      let last = null;
+      const pickAt = t => {
+        const btn = [...sh.querySelectorAll('[data-sel]')].find(b => { const r = b.getBoundingClientRect(); return t.clientY >= r.top - 4 && t.clientY <= r.bottom + 4; });
+        if (!btn || btn.dataset.sel === last || !Player.inCar || Player.passenger) return;
+        last = btn.dataset.sel; selectGear(Player.inCar, last);
+      };
+      sh.addEventListener('touchstart', e => { e.preventDefault(); last = null; pickAt(e.changedTouches[0]); }, { passive: false });
+      sh.addEventListener('touchmove', e => { e.preventDefault(); pickAt(e.changedTouches[0]); }, { passive: false });
+      sh.addEventListener('touchend', e => { e.preventDefault(); last = null; }, { passive: false });
+    }
     const note = document.getElementById('note');
     if (note) note.textContent = 'Telefonda: chapdagi joystik — yurish, mashinada — chap/o\'ng tugmalari va gaz/tormoz pedallari, ekranni surish — kamera, ko\'z belgisi — mashina ichidan ko\'rish. Barcha belgilar ☰ → Yo\'riqnoma ichida. O\'yin doim albom (yotiq) rejimida ochiladi.';
   },
@@ -270,13 +283,6 @@ const TouchUI = {
       const lb = this._lb || (this._lb = this.btn('lights')); lb.classList.toggle('lock', carLightsOn(lc));
       const sg = lc.signal || 0;
       this.btn('sigL').classList.toggle('lock', sg === -1); this.btn('sigR').classList.toggle('lock', sg === 1); this.btn('sigH').classList.toggle('lock', sg === 2);
-    }
-    // Tormoz pedali: mashina to'xtab turganda (yoki orqaga yurayotganda) — orqaga yurish strelkasi
-    const dc = Player.inCar;
-    if (dc && !Player.passenger) {
-      const f = dc.fwd;
-      if (this._rev ? f > 1.0 : f < 0.5) this._rev = !this._rev;
-      this.setIcon(this.pedalBrake || (this.pedalBrake = this.root.querySelector('[data-key="ArrowDown"]')), this._rev ? 'reverse' : 'brake', this._rev ? 'Orqaga yurish' : 'Tormoz');
     }
     const c = Player.inCar, car = !!c, pol = car && c.type === 'police', taxi = car && (c.type === 'taxi' || c.type === 'bus'), nitro = !!(car && c.mods && c.mods.nitro);
     const driving = car && !Player.passenger;

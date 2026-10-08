@@ -264,14 +264,15 @@ function enterCar(c) {
   }
   if (!c.mine) { Stats.add('stolen'); c.mine = true; }
   c.driver = 'player'; c.ai = null; c.panic = 0; c.siren = false; c.signal = 0;
+  gearOnEnter(c);
   P.inCar = c; P.punchT = 0; P.aimT = 0;
   c.seatHuman(P.hm, true);
   if (P.gun) P.gun.visible = false;
   Game.mouseIdle = 9;
   SFX.door();
   // Telefonda klaviatura tugmalari ko'rsatilmaydi (belgilar Yo'riqnomada)
-  HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? '' : `. <kbd>Probel</kbd> — tormoz, <kbd>F</kbd> — tushish` +
-    (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>R</kbd> — radio, <kbd>V</kbd> — ichidan ko\'rish, <kbd>L</kbd> — faralar'), Input.touch ? 2.5 : 5);
+  HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? ' · uzatma <b>D</b> da, orqaga yurish uchun selektorda <b>R</b>' : `. <kbd>W</kbd> — gaz, <kbd>S</kbd> — tormoz, <kbd>Q</kbd> <kbd>E</kbd> — uzatma (orqaga — <b>R</b>), <kbd>F</kbd> — tushish` +
+    (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>V</kbd> — ichidan ko\'rish'), Input.touch ? 3 : 5);
 }
 function exitCar() {
   const P = Player, c = P.inCar;
@@ -290,6 +291,7 @@ function exitCar() {
     P.passenger = null; P.inCar = null; updateWeaponModel();
   } else {
     c.thr = 0; c.hand = false; c.siren = false;
+    gearOnExit(c);
     leaveSeat();
   }
   Game.camYaw = c.h;

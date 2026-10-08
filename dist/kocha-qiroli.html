@@ -143,9 +143,20 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .speedo { position: absolute; right: 22px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); text-align: right; }
 .speedo b { font-family: var(--f-display); font-weight: 400; font-size: 40px; font-variant-numeric: tabular-nums; }
 .speedo span { font-size: 16px; font-weight: 600; margin-left: 4px; color: var(--muted); }
-.gear-ind { display: inline-block; font-style: normal; font-family: var(--f-display); font-size: 22px; line-height: 1; min-width: 30px; text-align: center; padding: 4px 6px 3px; margin-right: 10px; border: 2px solid rgba(255,255,255,.5); border-radius: 6px; vertical-align: 9px; }
-.gear-ind.shift { border-color: var(--sun); color: var(--sun); }
-.gear-ind.rev { border-color: var(--danger); color: var(--danger); }
+/* Uzatmalar qutisi: P R N D (mexanikada R N 1…5), tanlangani yorug' */
+.gear-strip { display: flex; justify-content: flex-end; gap: 3px; margin: 2px 0 1px; font-family: var(--f-display); font-size: 17px; line-height: 1; }
+.gear-strip i { font-style: normal; min-width: 22px; padding: 4px 4px 3px; text-align: center; border-radius: 4px; color: rgba(255,255,255,.5); }
+.gear-strip i.on { color: var(--night); background: var(--ink); }
+.gear-strip i.on.rev { background: var(--danger); color: #fff; }
+.gear-strip i.on.shift { background: var(--sun); }
+.gear-strip sub { font-size: 11px; vertical-align: 0; margin-left: 1px; }
+.touch .gear-strip { display: none; }
+.shifter { display: none; flex-direction: column; gap: 4px; padding: 6px 5px; border-radius: 14px; background: rgba(20, 16, 30, .55); border: 2px solid rgba(255,255,255,.35); pointer-events: auto; touch-action: none; }
+.shifter button { width: 46px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--ink); -webkit-text-fill-color: var(--ink); opacity: .6; font-family: var(--f-display); font-size: 19px; line-height: 1; pointer-events: none; }
+.shifter button.on { opacity: 1; -webkit-text-fill-color: currentColor; }
+.shifter button.on { background: var(--ink); color: var(--night); box-shadow: 0 2px 0 rgba(0,0,0,.4); }
+.shifter button.on[data-sel="R"] { background: var(--danger); color: #fff; }
+.touch-ui.driving:not(.manual) .shifter { display: flex; }
 .sigs { display: flex; justify-content: flex-end; gap: 10px; font-style: normal; height: 18px; }
 .sigs i { font-style: normal; font-size: 18px; color: rgba(255,255,255,.18); line-height: 1; }
 .sigs i.on { color: #7ee0a1; text-shadow: 0 0 8px rgba(126,224,161,.8); }
@@ -284,7 +295,6 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .gear-pad .tbtn { width: 50px; height: 50px; font-size: 18px; }
 .gear-pad b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--ink); text-shadow: 0 1px 3px rgba(0,0,0,.7); }
 .gear-pad b.shift { color: var(--sun); }
-.touch-ui.driving.manual .tbtns { right: calc(284px + env(safe-area-inset-right, 0px)); }
 .sig-pad { position: absolute; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(124px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; }
 .sig-pad .tbtn { width: 46px; height: 46px; }
 .sig-pad .tbtn svg { width: 24px; height: 24px; }
@@ -298,7 +308,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .touch-ui.driving:not([data-steer="arrows"]) .steer-pad,
 .touch-ui:not(.driving) .steer-wheel, .touch-ui:not([data-steer="wheel"]) .steer-wheel,
 .touch-ui:not(.driving) .tilt-ind, .touch-ui:not([data-steer="tilt"]) .tilt-ind { display: none; }
-.touch-ui.driving .tbtns { right: calc(222px + env(safe-area-inset-right, 0px)); grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 8px; }
+.touch-ui.driving .tbtns { right: calc(286px + env(safe-area-inset-right, 0px)); grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 8px; }
 .touch-ui.driving .tbtn[data-act="fire"] svg { width: 30px; height: 30px; }
 .tbtn[data-act="view"] { font-size: 13px; }
 .door-btn { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; pointer-events: auto; touch-action: none; padding: 0;
@@ -484,7 +494,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="cross" id="cross"></div>
   <div class="prompt" id="prompt" hidden></div>
   <div class="objective" id="objective" hidden></div>
-  <div class="speedo" id="speedo" hidden><div class="sigs"><i class="sig-l" id="sigL">◀</i><i class="sig-r" id="sigR">▶</i></div><i class="gear-ind" id="gearInd" title="Uzatma">D1</i><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="fuel" id="fuelWrap" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 14 5v16M3 21h12M6.5 7h5v4h-5z"/><path d="M14 9.5h2a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/></svg><span><i id="fuelBar"></i></span></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
+  <div class="speedo" id="speedo" hidden><div class="sigs"><i class="sig-l" id="sigL">◀</i><i class="sig-r" id="sigR">▶</i></div><div class="gear-strip" id="gearStrip" aria-label="Uzatmalar qutisi"></div><b id="kmh">0</b><span>km/soat</span><div class="car-hp"><i id="carhp"></i></div><div class="fuel" id="fuelWrap" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 14 5v16M3 21h12M6.5 7h5v4h-5z"/><path d="M14 9.5h2a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/></svg><span><i id="fuelBar"></i></span></div><div class="nitro" id="nitroWrap" hidden><i id="nitroBar"></i></div></div>
   <div class="area"><b id="district">Chilonzor</b><span id="street">Amir Temur ko'chasi</span></div>
   <div class="radar-wrap">
     <canvas id="radar" width="420" height="300"></canvas>
@@ -595,7 +605,14 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="steer-wheel" id="steerWheel" role="slider" aria-label="Rul"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="50" cy="50" r="42" stroke-width="10" fill="rgba(20,16,30,.35)"/><path d="M12 54 38 52M88 54 62 52M50 64v26" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="52" r="12" fill="currentColor" stroke="none"/><path d="M50 4v12" stroke="#ffb238" stroke-width="7" stroke-linecap="round"/></svg></div>
   <div class="tilt-ind" id="tiltInd" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="50" cy="50" r="42" stroke-width="10" fill="rgba(20,16,30,.35)"/><path d="M12 54 38 52M88 54 62 52M50 64v26" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="52" r="12" fill="currentColor" stroke="none"/><path d="M50 4v12" stroke="#ffb238" stroke-width="7" stroke-linecap="round"/></svg></div>
   <div class="pedals">
-    <!-- Mexanik uzatmalar (Sozlamalar → Uzatmalar qutisi → Mexanika) -->
+    <!-- Avtomat selektori: P (park), R (orqaga), N (neytral), D (oldinga) -->
+    <div class="shifter" id="shifter" role="radiogroup" aria-label="Uzatmalar selektori">
+      <button type="button" data-sel="P" aria-label="P — park">P</button>
+      <button type="button" data-sel="R" aria-label="R — orqaga">R</button>
+      <button type="button" data-sel="N" aria-label="N — neytral">N</button>
+      <button type="button" data-sel="D" aria-label="D — oldinga">D</button>
+    </div>
+    <!-- Mexanik uzatmalar (Sozlamalar → Uzatmalar qutisi → Mexanika): R N 1 … 5 -->
     <div class="gear-pad">
       <button class="tbtn" type="button" data-act="gearUp" aria-label="Yuqori uzatma">▲</button>
       <b id="gearPadInd">1</b>
@@ -659,6 +676,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <dt>O'ng tugma</dt><dd>Nishonga olish</dd>
     <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Qurol tanlash (sichqoncha g'ildiragi ham)</dd>
     <dt><kbd>H</kbd></dt><dd>Signal chalish (bosib tursangiz uzun chaladi)</dd>
+    <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Mashinada — uzatmalar selektori (P R N D): E — D tomonga, Q — R / P tomonga. Orqaga yurish uchun R</dd>
     <dt><kbd>B</kbd></dt><dd>Zapravkada yoqilg'i quyish / bak bo'sh bo'lsa — kanistr chaqirish</dd>
     <dt><kbd>G</kbd></dt><dd>Sirena va chiroqlar (politsiya mashinasida)</dd>
     <dt><kbd>R</kbd></dt><dd>Radio stansiyasini almashtirish (mashinada)</dd>
@@ -19078,14 +19096,24 @@ class Car {
     const acc = T.acc * (md ? 1 + 0.18 * md.eng : 1) * (bo ? 2.2 : 1) * (0.7 + 0.3 * Weather.grip);
     // Uzatmalar qutisi (js/gearbox.js): uzatmaga va dvigatel aylanishiga qarab tortish kuchi
     const drive = gearDrive(this, vF, maxS, Math.max(0, thr), dt);
-    if (thr > 0) { if (vF < -0.5) vF += brake * thr * dt; else if (vF < maxS) vF += acc * thr * dt * drive; }
-    else if (thr < 0) { if (vF > 0.5) vF += brake * thr * dt; else if (vF > -13) vF += acc * 0.7 * thr * dt; }
+    if (this.pedals) {
+      // O'yinchi: gaz faqat gaz, tormoz faqat tormoz; yo'nalishni selektor belgilaydi (D — oldinga, R — orqaga)
+      const sel = gearState(this).sel, brk = this.dead ? 0 : this.brk || 0;
+      if (thr > 0 && sel === 'D' && vF < maxS) vF += acc * thr * dt * drive;
+      if (thr > 0 && sel === 'R' && vF > -REV_MAX) vF -= acc * 0.7 * thr * dt * drive;
+      if (brk > 0) vF -= Math.sign(vF) * Math.min(Math.abs(vF), brake * brk * dt);
+    } else {
+      if (thr > 0) { if (vF < -0.5) vF += brake * thr * dt; else if (vF < maxS) vF += acc * thr * dt * drive; }
+      else if (thr < 0) { if (vF > 0.5) vF += brake * thr * dt; else if (vF > -REV_MAX) vF += acc * 0.7 * thr * dt; }
+    }
     vF -= vF * (thr === 0 ? 0.55 : 0.1) * dt;
     // Qiyalik (estakada): mashina pastga sirpanadi, qo'l tormozi ushlab turadi
     const gF = groundH(this.x + fx, this.z + fz), gB = groundH(this.x - fx, this.z - fz), slope = (gF - gB) / 2;
     this.pitch = Math.abs(slope) < 0.4 ? Math.atan(slope) : 0;
     if (this.pitch) vF -= 9.8 * slope * dt;
-    if (this.hand || !this.driver || this.dead) vF -= Math.sign(vF) * Math.min(Math.abs(vF), (this.hand ? 10 : 7) * dt);
+    // Qo'l tormozi, haydovchisiz mashina va "P" (park) holati — mashina ushlab turiladi
+    const park = this.pedals && gearState(this).sel === 'P';
+    if (this.hand || !this.driver || this.dead || park) vF -= Math.sign(vF) * Math.min(Math.abs(vF), (this.hand || park ? 10 : 7) * dt);
     this.vx = fx * vF + rx * vR; this.vz = fz * vF + rz * vR;
     // Rul: tezlikka qarab burilish
     const sp = Math.abs(vF), sf = clamp(sp / 5, 0, 1) * (1 - clamp(sp / (T.max * 1.6), 0, 0.55));
@@ -19685,26 +19713,36 @@ function trafficEvents(px, pz) {
 <script>
 'use strict';
 // ===== Uzatmalar qutisi: har uzatmaning eng yuqori tezligi (mashina eng yuqori tezligidan ulush) va tortish kuchi.
-// Avtomat — o'zi almashtiradi (boshqa mashinalarda doim), mexanika — o'yinchi E (yuqori) va Q (past) bilan.
+// O'yinchi mashinasida selektor bor: avtomatda P R N D, mexanikada R N 1…5(6). Gaz faqat gaz, tormoz faqat tormoz —
+// oldinga yoki orqaga yurish selektorga bog'liq. Boshqa mashinalar (AI) doim avtomatda, eski boshqaruv bilan.
 // Kuchlar shunday tanlanganki, avtomatda tezlanish oldingi (uzatmasiz) holat bilan deyarli bir xil.
 // Oxirgi uzatma eng yuqori tezlikda cheklovchigacha yetmaydi (havo qarshiligi to'xtatadi) — ovoz "uzilmaydi"
 const GEAR_SETS = {
   5: { top: [0.24, 0.42, 0.6, 0.8, 1.1], pull: [1.35, 1.1, 0.92, 0.8, 0.7] },
   6: { top: [0.2, 0.35, 0.5, 0.66, 0.83, 1.1], pull: [1.4, 1.18, 1.02, 0.9, 0.8, 0.7] },
 };
+const REV_MAX = 13; // orqaga eng yuqori tezlik (m/s)
 // Dvigatel kuchi aylanishga qarab: pastda biroz sust, o'rtada to'liq, cheklovchiga yaqinlashganda yo'qoladi
 const engineTorque = r => (r < 0.3 ? 0.82 + 0.6 * r : r > 0.92 ? Math.max(0, (1.04 - r) / 0.12) : 1);
 const gearSet = c => GEAR_SETS[c.T.gears] || GEAR_SETS[5];
 const manualBox = c => c.driver === 'player' && Settings.v.gearbox === 'manual';
-const gearState = c => c.gb || (c.gb = { g: 1, shiftT: 0, rpm: 0.1 });
+// sel: P / R / N / D (mexanikada D — oldinga, raqami g da)
+const gearState = c => c.gb || (c.gb = { g: 1, sel: 'D', shiftT: 0, rpm: 0.1 });
 
 // Har kadr (Car.physics): uzatmani tanlaydi, dvigatel aylanishini (rpm: 0.1 salt … 1 eng yuqori) hisoblaydi
-// va oldinga tortish ko'paytuvchisini qaytaradi (almashtirish paytida — 0)
+// va tortish ko'paytuvchisini qaytaradi (N, P va almashtirish paytida — 0). thr — gaz (0…1)
 function gearDrive(c, vF, maxS, thr, dt) {
-  const G = gearSet(c), S = gearState(c), n = G.top.length, v = Math.max(0, vF);
+  const G = gearSet(c), S = gearState(c), n = G.top.length, sel = c.pedals ? S.sel : 'D';
   if (S.g > n) S.g = n;
   S.shiftT = Math.max(0, S.shiftT - dt);
-  const ratio = g => v / (maxS * G.top[g - 1]);
+  // Neytral va "Park": g'ildiraklarga uzatilmaydi, gaz faqat dvigatelni aylantiradi
+  if (sel === 'N' || sel === 'P') { S.rpm = 0.1 + 0.85 * thr; return 0; }
+  if (sel === 'R') {
+    const r = Math.max(0, -vF) / REV_MAX;
+    S.rpm = Math.max(0.1 + 0.9 * clamp(r, 0, 1.05), thr > 0 && r < 0.4 ? 0.28 + 0.3 * thr : 0);
+    return S.shiftT > 0 ? 0 : 1.25 * engineTorque(r);
+  }
+  const v = Math.max(0, vF), ratio = g => v / (maxS * G.top[g - 1]);
   if (!manualBox(c)) {
     if (vF < 0.5) S.g = 1;
     else if (S.shiftT <= 0 && S.g < n && ratio(S.g) > (thr > 0.6 ? 0.9 : 0.62)) { S.g++; S.shiftT = 0.18; }
@@ -19718,22 +19756,75 @@ function gearDrive(c, vF, maxS, thr, dt) {
   S.rpm = rpm;
   return S.shiftT > 0 ? 0 : G.pull[S.g - 1] * engineTorque(r);
 }
-// Mexanikada qo'lda almashtirish (d: +1 yuqori, −1 past). Dvigatelni haddan tashqari aylantiradigan pastga o'tish rad etiladi
-function shiftGear(c, d) {
-  const G = gearSet(c), S = gearState(c), g = clamp(S.g + d, 1, G.top.length);
-  if (g === S.g) return;
-  if (d < 0 && Math.max(0, c.fwd) / (c.T.max * G.top[g - 1]) > 1.06) { SFX.click(); HUD.help('Bu tezlikda pastroq uzatmaga o\'tib bo\'lmaydi', 1.2); return; }
-  S.g = g; S.shiftT = 0.12;
+
+// Selektor holatlari: avtomatda P R N D, mexanikada R N 1 … n
+function gearOptions(c) {
+  if (!manualBox(c)) return ['P', 'R', 'N', 'D'];
+  return ['R', 'N', ...gearSet(c).top.map((_, i) => String(i + 1))];
+}
+// Joriy holat (selektordagi belgi)
+function gearSel(c) {
+  const S = gearState(c);
+  if (S.sel !== 'D') return S.sel;
+  return manualBox(c) ? String(S.g) : 'D';
+}
+// Selektorni o'tkazish. Harakatlanayotganda P va teskari yo'nalishga o'tib bo'lmaydi (haqiqiy mashinadagidek)
+function selectGear(c, opt) {
+  const S = gearState(c), cur = gearSel(c), v = c.fwd;
+  if (opt === cur) return;
+  const deny = msg => { SFX.click(); HUD.help(msg, 1.4); };
+  if (opt === 'P' && Math.abs(v) > 1) return deny('Avval to\'xtang, keyin P ga o\'tkazing');
+  if (opt === 'R' && v > 1.5) return deny('Oldinga yurib turibsiz — avval to\'xtang, keyin R');
+  const fwdGear = opt === 'D' || /^\d$/.test(opt);
+  if (fwdGear && v < -1.5) return deny('Orqaga yurib turibsiz — avval to\'xtang');
+  if (/^\d$/.test(opt)) {
+    const g = +opt, G = gearSet(c);
+    // Dvigatelni haddan tashqari aylantiradigan pastga o'tish rad etiladi
+    if (S.sel === 'D' && g < S.g && Math.max(0, v) / (c.T.max * G.top[g - 1]) > 1.06) return deny('Bu tezlikda pastroq uzatmaga o\'tib bo\'lmaydi');
+    S.g = g; S.sel = 'D';
+  } else {
+    S.sel = opt;
+    if (opt === 'D' && !manualBox(c)) S.g = 1;
+  }
+  S.shiftT = 0.15;
   SFX.gear();
 }
-// Ko'rsatkich: R — orqaga, mexanikada raqam, avtomatda D va raqam
-function gearLabel(c) {
-  if (c.fwd < -0.5) return 'R';
-  const S = gearState(c);
-  return manualBox(c) ? String(S.g) : 'D' + S.g;
+// Q / E (geympadda LB / RB, telefonda selektor): ro'yxat bo'ylab bir pog'ona
+function shiftStep(c, d) {
+  const L = gearOptions(c), i = L.indexOf(gearSel(c));
+  const j = clamp((i < 0 ? L.length - 1 : i) + d, 0, L.length - 1);
+  if (L[j] !== gearSel(c)) selectGear(c, L[j]);
 }
-// Mexanikada kamera Q/E bilan burilmaydi (bu tugmalar uzatma uchun)
-const camKeysFree = () => !(Player.inCar && !Player.passenger && Settings.v.gearbox === 'manual');
+// Mashinaga o'tirganda — harakatga tayyor (avtomatda D, mexanikada 1), tushganda — P
+function gearOnEnter(c) {
+  const S = gearState(c);
+  c.pedals = true; c.brk = 0; S.sel = 'D'; S.g = 1; S.shiftT = 0;
+}
+function gearOnExit(c) {
+  const S = gearState(c);
+  c.pedals = false; c.brk = 0; S.sel = 'P';
+}
+// Ko'rsatkich: avtomatda P / R / N / D3, mexanikada R / N / raqam
+function gearLabel(c) {
+  const S = gearState(c);
+  if (!c.pedals) return c.fwd < -0.5 ? 'R' : 'D' + S.g;
+  const s = gearSel(c);
+  return s === 'D' ? 'D' + S.g : s;
+}
+// Maslahat: tormozni bosib turib orqaga yurmoqchi — R kerak; N yoki P da gaz bosilsa — D kerak (har biri 3 martagacha)
+const _gh = { key: null, t: 0, n: {} };
+function gearHints(c, gas, brk, dt) {
+  const sel = gearState(c).sel, slow = Math.abs(c.fwd) < 0.4;
+  const key = slow && brk > 0 && !gas && sel === 'D' ? 'rev' : gas > 0 && (sel === 'N' || sel === 'P') ? 'drive' : null;
+  _gh.t = key && key === _gh.key ? _gh.t + dt : 0; _gh.key = key;
+  if (!key || _gh.t < (key === 'rev' ? 1.3 : 0.6) || (_gh.n[key] || 0) >= 3) return;
+  _gh.n[key] = (_gh.n[key] || 0) + 1; _gh.t = -99;
+  const L = gearOptions(c), steps = Math.abs(L.indexOf(gearSel(c)) - L.indexOf(key === 'rev' ? 'R' : manualBox(c) ? '1' : 'D'));
+  const how = Input.touch ? 'pedallar yonidagi selektordan' : `<kbd>${key === 'rev' ? 'Q' : 'E'}</kbd>${steps > 1 ? ' ni ' + steps + ' marta bosing' : ' bilan'}`;
+  HUD.help(key === 'rev' ? `Orqaga yurish uchun uzatmani <b>R</b> ga o'tkazing (${how}), keyin gazni bosing` : `Uzatma <b>${sel}</b> da — yurish uchun <b>D</b> ga o'tkazing (${how})`, 3.5);
+}
+// Mashinada Q / E — uzatma, shuning uchun kamera ular bilan burilmaydi (sichqoncha bilan buriladi)
+const camKeysFree = () => !(Player.inCar && !Player.passenger);
 
 </script>
 <script>
@@ -19924,7 +20015,7 @@ const CarLights = {
       const kc = !lit || c.lightsOn === false ? 0 : c.lightsOn === true ? Math.max(k, 0.55) : k;
       if (kc <= 0) continue;
       L.f.forEach((p, i) => { if (!(br & (1 << i)) && nf < LIGHT_N * 2) put(fP, fC, nf++, p, [1, 0.93, 0.78]); });
-      const braking = c.thr < -0.1 && c.fwd > 0.5;
+      const braking = c.pedals ? c.brk > 0.1 : c.thr < -0.1 && c.fwd > 0.5;
       L.r.forEach((p, i) => { if (!(br & (4 << i)) && nr < LIGHT_N * 2) put(rP, rC, nr++, p, braking ? [1, 0.12, 0.08] : [0.55, 0.04, 0.03]); });
       // Yo'ldagi yorug'lik (o'yinchining mashinasida haqiqiy fara bor)
       if (c !== Player.inCar && (br & 3) !== 3 && k > 0) {
@@ -20876,10 +20967,19 @@ const HUD = {
       if (R !== this._sr) { this._sr = R; (this._eR || (this._eR = document.getElementById('sigR'))).classList.toggle('on', R); }
     }
     if (car) {
-      // Uzatma: avtomatda D1…, mexanikada raqam; aylanish cheklovchiga yaqin bo'lsa — "almashtiring" (sariq)
-      const gl = gearLabel(car), sh = manualBox(car) && (Game.rpm || 0) > 0.92, cls = gl === 'R' ? 'rev' : sh ? 'shift' : '';
-      if (gl !== this._gl) { this._gl = gl; (this._ge || (this._ge = document.getElementById('gearInd'))).textContent = gl; const gp = document.getElementById('gearPadInd'); if (gp) gp.textContent = gl; }
-      if (cls !== this._gc) { this._gc = cls; this._ge.className = 'gear-ind' + (cls ? ' ' + cls : ''); const gp = document.getElementById('gearPadInd'); if (gp) gp.className = sh ? 'shift' : ''; }
+      // Uzatmalar qutisi: P R N D (mexanikada R N 1…5); aylanish cheklovchiga yaqin bo'lsa — sariq ("yuqoriga o'ting")
+      const opts = gearOptions(car), cur = gearSel(car), S = gearState(car), sh = manualBox(car) && (Game.rpm || 0) > 0.92;
+      const key = opts.join('') + '|' + cur + '|' + S.g + '|' + sh;
+      if (key !== this._gk) {
+        this._gk = key;
+        (this._gs || (this._gs = document.getElementById('gearStrip'))).innerHTML = opts.map(o => {
+          const on = o === cur, cls = on ? 'on' + (o === 'R' ? ' rev' : sh ? ' shift' : '') : '';
+          return `<i class="${cls}">${o}${on && o === 'D' ? `<sub>${S.g}</sub>` : ''}</i>`;
+        }).join('');
+        const gp = document.getElementById('gearPadInd');
+        if (gp) { gp.textContent = gearLabel(car); gp.className = sh ? 'shift' : ''; }
+        document.querySelectorAll('#shifter [data-sel]').forEach(b => { const on = b.dataset.sel === cur; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.textContent = on && cur === 'D' ? 'D' + S.g : b.dataset.sel; });
+      }
     }
     if (car) { e.kmh.textContent = Math.round(car.speed * 3.6); e.carhp.style.width = clamp(car.hp / (car.maxHp || car.T.hp) * 100, 0, 100) + '%'; }
     e.cross.hidden = !!car || P.dead;
@@ -21089,12 +21189,12 @@ const AD_EX = [
   { id: 'light1', name: 'Harakat tartibga solingan chorraha (to\'g\'riga)', tip: 'Svetoforga qarang: qizilda to\'xtash chizig\'i oldida to\'xtang, yashilda to\'g\'riga o\'ting', guide: [[1.5, -6]] },
   { id: 'snake', name: 'Ilon izi', tip: 'Konuslar orasidan ilonsimon o\'ting — birinchisini o\'ng tomondan', guide: [[-3, -21.5], [-18, -21.5]], nodes: [[0, -20, -1]] },
   { id: 'light2', name: 'Harakat tartibga solingan chorraha (to\'g\'riga)', tip: 'Chorrahadan to\'g\'riga o\'ting', guide: [[-21.5, -16], [-21.5, -3], [-18, 1.5], [6, 1.5]], nodes: [[-20, -20, -1], [-20, 0, -1]] },
-  { id: 'box', name: 'Tor joyda qayrilib olish uchun boksga kirish', tip: 'Boksdan o\'ting, orqa bilan kirib to\'xtang, so\'ng chiqib orqaga qayting', guide: [[15.5, 1.5], [11, 6], [6, -1.5]] },
+  { id: 'box', name: 'Tor joyda qayrilib olish uchun boksga kirish', tip: 'Boksdan o\'ting, uzatmani R ga o\'tkazib orqa bilan kiring va to\'xtang, so\'ng D da chiqib orqaga qayting', guide: [[15.5, 1.5], [11, 6], [6, -1.5]] },
   { id: 'light3', name: 'Harakat tartibga solingan chorraha (chapga burilish)', tip: 'Chorrahada chapga buriling', guide: [[3, -1.5], [-1.5, 3], [-1.5, 5]], nodes: [[0, 0, -1]] },
   { id: 'rail', name: 'Temir yo\'l kesishmasi', tip: 'STOP belgisi: temir yo\'l oldidagi chiziqda to\'liq to\'xtang', guide: [[-1.5, 8], [-1.5, 15]] },
   { id: 'accel', name: 'Tezlashish bo\'lagi', tip: 'Bu bo\'lakda 25–40 km/soat gacha tezlashing', guide: [[3, 21.5], [18, 21.5], [21.5, 17], [21.5, 0]], nodes: [[0, 20, -1], [20, 20, -1]] },
   { id: 'brake', name: 'Avariya holatda to\'xtash', tip: 'Qizil «STOP» chiqishi bilan darhol to\'xtang', guide: [[21.5, -10]] },
-  { id: 'park', name: 'Orqaga harakatlanib parallel to\'xtash (parkovka)', tip: 'O\'ng tomondagi joyga orqa bilan kirib, yo\'lga parallel to\'xtang', guide: [[18, -21.5], [4, -21.5], [10.5, -24.4], [2, -21.5]], nodes: [[20, -20, -1]] },
+  { id: 'park', name: 'Orqaga harakatlanib parallel to\'xtash (parkovka)', tip: 'Joydan o\'tib, uzatmani R ga o\'tkazing va orqa bilan kirib, yo\'lga parallel to\'xtang (keyin D)', guide: [[18, -21.5], [4, -21.5], [10.5, -24.4], [2, -21.5]], nodes: [[20, -20, -1]] },
   { id: 'light4', name: 'Harakat tartibga solingan chorraha (o\'ngga burilish)', tip: 'Burchakda chapga, chorrahada o\'ngga buriling (burilish chiroqlari bilan)', guide: [[-1.5, -16], [-1.5, -5], [-5, -1.5]], nodes: [[0, -20, -1], [0, 0, 1]] },
   { id: 'finish', name: 'Harakatni yakunlash (Finish)', tip: 'FINISH chizig\'idan keyin to\'xtang', guide: [[-13, -1.5]] },
 ];
@@ -22266,6 +22366,19 @@ const TouchUI = {
       btn.addEventListener('touchend', up, { passive: false });
       btn.addEventListener('touchcancel', up, { passive: false });
     });
+    // Avtomat selektori (P R N D): harfni bosing yoki barmoqni dastak bo'ylab suring
+    const sh = document.getElementById('shifter');
+    if (sh) {
+      let last = null;
+      const pickAt = t => {
+        const btn = [...sh.querySelectorAll('[data-sel]')].find(b => { const r = b.getBoundingClientRect(); return t.clientY >= r.top - 4 && t.clientY <= r.bottom + 4; });
+        if (!btn || btn.dataset.sel === last || !Player.inCar || Player.passenger) return;
+        last = btn.dataset.sel; selectGear(Player.inCar, last);
+      };
+      sh.addEventListener('touchstart', e => { e.preventDefault(); last = null; pickAt(e.changedTouches[0]); }, { passive: false });
+      sh.addEventListener('touchmove', e => { e.preventDefault(); pickAt(e.changedTouches[0]); }, { passive: false });
+      sh.addEventListener('touchend', e => { e.preventDefault(); last = null; }, { passive: false });
+    }
     const note = document.getElementById('note');
     if (note) note.textContent = 'Telefonda: chapdagi joystik — yurish, mashinada — chap/o\'ng tugmalari va gaz/tormoz pedallari, ekranni surish — kamera, ko\'z belgisi — mashina ichidan ko\'rish. Barcha belgilar ☰ → Yo\'riqnoma ichida. O\'yin doim albom (yotiq) rejimida ochiladi.';
   },
@@ -22411,13 +22524,6 @@ const TouchUI = {
       const lb = this._lb || (this._lb = this.btn('lights')); lb.classList.toggle('lock', carLightsOn(lc));
       const sg = lc.signal || 0;
       this.btn('sigL').classList.toggle('lock', sg === -1); this.btn('sigR').classList.toggle('lock', sg === 1); this.btn('sigH').classList.toggle('lock', sg === 2);
-    }
-    // Tormoz pedali: mashina to'xtab turganda (yoki orqaga yurayotganda) — orqaga yurish strelkasi
-    const dc = Player.inCar;
-    if (dc && !Player.passenger) {
-      const f = dc.fwd;
-      if (this._rev ? f > 1.0 : f < 0.5) this._rev = !this._rev;
-      this.setIcon(this.pedalBrake || (this.pedalBrake = this.root.querySelector('[data-key="ArrowDown"]')), this._rev ? 'reverse' : 'brake', this._rev ? 'Orqaga yurish' : 'Tormoz');
     }
     const c = Player.inCar, car = !!c, pol = car && c.type === 'police', taxi = car && (c.type === 'taxi' || c.type === 'bus'), nitro = !!(car && c.mods && c.mods.nitro);
     const driving = car && !Player.passenger;
@@ -22646,7 +22752,7 @@ const AutoQuality = {
 
 // ----- Geympad (Xbox/PlayStation standart sxemasi) -----
 const PAD_HOLD = { 0: 'Space', 2: 'ShiftLeft', 1: 'KeyN', 10: 'KeyH' };
-const PAD_PRESS = { 3: 'KeyF', 11: 'KeyG', 12: 'KeyR', 14: 'KeyT', 15: 'KeyV' };
+const PAD_PRESS = { 3: 'KeyF', 11: 'KeyG', 12: 'KeyR' };
 const Pad = {
   connected: false, prev: [],
   poll() {
@@ -22665,13 +22771,15 @@ const Pad = {
     for (const [i, code] of Object.entries(PAD_PRESS)) if (rise(i)) Input.pressed[code] = true;
     // LB/RB: piyodada — qurol, mashinada — burilish chiroqlari
     const inCar = Player.inCar && !Player.passenger;
-    // Mexanik uzatmada LB/RB — uzatma (past/yuqori)
-    const manual = inCar && Settings.v.gearbox === 'manual';
-    if (rise(4)) { if (manual) Input.pressed.KeyQ = true; else if (inCar) Input.pressed.KeyZ = true; else Input.wheel -= 1; }
-    if (rise(5)) { if (manual) Input.pressed.KeyE = true; else if (inCar) Input.pressed.KeyC = true; else Input.wheel += 1; }
+    // Mashinada: LB / RB — uzatmalar selektori, D-pad chap / o'ng — burilish chiroqlari, X — taksi/avtobus ishi yoki ichidan ko'rish
+    if (rise(4)) { if (inCar) Input.pressed.KeyQ = true; else Input.wheel -= 1; }
+    if (rise(5)) { if (inCar) Input.pressed.KeyE = true; else Input.wheel += 1; }
+    if (inCar && rise(2)) Input.pressed[['taxi', 'bus'].includes(Player.inCar.type) ? 'KeyT' : 'KeyV'] = true;
     if (btn(7) !== !!was.rt) { Input.mouseL = btn(7) || val(7) > 0.5; if (Input.mouseL) Input.clickL = true; }
     if (btn(6) !== !!was.lt) Input.mouseR = btn(6) || val(6) > 0.5;
     if (rise(13)) Input.pressed[Fuel.action ? 'KeyB' : 'KeyO'] = true; // D-pad pastga: zapravkada quyish, aks holda ob-havo
+    if (rise(14)) Input.pressed[inCar ? 'KeyZ' : 'KeyT'] = true;
+    if (rise(15)) Input.pressed[inCar ? 'KeyC' : 'KeyV'] = true;
     if (rise(9)) { if (!Game.started) startGame(); else togglePause(); }
     if (rise(8)) MapUI.toggle();
     this.prev = now; this.prev.rt = btn(7); this.prev.lt = btn(6);
@@ -22727,7 +22835,7 @@ const Panel = {
       <label class="set-row" for="setInvert"><span>Kamerani teskari (yuqori/past)</span><input type="checkbox" id="setInvert"${v.invertY ? ' checked' : ''}></label>
       <div class="set-row"><span>Uzatmalar qutisi</span><div class="segs" id="setGear">${[['auto', 'Avtomat'], ['manual', 'Mexanika']].map(([k, n]) =>
         `<button type="button" class="seg${(v.gearbox || 'auto') === k ? ' on' : ''}" data-gear="${k}">${n}</button>`).join('')}</div></div>
-      <p class="set-note">Mexanikada uzatmani o'zingiz almashtirasiz: ${Input.touch ? 'pedallar yonidagi ▲ ▼ tugmalari' : '<kbd>E</kbd> — yuqori, <kbd>Q</kbd> — past'} (geympadda RB / LB). Aylanish ko'rsatkichi sariq bo'lsa — yuqoriga o'ting.</p>
+      <p class="set-note">Gaz faqat gaz, tormoz faqat tormoz: oldinga yoki orqaga yurishni selektor belgilaydi. Avtomatda P R N D, mexanikada R N 1…5 — uzatmani o'zingiz almashtirasiz. ${Input.touch ? 'Telefonda pedallar yonidagi selektor (avtomatda harfni bosing yoki barmoqni suring, mexanikada ▲ ▼).' : '<kbd>E</kbd> — keyingi (D / yuqori uzatma tomon), <kbd>Q</kbd> — oldingi (R / P tomon).'} Geympadda RB / LB. Mexanikada ko'rsatkich sariq bo'lsa — yuqoriga o'ting.</p>
       <label class="set-row" for="setFuel"><span>Yoqilg'i sarflanadi (zapravkada quyish kerak)</span><input type="checkbox" id="setFuel"${v.fuel !== false ? ' checked' : ''}></label>
       ${Input.touch ? '' : `<label class="set-row" for="setHints"><span>Tugmalar ko'rsatmasi o'yin ichida (I)</span><input type="checkbox" id="setHints"${v.keyHints !== false ? ' checked' : ''}></label>`}
       ${Input.touch ? `<div class="set-row"><span>Mashinani burish (telefonda)</span><div class="segs" id="setSteer">${STEER_MODES.map(([k, n]) =>
@@ -22783,10 +22891,9 @@ const Panel = {
         [['car'], '«Rul» usuli: chapdagi rulni barmoq bilan aylantiring, qo\'yib yuborsangiz o\'rtaga qaytadi'],
         [['tilt'], '«Qiyshaytirish» usuli: telefonni rul kabi chapga/o\'ngga qiyshaytiring (iPhone sensorga ruxsat so\'raydi)'],
         [['gas', 'brake'], 'Gaz va tormoz pedallari'],
-        [['reverse'], 'Mashina to\'xtab turganda tormoz pedali shu belgiga aylanadi — bosib tursangiz orqaga yurasiz'],
         [['handbrake'], 'Qo\'l tormozi (drift)'],
         [['horn'], 'Signal (bosib tursangiz uzun chaladi)'],
-        [['gearUp', 'gearDown'], 'Mexanik uzatmalar (Sozlamalar → Uzatmalar qutisi → Mexanika): yuqori / past'],
+        [['gearUp', 'gearDown'], 'Uzatmalar selektori: avtomatda P R N D harflarini bosing (yoki barmoqni suring), mexanikada ▲ ▼ bilan R N 1…5. Gaz faqat gaz, tormoz faqat tormoz — orqaga yurish uchun R ni tanlang'],
         [['fuel'], 'Zapravkada kolonka yonida to\'xtasangiz chiqadi — benzin yoki metan quyish; bak bo\'shasa — kanistr chaqirish', 'ic-fuel'],
         [['exit'], 'Mashinadan tushish'],
         [['view'], 'Mashina ichidan ko\'rish (rul va tablo) / orqadan ko\'rish'],
@@ -22809,10 +22916,10 @@ const Panel = {
       ])}</ul>
       <h3>Uzatmalar qutisi</h3>
       <ul>${li([
-        'Avtomat (odatiy): uzatmalar o\'zi almashadi. Gaz oxirigacha bosilsa — pastroq uzatmaga tushib, tezroq tezlanadi',
-        'Mexanika: Sozlamalar → Uzatmalar qutisi. <kbd>E</kbd> — yuqori, <kbd>Q</kbd> — past (telefonda pedallar yonidagi ▲ ▼). Mashinalarda 5 ta, kuchli mashinalar, avtobus va mototsiklda 6 ta uzatma',
-        'Har uzatmaning o\'z eng yuqori tezligi bor: aylanish oxiriga yetsa, dvigatel cheklovchiga uriladi — ko\'rsatkich sariq bo\'lganda yuqoriga o\'ting. Past uzatmada tezroq tezlanasiz, baland uzatmada joyidan sekin qo\'zg\'alasiz',
-        'Orqaga: to\'xtab turganda tormozni bosib turing (R)',
+        'Gaz faqat gaz, tormoz faqat tormoz. Oldinga yoki orqaga yurishni selektor belgilaydi: <b>D</b> — oldinga, <b>R</b> — orqaga, <b>N</b> — neytral (gaz faqat dvigatelni aylantiradi), <b>P</b> — park (mashina joyidan qimirlamaydi, estakadada ham)',
+        'Selektor: kompyuterda <kbd>E</kbd> — D tomonga, <kbd>Q</kbd> — R / P tomonga; telefonda pedallar yonidagi dastak (harfni bosing yoki barmoqni suring); geympadda RB / LB. Mashinaga o\'tirganda D da bo\'ladi, tushganda P ga o\'tadi',
+        'Harakatlanayotganda P ga yoki teskari yo\'nalishga (D ↔ R) o\'tib bo\'lmaydi — avval to\'xtang',
+        'Avtomat (odatiy): D da uzatmalar o\'zi almashadi, gaz oxirigacha bosilsa — pastroq uzatmaga tushadi. Mexanika (Sozlamalar → Uzatmalar qutisi): R N 1…5, uzatmani o\'zingiz almashtirasiz; ko\'rsatkich sariq bo\'lsa — yuqoriga o\'ting',
       ])}</ul>
       <h3>Yoqilg'i va zapravka</h3>
       <ul>${li([
@@ -22830,9 +22937,9 @@ const Panel = {
       ])}</ul>
       <h3>Geympad</h3>
       <ul>${li([
-        'Chap tayoq — yurish va rul, o\'ng tayoq — kamera; mashinada LB / RB — burilish chiroqlari (mexanik uzatmada — uzatma past / yuqori)',
+        'Chap tayoq — yurish va rul, o\'ng tayoq — kamera; mashinada LB / RB — uzatmalar selektori, D-pad chap / o\'ng — burilish chiroqlari',
         'RT — otish / gaz, LT — nishon / tormoz, A — sakrash / qo\'l tormozi, B — nitro, Y — mashinaga o\'tirish',
-        'D-pad o\'ng — mashina ichidan ko\'rish, D-pad past — zapravkada yoqilg\'i quyish, Back — xarita, Start — pauza',
+        'Mashinada X — ichidan ko\'rish (taksi va avtobusda — ish), D-pad past — zapravkada yoqilg\'i quyish, Back — xarita, Start — pauza',
       ])}</ul>
     </div>`);
   },
@@ -22913,7 +23020,7 @@ const KeyHints = {
         [K('F'), 'o\'tirish / tushish'], ['Chap tugma', 'urish / otish'], ['O\'ng tugma', 'nishon'], [K('1–5'), 'qurol'],
         [K('Z C'), 'burilish chirog\'i'], [K('X'), 'avariya chirog\'i'], [K('H'), 'signal'], [K('B'), 'yoqilg\'i quyish'], [K('L'), 'faralar'], [K('V'), 'ichidan ko\'rish'], [K('R'), 'radio'],
         [K('G'), 'sirena'], [K('N'), 'nitro'], [K('T'), 'taksi / avtobus ishi'], [K('M'), 'xarita'],
-        [K('O'), 'ob-havo'], [K('Q E'), 'kamerani burish'], [K('I'), 'ko\'rsatma'], [K('P'), 'pauza'],
+        [K('O'), 'ob-havo'], [K('Q E'), 'kamera / mashinada uzatma'], [K('I'), 'ko\'rsatma'], [K('P'), 'pauza'],
       ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('') + '</dl>';
       mk.hidden = false;
     }
@@ -22928,9 +23035,9 @@ const KeyHints = {
     const P = Player, c = P.inCar, k = (keys, text) => [keys.map(x => `<kbd>${x}</kbd>`).join(' '), text];
     if (c && P.passenger) return [k(['F'], 'tushish'), k(['M'], 'xarita'), k(['P'], 'pauza')];
     if (c) {
-      const out = [k(['W', 'S'], 'gaz / tormoz, orqaga'), k(['A', 'D'], 'rul'), k(['Probel'], 'qo\'l tormozi'), k(['F'], 'tushish'),
+      const out = [k(['W', 'S'], 'gaz / tormoz'), k(['A', 'D'], 'rul'), k(['Probel'], 'qo\'l tormozi'), k(['F'], 'tushish'),
         k(['Z', 'C'], 'burilish chirog\'i'), k(['X'], 'avariya chirog\'i'), k(['H'], 'signal'), k(['B'], 'yoqilg\'i (zapravkada)'), k(['L'], 'faralar'), k(['V'], 'ichidan ko\'rish'), k(['R'], 'radio')];
-      if (Settings.v.gearbox === 'manual') out.splice(2, 0, k(['E', 'Q'], 'uzatma yuqori / past'));
+      out.splice(2, 0, k(['E', 'Q'], Settings.v.gearbox === 'manual' ? 'uzatma yuqori / past (R N 1…5)' : 'uzatma: D tomon / R tomon'));
       if (c.mods && c.mods.nitro) out.push(k(['N'], 'nitro'));
       if (c.type === 'police') out.push(k(['G'], 'sirena'));
       if (c.type === 'taxi') out.push(k(['T'], 'taksi ishi'));
@@ -24488,14 +24595,15 @@ function enterCar(c) {
   }
   if (!c.mine) { Stats.add('stolen'); c.mine = true; }
   c.driver = 'player'; c.ai = null; c.panic = 0; c.siren = false; c.signal = 0;
+  gearOnEnter(c);
   P.inCar = c; P.punchT = 0; P.aimT = 0;
   c.seatHuman(P.hm, true);
   if (P.gun) P.gun.visible = false;
   Game.mouseIdle = 9;
   SFX.door();
   // Telefonda klaviatura tugmalari ko'rsatilmaydi (belgilar Yo'riqnomada)
-  HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? '' : `. <kbd>Probel</kbd> — tormoz, <kbd>F</kbd> — tushish` +
-    (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>R</kbd> — radio, <kbd>V</kbd> — ichidan ko\'rish, <kbd>L</kbd> — faralar'), Input.touch ? 2.5 : 5);
+  HUD.help(`${c.T.kind === 'moto' ? '<b>Mototsikl</b>' : `Mashina: <b>${c.T.name}</b>`}` + (Input.touch ? ' · uzatma <b>D</b> da, orqaga yurish uchun selektorda <b>R</b>' : `. <kbd>W</kbd> — gaz, <kbd>S</kbd> — tormoz, <kbd>Q</kbd> <kbd>E</kbd> — uzatma (orqaga — <b>R</b>), <kbd>F</kbd> — tushish` +
+    (c.type === 'police' ? ', <kbd>G</kbd> — sirena' : '') + ', <kbd>V</kbd> — ichidan ko\'rish'), Input.touch ? 3 : 5);
 }
 function exitCar() {
   const P = Player, c = P.inCar;
@@ -24514,6 +24622,7 @@ function exitCar() {
     P.passenger = null; P.inCar = null; updateWeaponModel();
   } else {
     c.thr = 0; c.hand = false; c.siren = false;
+    gearOnExit(c);
     leaveSeat();
   }
   Game.camYaw = c.h;
@@ -24875,8 +24984,8 @@ function handleActions() {
   if (P.inCar && kp('KeyR')) Radio.cycle();
   if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
-  // Mexanik uzatmalar: E — yuqori, Q — past
-  if (P.inCar && !P.passenger && Settings.v.gearbox === 'manual') { if (kp('KeyE')) shiftGear(P.inCar, 1); if (kp('KeyQ')) shiftGear(P.inCar, -1); }
+  // Uzatmalar selektori: E — keyingi (D / yuqori uzatma tomon), Q — oldingi (R / P tomon)
+  if (P.inCar && !P.passenger) { if (kp('KeyE')) shiftStep(P.inCar, 1); if (kp('KeyQ')) shiftStep(P.inCar, -1); }
   if (kp('KeyB')) Fuel.act();
   if (kp('KeyI') && !Input.touch) KeyHints.toggle();
   if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
@@ -24897,14 +25006,19 @@ function updatePlayerCar(dt) {
   const c = Player.inCar;
   if (Player.passenger) return;
   const J = activeStick(), pad = Input.pad;
-  c.thr = J.active ? (Math.abs(J.y) < 0.15 ? 0 : clamp(-J.y * 1.3, -1, 1)) : (kd('KeyW') || kd('ArrowUp') ? 1 : 0) - (kd('KeyS') || kd('ArrowDown') ? 1 : 0);
-  if (pad.active && (pad.rt > 0.05 || pad.lt > 0.05)) c.thr = pad.rt - pad.lt;
+  // Gaz va tormoz alohida: oldinga/orqaga yurishni uzatmalar selektori belgilaydi (D / R)
+  let gas, brk;
+  if (J.active) { const y = Math.abs(J.y) < 0.15 ? 0 : J.y * 1.3; gas = clamp(-y, 0, 1); brk = clamp(y, 0, 1); }
+  else { gas = kd('KeyW') || kd('ArrowUp') ? 1 : 0; brk = kd('KeyS') || kd('ArrowDown') ? 1 : 0; }
+  if (pad.active && (pad.rt > 0.05 || pad.lt > 0.05)) { gas = pad.rt; brk = pad.lt; }
+  c.pedals = true; c.thr = gas; c.brk = brk;
+  gearHints(c, gas, brk, dt);
   // Rul: telefondagi rul/qiyshaytirish (Input.steer), joystik yoki tugmalar (chapga — musbat)
   const st = Input.steer.active ? Input.steer.v : J.active ? -J.x : (kd('KeyA') || kd('ArrowLeft') ? 1 : 0) - (kd('KeyD') || kd('ArrowRight') ? 1 : 0);
   c.steer = lerp(c.steer, st, 1 - Math.exp(-7 * dt));
   c.hand = kd('Space');
   // Bak bo'sh: dvigatel o'chgan — faqat tormoz ishlaydi, mashina inersiya bilan to'xtaydi
-  if (fuelEmpty(c)) c.thr = c.fwd > 0.5 ? Math.min(0, c.thr) : c.fwd < -0.5 ? Math.max(0, c.thr) : 0;
+  if (fuelEmpty(c)) c.thr = 0;
 }
 function deathAnim(dt) {
   const g = Player.hm.g;

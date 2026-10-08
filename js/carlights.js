@@ -91,7 +91,7 @@ const CarLights = {
       const kc = !lit || c.lightsOn === false ? 0 : c.lightsOn === true ? Math.max(k, 0.55) : k;
       if (kc <= 0) continue;
       L.f.forEach((p, i) => { if (!(br & (1 << i)) && nf < LIGHT_N * 2) put(fP, fC, nf++, p, [1, 0.93, 0.78]); });
-      const braking = c.thr < -0.1 && c.fwd > 0.5;
+      const braking = c.pedals ? c.brk > 0.1 : c.thr < -0.1 && c.fwd > 0.5;
       L.r.forEach((p, i) => { if (!(br & (4 << i)) && nr < LIGHT_N * 2) put(rP, rC, nr++, p, braking ? [1, 0.12, 0.08] : [0.55, 0.04, 0.03]); });
       // Yo'ldagi yorug'lik (o'yinchining mashinasida haqiqiy fara bor)
       if (c !== Player.inCar && (br & 3) !== 3 && k > 0) {

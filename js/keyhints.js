@@ -13,7 +13,7 @@ const KeyHints = {
         [K('F'), 'o\'tirish / tushish'], ['Chap tugma', 'urish / otish'], ['O\'ng tugma', 'nishon'], [K('1–5'), 'qurol'],
         [K('Z C'), 'burilish chirog\'i'], [K('X'), 'avariya chirog\'i'], [K('H'), 'signal'], [K('B'), 'yoqilg\'i quyish'], [K('L'), 'faralar'], [K('V'), 'ichidan ko\'rish'], [K('R'), 'radio'],
         [K('G'), 'sirena'], [K('N'), 'nitro'], [K('T'), 'taksi / avtobus ishi'], [K('M'), 'xarita'],
-        [K('O'), 'ob-havo'], [K('Q E'), 'kamerani burish'], [K('I'), 'ko\'rsatma'], [K('P'), 'pauza'],
+        [K('O'), 'ob-havo'], [K('Q E'), 'kamera / mashinada uzatma'], [K('I'), 'ko\'rsatma'], [K('P'), 'pauza'],
       ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('') + '</dl>';
       mk.hidden = false;
     }
@@ -28,9 +28,9 @@ const KeyHints = {
     const P = Player, c = P.inCar, k = (keys, text) => [keys.map(x => `<kbd>${x}</kbd>`).join(' '), text];
     if (c && P.passenger) return [k(['F'], 'tushish'), k(['M'], 'xarita'), k(['P'], 'pauza')];
     if (c) {
-      const out = [k(['W', 'S'], 'gaz / tormoz, orqaga'), k(['A', 'D'], 'rul'), k(['Probel'], 'qo\'l tormozi'), k(['F'], 'tushish'),
+      const out = [k(['W', 'S'], 'gaz / tormoz'), k(['A', 'D'], 'rul'), k(['Probel'], 'qo\'l tormozi'), k(['F'], 'tushish'),
         k(['Z', 'C'], 'burilish chirog\'i'), k(['X'], 'avariya chirog\'i'), k(['H'], 'signal'), k(['B'], 'yoqilg\'i (zapravkada)'), k(['L'], 'faralar'), k(['V'], 'ichidan ko\'rish'), k(['R'], 'radio')];
-      if (Settings.v.gearbox === 'manual') out.splice(2, 0, k(['E', 'Q'], 'uzatma yuqori / past'));
+      out.splice(2, 0, k(['E', 'Q'], Settings.v.gearbox === 'manual' ? 'uzatma yuqori / past (R N 1…5)' : 'uzatma: D tomon / R tomon'));
       if (c.mods && c.mods.nitro) out.push(k(['N'], 'nitro'));
       if (c.type === 'police') out.push(k(['G'], 'sirena'));
       if (c.type === 'taxi') out.push(k(['T'], 'taksi ishi'));

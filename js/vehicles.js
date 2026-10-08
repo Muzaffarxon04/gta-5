@@ -82,14 +82,24 @@ class Car {
     const acc = T.acc * (md ? 1 + 0.18 * md.eng : 1) * (bo ? 2.2 : 1) * (0.7 + 0.3 * Weather.grip);
     // Uzatmalar qutisi (js/gearbox.js): uzatmaga va dvigatel aylanishiga qarab tortish kuchi
     const drive = gearDrive(this, vF, maxS, Math.max(0, thr), dt);
-    if (thr > 0) { if (vF < -0.5) vF += brake * thr * dt; else if (vF < maxS) vF += acc * thr * dt * drive; }
-    else if (thr < 0) { if (vF > 0.5) vF += brake * thr * dt; else if (vF > -13) vF += acc * 0.7 * thr * dt; }
+    if (this.pedals) {
+      // O'yinchi: gaz faqat gaz, tormoz faqat tormoz; yo'nalishni selektor belgilaydi (D — oldinga, R — orqaga)
+      const sel = gearState(this).sel, brk = this.dead ? 0 : this.brk || 0;
+      if (thr > 0 && sel === 'D' && vF < maxS) vF += acc * thr * dt * drive;
+      if (thr > 0 && sel === 'R' && vF > -REV_MAX) vF -= acc * 0.7 * thr * dt * drive;
+      if (brk > 0) vF -= Math.sign(vF) * Math.min(Math.abs(vF), brake * brk * dt);
+    } else {
+      if (thr > 0) { if (vF < -0.5) vF += brake * thr * dt; else if (vF < maxS) vF += acc * thr * dt * drive; }
+      else if (thr < 0) { if (vF > 0.5) vF += brake * thr * dt; else if (vF > -REV_MAX) vF += acc * 0.7 * thr * dt; }
+    }
     vF -= vF * (thr === 0 ? 0.55 : 0.1) * dt;
     // Qiyalik (estakada): mashina pastga sirpanadi, qo'l tormozi ushlab turadi
     const gF = groundH(this.x + fx, this.z + fz), gB = groundH(this.x - fx, this.z - fz), slope = (gF - gB) / 2;
     this.pitch = Math.abs(slope) < 0.4 ? Math.atan(slope) : 0;
     if (this.pitch) vF -= 9.8 * slope * dt;
-    if (this.hand || !this.driver || this.dead) vF -= Math.sign(vF) * Math.min(Math.abs(vF), (this.hand ? 10 : 7) * dt);
+    // Qo'l tormozi, haydovchisiz mashina va "P" (park) holati — mashina ushlab turiladi
+    const park = this.pedals && gearState(this).sel === 'P';
+    if (this.hand || !this.driver || this.dead || park) vF -= Math.sign(vF) * Math.min(Math.abs(vF), (this.hand || park ? 10 : 7) * dt);
     this.vx = fx * vF + rx * vR; this.vz = fz * vF + rz * vR;
     // Rul: tezlikka qarab burilish
     const sp = Math.abs(vF), sf = clamp(sp / 5, 0, 1) * (1 - clamp(sp / (T.max * 1.6), 0, 0.55));

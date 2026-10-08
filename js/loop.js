@@ -206,8 +206,8 @@ function handleActions() {
   if (P.inCar && kp('KeyR')) Radio.cycle();
   if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
-  // Mexanik uzatmalar: E — yuqori, Q — past
-  if (P.inCar && !P.passenger && Settings.v.gearbox === 'manual') { if (kp('KeyE')) shiftGear(P.inCar, 1); if (kp('KeyQ')) shiftGear(P.inCar, -1); }
+  // Uzatmalar selektori: E — keyingi (D / yuqori uzatma tomon), Q — oldingi (R / P tomon)
+  if (P.inCar && !P.passenger) { if (kp('KeyE')) shiftStep(P.inCar, 1); if (kp('KeyQ')) shiftStep(P.inCar, -1); }
   if (kp('KeyB')) Fuel.act();
   if (kp('KeyI') && !Input.touch) KeyHints.toggle();
   if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
@@ -228,14 +228,19 @@ function updatePlayerCar(dt) {
   const c = Player.inCar;
   if (Player.passenger) return;
   const J = activeStick(), pad = Input.pad;
-  c.thr = J.active ? (Math.abs(J.y) < 0.15 ? 0 : clamp(-J.y * 1.3, -1, 1)) : (kd('KeyW') || kd('ArrowUp') ? 1 : 0) - (kd('KeyS') || kd('ArrowDown') ? 1 : 0);
-  if (pad.active && (pad.rt > 0.05 || pad.lt > 0.05)) c.thr = pad.rt - pad.lt;
+  // Gaz va tormoz alohida: oldinga/orqaga yurishni uzatmalar selektori belgilaydi (D / R)
+  let gas, brk;
+  if (J.active) { const y = Math.abs(J.y) < 0.15 ? 0 : J.y * 1.3; gas = clamp(-y, 0, 1); brk = clamp(y, 0, 1); }
+  else { gas = kd('KeyW') || kd('ArrowUp') ? 1 : 0; brk = kd('KeyS') || kd('ArrowDown') ? 1 : 0; }
+  if (pad.active && (pad.rt > 0.05 || pad.lt > 0.05)) { gas = pad.rt; brk = pad.lt; }
+  c.pedals = true; c.thr = gas; c.brk = brk;
+  gearHints(c, gas, brk, dt);
   // Rul: telefondagi rul/qiyshaytirish (Input.steer), joystik yoki tugmalar (chapga — musbat)
   const st = Input.steer.active ? Input.steer.v : J.active ? -J.x : (kd('KeyA') || kd('ArrowLeft') ? 1 : 0) - (kd('KeyD') || kd('ArrowRight') ? 1 : 0);
   c.steer = lerp(c.steer, st, 1 - Math.exp(-7 * dt));
   c.hand = kd('Space');
   // Bak bo'sh: dvigatel o'chgan — faqat tormoz ishlaydi, mashina inersiya bilan to'xtaydi
-  if (fuelEmpty(c)) c.thr = c.fwd > 0.5 ? Math.min(0, c.thr) : c.fwd < -0.5 ? Math.max(0, c.thr) : 0;
+  if (fuelEmpty(c)) c.thr = 0;
 }
 function deathAnim(dt) {
   const g = Player.hm.g;

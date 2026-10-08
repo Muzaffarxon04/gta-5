@@ -66,10 +66,19 @@ const HUD = {
       if (R !== this._sr) { this._sr = R; (this._eR || (this._eR = document.getElementById('sigR'))).classList.toggle('on', R); }
     }
     if (car) {
-      // Uzatma: avtomatda D1…, mexanikada raqam; aylanish cheklovchiga yaqin bo'lsa — "almashtiring" (sariq)
-      const gl = gearLabel(car), sh = manualBox(car) && (Game.rpm || 0) > 0.92, cls = gl === 'R' ? 'rev' : sh ? 'shift' : '';
-      if (gl !== this._gl) { this._gl = gl; (this._ge || (this._ge = document.getElementById('gearInd'))).textContent = gl; const gp = document.getElementById('gearPadInd'); if (gp) gp.textContent = gl; }
-      if (cls !== this._gc) { this._gc = cls; this._ge.className = 'gear-ind' + (cls ? ' ' + cls : ''); const gp = document.getElementById('gearPadInd'); if (gp) gp.className = sh ? 'shift' : ''; }
+      // Uzatmalar qutisi: P R N D (mexanikada R N 1…5); aylanish cheklovchiga yaqin bo'lsa — sariq ("yuqoriga o'ting")
+      const opts = gearOptions(car), cur = gearSel(car), S = gearState(car), sh = manualBox(car) && (Game.rpm || 0) > 0.92;
+      const key = opts.join('') + '|' + cur + '|' + S.g + '|' + sh;
+      if (key !== this._gk) {
+        this._gk = key;
+        (this._gs || (this._gs = document.getElementById('gearStrip'))).innerHTML = opts.map(o => {
+          const on = o === cur, cls = on ? 'on' + (o === 'R' ? ' rev' : sh ? ' shift' : '') : '';
+          return `<i class="${cls}">${o}${on && o === 'D' ? `<sub>${S.g}</sub>` : ''}</i>`;
+        }).join('');
+        const gp = document.getElementById('gearPadInd');
+        if (gp) { gp.textContent = gearLabel(car); gp.className = sh ? 'shift' : ''; }
+        document.querySelectorAll('#shifter [data-sel]').forEach(b => { const on = b.dataset.sel === cur; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.textContent = on && cur === 'D' ? 'D' + S.g : b.dataset.sel; });
+      }
     }
     if (car) { e.kmh.textContent = Math.round(car.speed * 3.6); e.carhp.style.width = clamp(car.hp / (car.maxHp || car.T.hp) * 100, 0, 100) + '%'; }
     e.cross.hidden = !!car || P.dead;
