@@ -10,7 +10,7 @@ const AD_POCKET = { x0: 7, x1: 14, z0: -25.6, z1: -23.2 };
 const AD_RAIL = { z: 11, stop: 8.5 };
 const AD_SNAKE = [-5.5, -10, -14.5];
 const AD_FINISH = { x0: -17, x1: -10 };
-const AD_FEE = 50, AD_MAX_ERR = 3, AD_TIME = 25 * 60;
+const AD_FEE = 50, AD_MAX_ERR = 5, AD_TIME = 25 * 60;
 const AD_TOL = 0.25;
 // Mashqlar (YIM ro'yxati bo'yicha) va yo'l ko'rsatkich nuqtalari (o'ng qator markazi)
 const AD_EX = [

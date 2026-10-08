@@ -219,7 +219,7 @@ const Panel = {
         'Xaritadagi yashil <b>P</b> belgisi — Yunusobod tumanidagi avtodrom. Imtihonchi yonidagi yashil halqaga kiring (haqi $50)',
         'O\'quv mashinasida YIM tartibidagi 15 mashq: start, piyodalar o\'tish joyi, estakada, 90° burilishlar, svetoforli chorrahalar, ilon izi, boks, temir yo\'l, tezlashish, avariya to\'xtashi, parallel parkovka, finish',
         'Tezlik 20 km/soatdan oshmasin (tezlashish bo\'lagida 40 gacha), har burilishda burilish chirog\'ini yoqing, chiziq va konuslarga tegmang',
-        '3 ta xato — «O\'tmadi». Qizil chiroqda o\'tish yoki piyodaga yo\'l bermaslik — darhol «O\'tmadi»',
+        '5 ta xato — «O\'tmadi». Qizil chiroqda o\'tish yoki piyodaga yo\'l bermaslik — darhol «O\'tmadi»',
       ])}</ul>
       <h3>Uzatmalar qutisi</h3>
       <ul>${li([
