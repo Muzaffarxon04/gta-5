@@ -454,9 +454,18 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .mp-qr details > * { margin-top: 6px; }
 .mp-qr summary { cursor: pointer; }
 .mp-list { margin: 0; padding: 0 8px 8px 28px; font-size: 18px; }
+.mp-pvp { padding: 10px 8px 0; }
+.mp-note { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.35; }
+.mp-small { font-size: 14px; padding: 5px 10px; }
+.mp-rooms-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; font-size: 15px; color: var(--muted); }
+.mp-rooms { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow-y: auto; }
+.mp-rooms li { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 16px; padding: 4px 0 4px 8px; border-left: 2px solid rgba(126,224,255,.5); }
+.mp-rooms li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-rooms small { color: var(--muted); margin-left: 6px; }
+.mp-rooms .mp-muted { color: var(--muted); border: 0; padding-left: 0; font-size: 14px; }
 .mp-status { color: var(--cash); font-size: 15px; }
 .mp-foot-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.mp-play { font-size: 18px; padding: 9px 18px; box-shadow: none; }
+.mp-play { position: static; font-size: 18px; padding: 9px 18px; box-shadow: none; }
 .mp-hud { position: absolute; top: calc(52px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); background: var(--shade); padding: 4px 10px; border-radius: 4px; font-size: 15px; font-weight: 600; color: #7ee0ff; text-shadow: none; white-space: nowrap; }
 .toast { z-index: 30; }
 .tbtn[data-act="taxi"] { grid-area: aim; }
@@ -535,23 +544,27 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   <div class="shop-card mp-card" role="dialog" aria-labelledby="mpTitle">
     <div class="shop-head"><div><div class="eyebrow">Do'stlar bilan</div><h2 id="mpTitle">Ko'p o'yinchi</h2></div></div>
     <div class="shop-list">
-      <p class="set-note" id="mpWarn" hidden>Ko'p o'yinchi rejimi bu sahifada ishlamaydi: o'yin boshqa sayt ichida ochilgan va u yerda telefonlar o'rtasidagi to'g'ridan-to'g'ri ulanish taqiqlangan. O'yinni o'z saytidan (<b>muzaffarxon04.github.io/gta-5</b>) yoki <b>dist/kocha-qiroli.html</b> faylidan oching.</p>
       <div id="mpSetup">
         <label class="mp-row" for="mpName"><span>Ismingiz</span><input id="mpName" maxlength="16" placeholder="Masalan, Ali" autocomplete="nickname"></label>
         <div class="mp-cols">
           <section class="mp-box">
-            <h3>Xona ochish (host)</h3>
-            <button class="ghost" id="mpHost" type="button">Xona kodi bilan</button>
-            <button class="ghost" id="mpQrHost" type="button">QR-kod bilan (internetsiz)</button>
+            <h3>Online — internet orqali</h3>
+            <button class="ghost" id="mpHost" type="button">Xona ochish</button>
+            <label class="mp-check" for="mpPub"><input type="checkbox" id="mpPub" checked> Ochiq xona (ro'yxatda hamma ko'radi)</label>
             <div class="mp-room" id="mpRoom" aria-live="polite"></div>
-            <label class="mp-check" for="mpPvp"><input type="checkbox" id="mpPvp" checked> O'yinchilar bir-biriga zarar yetkaza oladi</label>
-          </section>
-          <section class="mp-box">
-            <h3>Qo'shilish</h3>
             <div class="mp-join"><input id="mpCode" maxlength="8" placeholder="Xona kodi" autocapitalize="characters" autocomplete="off"><button class="ghost" id="mpJoin" type="button">Qo'shilish</button></div>
-            <button class="ghost" id="mpQrJoin" type="button">QR orqali qo'shilish (internetsiz)</button>
+            <div class="mp-rooms-head"><span>Ochiq xonalar</span><button class="ghost mp-small" id="mpRefresh" type="button">Yangilash</button></div>
+            <ul class="mp-rooms" id="mpRooms"></ul>
+          </section>
+          <section class="mp-box" id="mpLan">
+            <h3>Bir Wi-Fi'da — internetsiz</h3>
+            <button class="ghost" id="mpQrHost" type="button">QR-kod bilan xona ochish</button>
+            <button class="ghost" id="mpQrJoin" type="button">QR orqali qo'shilish</button>
+            <p class="mp-note">Telefonlar bir Wi-Fi yoki hotspotga ulangan bo'lsin. Kameraga ruxsat so'raladi.</p>
           </section>
         </div>
+        <p class="set-note" id="mpWarn" hidden>Internetsiz (QR) ulanish bu sahifada ishlamaydi: o'yin boshqa sayt ichida ochilgan. Online xonalar ishlamasa, o'yinni o'z saytidan oching: <b>muzaffarxon04.github.io/gta-5</b>.</p>
+        <label class="mp-check mp-pvp" for="mpPvp"><input type="checkbox" id="mpPvp" checked> O'yinchilar bir-biriga zarar yetkaza oladi</label>
         <div class="mp-qr" id="mpQrBox" hidden>
           <img id="mpQrImg" alt="Ulanish QR-kodi">
           <div class="mp-qr-side">
@@ -570,8 +583,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
         </div>
         <h3 class="mp-h">O'yinchilar</h3>
         <ul class="mp-list" id="mpList"></ul>
-        <p class="set-note">Hammangiz bir Wi-Fi tarmog'ida bo'lsangiz, o'yin ma'lumotlari to'g'ridan-to'g'ri lokal tarmoq orqali yuradi. Xona kodi faqat ulanish uchun internetdan foydalanadi; QR-kod usuli internetsiz ishlaydi va kameraga ruxsat so'raydi — bu ulanishni ishonchliroq qiladi.</p>
-        <p class="set-note">Ulanmasa: o'ynamaydigan uchinchi telefonda hotspot yoqing yoki oddiy Wi-Fi router ishlating — shunda barcha o'yinchilar teng sharoitda ulanadi.</p>
+        <p class="set-note">Online: do'stlaringiz istalgan joydan — mobil internet yoki istalgan Wi-Fi orqali qo'shila oladi. Xona kodini yuboring yoki ular «Ochiq xonalar» ro'yxatidan tanlasin. Bir xonada 16 kishigacha; xona egasi chiqsa ham o'yin davom etadi.</p>
+        <p class="set-note">Internetsiz ulanmasa: o'ynamaydigan uchinchi telefonda hotspot yoqing yoki oddiy Wi-Fi router ishlating — shunda barcha o'yinchilar teng sharoitda ulanadi.</p>
       </div>
     </div>
     <div class="shop-foot"><span class="mp-status" id="mpStatus" aria-live="polite"></span>
@@ -23758,14 +23771,15 @@ const PoliceAir = {
 </script>
 <script>
 'use strict';
-// ===== Tarmoq: telefonlar o'rtasida to'g'ridan-to'g'ri ulanish (WebRTC) =====
-// Bir telefon — host, qolganlari unga ulanadi (yulduz shaklida). O'yin ma'lumotlari to'g'ridan-to'g'ri,
-// bir Wi-Fi'da bo'lsa — internetsiz, lokal tarmoq orqali yuradi.
-// Tanishuv (signal) ikki xil:
-//   1) Xona kodi — ntfy.sh orqali (faqat ulanish lahzasida internet kerak)
-//   2) QR-kod — telefonlar bir-birining QR-kodini skanerlaydi (internet umuman kerak emas)
-const RELAY = 'https://ntfy.sh/';
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+// ===== Tarmoq =====
+// Ikki xil ulanish:
+//   1) Online — o'yin serveri orqali (server/server.js, WebSocket). Har qanday internetda ishlaydi;
+//      har bir o'yinchi o'z holatini serverga yuboradi, server xonadagilarga tarqatadi. Xona egasi
+//      chiqsa ham xona yopilmaydi. Ochiq xonalar ro'yxati bor.
+//   2) Bir Wi-Fi'da, internetsiz — telefonlar o'rtasida to'g'ridan-to'g'ri (WebRTC), tanishuv QR-kod bilan.
+//      Bir telefon — host, qolganlari unga ulanadi (yulduz shaklida).
+// Online server manzili (o'yin GitHub Pages'da, server — alohida). Sinov uchun: localStorage 'kq-server'
+const MP_SERVER = 'wss://151-145-55-234.sslip.io/game';
 
 function b64u(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 function unb64u(str) { const s = atob(str.replace(/-/g, '+').replace(/_/g, '/')); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
@@ -23787,7 +23801,8 @@ const trimSdp = sdp => sdp.split('\r\n').filter(l => l && !/^a=(extmap|rtcp-fb|s
 
 const Net = {
   role: null, id: Math.random().toString(36).slice(2, 10), name: '',
-  peers: new Map(), room: null, polling: false, seen: new Set(), pendingQR: null,
+  peers: new Map(), room: null, pendingQR: null,
+  mode: null, ws: null, waiters: [], onHost: null,
   onMessage: null, onOpen: null, onClose: null, onStatus: null,
   supported() { return typeof RTCPeerConnection === 'function'; },
   status(t) { if (this.onStatus) this.onStatus(t); },
@@ -23821,73 +23836,114 @@ const Net = {
     return trimSdp(peer.pc.localDescription.sdp);
   },
   send(id, msg, fast) {
+    if (this.mode === 'ws') { if (this.peers.has(id)) this.wsSend({ t: 'to', to: id, m: msg }); return; }
     const p = this.peers.get(id);
     if (!p || !p.open) return;
     const ch = fast ? p.fast : p.rel;
     if (ch.readyState === 'open') try { ch.send(JSON.stringify(msg)); } catch (e) { /* bufer to'la */ }
   },
-  broadcast(msg, fast, except) { for (const id of this.peers.keys()) if (id !== except) this.send(id, msg, fast); },
+  broadcast(msg, fast, except) {
+    if (this.mode === 'ws') { if (this.peers.size) this.wsSend({ t: 'to', to: '*', m: msg, x: except }); return; }
+    for (const id of this.peers.keys()) if (id !== except) this.send(id, msg, fast);
+  },
   drop(id) {
     const p = this.peers.get(id);
     if (!p) return;
     this.peers.delete(id);
-    try { p.pc.close(); } catch (e) { /* allaqachon yopilgan */ }
+    if (p.pc) try { p.pc.close(); } catch (e) { /* allaqachon yopilgan */ }
     if (p.open && this.onClose) this.onClose(id, p.name);
   },
+  // Hammadan jimgina uzilish (o'zimiz chiqyapmiz — har biri uchun "chiqdi" xabari kerak emas)
+  clearPeers() {
+    const ps = [...this.peers.values()];
+    this.peers.clear();
+    for (const p of ps) if (p.pc) try { p.pc.close(); } catch (e) { /* allaqachon yopilgan */ }
+  },
   leave() {
-    for (const id of [...this.peers.keys()]) this.drop(id);
-    this.role = null; this.room = null; this.polling = false; this.pendingQR = null;
+    if (this.mode === 'ws') this.wsSend({ t: 'leave' });
+    this.clearPeers();
+    this.role = null; this.room = null; this.pendingQR = null; this.mode = null;
   },
 
-  // ----- 1) Xona kodi (ntfy.sh orqali tanishuv) -----
-  topic(suffix) { return `kocha-qiroli-${this.room.toLowerCase()}-${suffix}`; },
-  async publish(suffix, obj) { await fetch(RELAY + this.topic(suffix), { method: 'POST', body: await packMsg(obj) }); },
-  pollLoop(suffix, handler) {
-    this.polling = true;
-    let since = Math.floor(Date.now() / 1000) - 60;
-    const tick = async () => {
-      if (!this.polling || !this.room) return;
-      try {
-        const r = await fetch(`${RELAY}${this.topic(suffix)}/json?poll=1&since=${since}`);
-        for (const line of (await r.text()).split('\n')) {
-          if (!line) continue;
-          const m = JSON.parse(line);
-          if (m.event !== 'message' || this.seen.has(m.id)) continue;
-          this.seen.add(m.id); since = Math.max(since, m.time - 1);
-          try { await handler(await unpackMsg(m.message)); } catch (e) { /* begona xabar */ }
+  // ----- Online: o'yin serveri (WebSocket) -----
+  server() { try { return localStorage.getItem('kq-server') || MP_SERVER; } catch (e) { return MP_SERVER; } },
+  wsConnect() {
+    if (this.ws && this.ws.readyState === 1) return Promise.resolve();
+    if (this.wsOpening) return this.wsOpening;
+    return (this.wsOpening = new Promise((res, rej) => {
+      let ws;
+      try { ws = new WebSocket(this.server()); } catch (e) { this.wsOpening = null; rej(e); return; }
+      const t = setTimeout(() => { ws.close(); }, 8000);
+      ws.onopen = () => { clearTimeout(t); this.ws = ws; this.wsOpening = null; res(); };
+      ws.onerror = () => {};
+      ws.onclose = () => {
+        clearTimeout(t);
+        const was = this.ws === ws;
+        if (was) this.ws = null;
+        if (this.wsOpening) { this.wsOpening = null; rej(new Error('server')); }
+        if (was && this.mode === 'ws') {
+          // Internet uzildi yoki server o'chdi — xonadan chiqamiz
+          this.clearPeers();
+          this.role = null; this.room = null; this.mode = null;
+          this.status('Server bilan aloqa uzildi.');
+          if (this.onLost) this.onLost();
         }
-      } catch (e) { this.status('Internetga ulanib bo\'lmadi — QR-kod usulidan foydalaning.'); }
-      setTimeout(tick, 1500);
-    };
-    tick();
+        for (const w of this.waiters.splice(0)) w.rej(new Error('server'));
+      };
+      ws.onmessage = e => { let d; try { d = JSON.parse(e.data); } catch (err) { return; } this.wsMsg(d); };
+    }));
   },
-  hostRoom() {
-    this.role = 'host';
-    this.room = Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
-    this.pollLoop('host', async d => {
-      if (d.k !== 'offer' || this.peers.has(d.from)) return;
-      const peer = this.newPeer(d.from); peer.name = d.name;
-      this.status(`${d.name} ulanmoqda…`);
-      const sdp = await this.answer(peer, d.sdp);
-      await this.publish(d.from, { k: 'answer', sdp, name: this.name, from: this.id });
+  wsSend(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); },
+  // Server javobini kutish (room, rooms yoki err)
+  wait(types, ms = 8000) {
+    return new Promise((res, rej) => {
+      const w = { types, res, rej };
+      w.timer = setTimeout(() => { this.waiters = this.waiters.filter(x => x !== w); rej(new Error('Server javob bermadi')); }, ms);
+      this.waiters.push(w);
     });
-    return this.room;
   },
-  async joinRoom(code) {
-    this.role = 'guest'; this.room = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const peer = this.newPeer('host');
-    this.status('Ulanmoqda…');
-    const sdp = await this.offer(peer);
-    this.pollLoop(this.id, async d => {
-      if (d.k !== 'answer' || peer.pc.signalingState !== 'have-local-offer') return;
-      peer.name = d.name; this.hostId = d.from;
-      await peer.pc.setRemoteDescription({ type: 'answer', sdp: d.sdp });
-      this.polling = false;
-    });
-    await this.publish('host', { k: 'offer', from: this.id, sdp, name: this.name });
+  wsMsg(d) {
+    const w = this.waiters.find(x => x.types.includes(d.t));
+    if (w) {
+      this.waiters = this.waiters.filter(x => x !== w); clearTimeout(w.timer);
+      if (d.t === 'err') w.rej(new Error(d.msg)); else w.res(d);
+    }
+    if (d.t === 'room') {
+      this.clearPeers();
+      this.mode = 'ws'; this.room = d.code; this.id = d.you; this.hostId = d.hostId;
+      this.role = d.host ? 'host' : 'guest';
+      for (const m of d.members) this.wsPeer(m.id, m.name);
+    } else if (d.t === 'join') { this.wsPeer(d.id, d.name); this.status(`${d.name} qo'shildi`); }
+    else if (d.t === 'left') this.drop(d.id);
+    else if (d.t === 'host') {
+      this.hostId = d.id;
+      if (d.id === this.id && this.role !== 'host') { this.role = 'host'; this.status('Endi xona egasi — siz'); if (this.onHost) this.onHost(); }
+    } else if (d.t === 'msg') { if (this.onMessage && this.peers.has(d.from)) this.onMessage(d.from, d.m); }
+    else if (d.t === 'err' && !w) this.status(d.msg);
+  },
+  wsPeer(id, name) {
+    if (this.peers.has(id)) return;
+    const peer = { id, name, open: true };
+    this.peers.set(id, peer);
+    if (this.onOpen) this.onOpen(id, name);
+  },
+  async onlineHost(pub) {
+    await this.wsConnect();
+    this.wsSend({ t: 'host', name: this.name, pub });
+    return (await this.wait(['room', 'err'])).code;
+  },
+  async onlineJoin(code) {
+    await this.wsConnect();
+    this.wsSend({ t: 'join', code, name: this.name });
+    return (await this.wait(['room', 'err'])).code;
+  },
+  async onlineRooms() {
+    await this.wsConnect();
+    this.wsSend({ t: 'list' });
+    return (await this.wait(['rooms'])).rooms;
   },
 
-  // ----- 2) QR-kod (internetsiz) -----
+  // ----- Bir Wi-Fi'da: QR-kod (internetsiz) -----
   // Host: taklif QR-kodi -> o'yinchi skanerlaydi -> javob QR-kodi -> host skanerlaydi
   async qrHostOffer() {
     this.role = 'host';
@@ -23967,9 +24023,9 @@ class RemotePlayer {
       this.rebuild();
     }
   }
-  // ~110 ms kechikish bilan ikki holat orasini silliq to'ldirish
+  // Kechikish bilan ikki holat orasini silliq to'ldirish (internet orqali — tebranish ko'proq, kechikish kattaroq)
   sample() {
-    const B = this.buf, t = performance.now() - 110;
+    const B = this.buf, t = performance.now() - (Net.mode === 'ws' ? 160 : 110);
     if (!B.length) return null;
     let a = B[B.length - 1], b = a;
     for (let i = B.length - 1; i > 0; i--) if (B[i - 1].rt <= t) { a = B[i - 1]; b = B[i]; break; }
@@ -24056,7 +24112,11 @@ const MP = {
       MPUI.refresh();
     };
     Net.onClose = (pid, name) => {
-      if (Net.role === 'guest') {
+      if (Net.mode === 'ws') {
+        // Online: server hammaga o'zi xabar beradi; xona egasi chiqsa ham o'yin davom etadi
+        this.removePlayer(pid);
+        toast('Ko\'p o\'yinchi', name || 'O\'yinchi', 'o\'yindan chiqdi');
+      } else if (Net.role === 'guest') {
         for (const id of [...this.players.keys()]) this.removePlayer(id);
         toast('Ko\'p o\'yinchi', 'Host o\'yinni yopdi', 'Siz yana yolg\'iz o\'ynayapsiz');
         Net.leave(); this.active = false;
@@ -24066,6 +24126,14 @@ const MP = {
         toast('Ko\'p o\'yinchi', name || 'O\'yinchi', 'o\'yindan chiqdi');
       }
       MPUI.refresh();
+    };
+    // Online: oldingi xona egasi chiqdi — vaqt va ob-havoni endi biz boshqaramiz
+    Net.onHost = () => { this.sendWorld(); MPUI.refresh(); toast('Ko\'p o\'yinchi', 'Xona egasi — endi siz', ''); };
+    Net.onLost = () => {
+      for (const id of [...this.players.keys()]) this.removePlayer(id);
+      this.active = false;
+      toast('Ko\'p o\'yinchi', 'Server bilan aloqa uzildi', 'Siz yana yolg\'iz o\'ynayapsiz');
+      MPUI.reset();
     };
   },
   stop() {
@@ -24091,7 +24159,9 @@ const MP = {
     if ((this.sendT -= dt) <= 0) {
       this.sendT = 1 / 15;
       const s = this.myState();
-      if (Net.role === 'host') Net.broadcast({ t: 'S', ps: [s, ...[...this.players.values()].map(r => r.last).filter(Boolean)] }, true);
+      // Online: har kim o'z holatini hammaga yuboradi (server tarqatadi). Wi-Fi'da: host hammaning holatini yig'ib yuboradi
+      if (Net.mode === 'ws') Net.broadcast(s, true);
+      else if (Net.role === 'host') Net.broadcast({ t: 'S', ps: [s, ...[...this.players.values()].map(r => r.last).filter(Boolean)] }, true);
       else Net.send('host', s, true);
     }
     if (Net.role === 'host' && (this.wT -= dt) <= 0) { this.wT = 4; this.sendWorld(); }
@@ -24101,11 +24171,12 @@ const MP = {
     if (P.passenger && (!P.inCar || P.inCar.driver !== 'remote')) { if (P.inCar) exitCar(); else P.passenger = null; }
   },
   onMsg(pid, m) {
-    const host = Net.role === 'host';
-    if (m.t === 's') { if (host) this.apply(m); }
+    // host — Wi-Fi rejimida xabarlarni boshqalarga uzatuvchi (online'da server uzatadi)
+    const host = Net.role === 'host' && Net.mode !== 'ws';
+    if (m.t === 's') { if (host || Net.mode === 'ws') { m.id = pid; this.apply(m); } }
     else if (m.t === 'S') { for (const s of m.ps) if (s.id !== Net.id) this.apply(s); }
     else if (m.t === 'hi') { MPUI.refresh(); }
-    else if (m.t === 'w') { World.dayT = m.day; this.pvp = m.pvp; Weather.timer = 9999; if (Weather.kind !== m.wx) Weather.set(m.wx, false); }
+    else if (m.t === 'w') { if (Net.mode === 'ws' && pid !== Net.hostId) return; World.dayT = m.day; this.pvp = m.pvp; Weather.timer = 9999; if (Weather.kind !== m.wx) Weather.set(m.wx, false); if (MPUI.el.mpPvp) MPUI.el.mpPvp.checked = m.pvp; }
     else if (m.t === 'shot') { this.remoteShot(m); if (host) Net.broadcast(m, false, pid); }
     else if (m.t === 'hit') {
       if (m.to === Net.id) this.takeHit(m);
@@ -24124,7 +24195,7 @@ const MP = {
   shot(ax, ay, az, bx, by, bz, w) {
     if (!this.active || !Net.peers.size) return;
     const m = { t: 'shot', id: Net.id, a: [ax, ay, az].map(v => +v.toFixed(2)), b: [bx, by, bz].map(v => +v.toFixed(2)), w };
-    if (Net.role === 'host') Net.broadcast(m, false); else Net.send('host', m, false);
+    if (Net.role === 'host' || Net.mode === 'ws') Net.broadcast(m, false); else Net.send('host', m, false);
   },
   remoteShot(m) {
     FX.tracer(...m.a, ...m.b);
@@ -24153,7 +24224,7 @@ const MP = {
   },
   hit(r, dmg) {
     const m = { t: 'hit', to: r.id, from: Net.id, dmg: Math.round(dmg) };
-    if (Net.role === 'host') Net.send(r.id, m, false); else Net.send('host', m, false);
+    if (Net.role === 'host' || Net.mode === 'ws') Net.send(r.id, m, false); else Net.send('host', m, false);
     Game.hitMark = 0.2;
   },
   takeHit(m) {
@@ -24162,7 +24233,7 @@ const MP = {
     hurtPlayer(m.dmg);
     if (Player.dead) {
       const k = { t: 'kill', k: m.from, v: Net.id };
-      if (Net.role === 'host') Net.broadcast(k, false); else Net.send('host', k, false);
+      if (Net.role === 'host' || Net.mode === 'ws') Net.broadcast(k, false); else Net.send('host', k, false);
       this.killFeed(k);
     }
   },
@@ -24219,16 +24290,20 @@ const MPUI = {
   el: {}, after: null,
   init() {
     for (const id of ['mpPanel', 'mpName', 'mpHost', 'mpQrHost', 'mpCode', 'mpJoin', 'mpQrJoin', 'mpLeave', 'mpPlay', 'mpClose', 'mpStatus', 'mpList',
-      'mpRoom', 'mpQrBox', 'mpQrImg', 'mpQrCap', 'mpOut', 'mpCopy', 'mpScan', 'mpIn', 'mpApply', 'mpPvp', 'mpSetup', 'mpWarn']) this.el[id] = document.getElementById(id);
+      'mpRoom', 'mpQrBox', 'mpQrImg', 'mpQrCap', 'mpOut', 'mpCopy', 'mpScan', 'mpIn', 'mpApply', 'mpPvp', 'mpSetup', 'mpWarn',
+      'mpPub', 'mpRooms', 'mpRefresh', 'mpLan']) this.el[id] = document.getElementById(id);
     const e = this.el;
     try { e.mpName.value = localStorage.getItem('kq-name') || ''; } catch (err) { /* saqlash yo'q */ }
     document.getElementById('btnMP').addEventListener('click', () => this.open());
     e.mpClose.addEventListener('click', () => this.close());
     e.mpPlay.addEventListener('click', () => { this.close(); startGame(); });
-    e.mpLeave.addEventListener('click', () => { MP.stop(); this.reset(); this.status('Xonadan chiqdingiz.'); });
+    e.mpLeave.addEventListener('click', () => { MP.stop(); this.reset(); this.status('Xonadan chiqdingiz.'); this.rooms(); });
     e.mpHost.addEventListener('click', () => this.host());
     e.mpQrHost.addEventListener('click', () => this.qrHost());
     e.mpJoin.addEventListener('click', () => this.join());
+    e.mpCode.addEventListener('keydown', ev => { if (ev.key === 'Enter') this.join(); });
+    e.mpRefresh.addEventListener('click', () => this.rooms());
+    e.mpRooms.addEventListener('click', ev => { const b = ev.target.closest('[data-code]'); if (b) this.join(b.dataset.code); });
     e.mpQrJoin.addEventListener('click', () => this.qrJoin());
     e.mpCopy.addEventListener('click', () => {
       const t = e.mpOut.value;
@@ -24240,8 +24315,8 @@ const MPUI = {
     e.mpPvp.addEventListener('change', () => { MP.pvp = e.mpPvp.checked; if (Net.role === 'host') MP.sendWorld(); });
     Net.onStatus = t => this.status(t);
   },
-  supported() {
-    // claude.ai sahifasi ichida (iframe) to'g'ridan-to'g'ri ulanish taqiqlangan
+  // Internetsiz (WebRTC) ulanish: boshqa sayt ichida (iframe) taqiqlangan
+  lanOk() {
     let framed = true;
     try { framed = window.top !== window.self; } catch (e) { framed = true; }
     if (!Net.supported() || framed || /claude\.ai$/.test(location.hostname)) return false;
@@ -24249,8 +24324,9 @@ const MPUI = {
   },
   open() {
     this.el.mpPanel.hidden = false;
-    const ok = this.supported();
-    this.el.mpWarn.hidden = ok; this.el.mpSetup.hidden = !ok;
+    const lan = this.lanOk();
+    this.el.mpWarn.hidden = lan; this.el.mpLan.hidden = !lan;
+    if (!Net.room) this.rooms();
     this.refresh();
   },
   close() { Scanner.stop(); this.el.mpPanel.hidden = true; },
@@ -24275,13 +24351,39 @@ const MPUI = {
       e.mpQrImg.src = qr.createDataURL(Math.max(2, Math.floor(300 / qr.getModuleCount())), 2);
     });
   },
-  host() {
-    if (Net.role === 'guest') MP.stop();
-    this.myName(); MP.start();
-    const code = Net.room || Net.hostRoom();
-    this.el.mpRoom.textContent = code;
-    this.status('Xona ochildi. Do\'stlaringiz «Qo\'shilish» bo\'limida shu kodni kiritsin (internet kerak).');
+  netErr(err) { return err.message === 'server' ? 'Serverga ulanib bo\'lmadi. Internetni tekshiring.' : err.message; },
+  // Online xona: o'yin serverida
+  async host() {
+    if (Net.mode === 'ws' && Net.role === 'host') { this.status('Xona ochiq: ' + Net.room); return; }
+    MP.stop(); this.reset(); this.myName(); MP.start();
+    this.status('Serverga ulanmoqda…');
+    try {
+      const code = await Net.onlineHost(this.el.mpPub.checked);
+      this.el.mpRoom.textContent = code;
+      this.status(`Xona ochildi. Do'stlaringiz shu kodni kiritsin${this.el.mpPub.checked ? ' yoki «Ochiq xonalar» dan tanlasin' : ''}.`);
+    } catch (err) { MP.stop(); this.status(this.netErr(err)); }
     this.refresh();
+  },
+  async join(code) {
+    code = String(code || this.el.mpCode.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length < 4) { this.status('Xona kodini kiriting.'); return; }
+    if (Net.mode === 'ws' && Net.room === code) { this.status('Siz shu xonadasiz.'); return; }
+    MP.stop(); this.reset(); this.myName(); MP.start();
+    this.status('Ulanmoqda…');
+    try {
+      this.el.mpRoom.textContent = await Net.onlineJoin(code);
+      this.status('Xonaga qo\'shildingiz. «O\'ynash» ni bosing.');
+    } catch (err) { MP.stop(); this.status(this.netErr(err)); }
+    this.refresh();
+  },
+  async rooms() {
+    const ul = this.el.mpRooms, esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+    ul.innerHTML = '<li class="mp-muted">Yuklanmoqda…</li>';
+    try {
+      const list = (await Net.onlineRooms()).filter(r => r.code !== Net.room);
+      ul.innerHTML = list.length ? list.map(r => `<li><span>${esc(r.name)}<small>${r.n}/${r.max}</small></span><button class="ghost mp-small" type="button" data-code="${esc(r.code)}">Qo'shilish</button></li>`).join('')
+        : '<li class="mp-muted">Hozircha ochiq xona yo\'q — o\'zingiz oching!</li>';
+    } catch (err) { ul.innerHTML = `<li class="mp-muted">${esc(this.netErr(err))}</li>`; }
   },
   // Kameraga ruxsat berilgan sahifaga brauzer telefonning haqiqiy lokal manzilini ochadi —
   // shunda hotspot va oddiy Wi-Fi'da telefonlar bir-birini ishonchliroq topadi
@@ -24295,7 +24397,7 @@ const MPUI = {
     } catch (e) { /* ruxsat berilmadi — baribir urinib ko'ramiz */ }
   },
   async qrHost() {
-    if (Net.role === 'guest') MP.stop();
+    if (Net.role === 'guest' || Net.mode === 'ws') MP.stop();
     this.myName(); MP.start();
     if (!Net.role) Net.role = 'host';
     await this.warmCamera();
@@ -24303,12 +24405,6 @@ const MPUI = {
     const str = await Net.qrHostOffer();
     this.showQR(str, '1) O\'yinchi «QR orqali qo\'shilish» ni bosib, shu kodni skanerlasin. 2) Keyin uning telefonidagi javob QR-kodini «Skanerlash» bilan o\'qing.', 'host');
     this.status('O\'yinchi skanerlashini kuting.');
-  },
-  join() {
-    const code = (this.el.mpCode.value || '').trim();
-    if (code.length < 4) { this.status('Xona kodini kiriting.'); return; }
-    MP.stop(); this.myName(); MP.start();
-    Net.joinRoom(code).catch(() => this.status('Ulanib bo\'lmadi. Internetni tekshiring yoki QR usulini sinang.'));
   },
   qrJoin() {
     MP.stop(); this.myName(); MP.start();
@@ -24331,11 +24427,15 @@ const MPUI = {
   refresh() {
     const e = this.el;
     if (!e.mpList) return;
-    const names = [`${Net.name || 'Siz'}${Net.role === 'host' ? ' (host)' : ''}`, ...[...MP.players.values()].map(r => r.name)];
-    e.mpList.innerHTML = Net.role ? names.map(n => `<li>${n.replace(/</g, '&lt;')}</li>`).join('') : '<li>Hali hech kim yo\'q</li>';
+    const ws = Net.mode === 'ws', boss = ws ? ' (xona egasi)' : ' (host)';
+    // Online'da xonadagilar serverdan ma'lum; Wi-Fi'da mehmon faqat hostni biladi — ro'yxat o'yinchilar holatidan
+    const others = ws ? [...Net.peers.values()].map(p => p.name + (p.id === Net.hostId ? boss : '')) : [...MP.players.values()].map(r => r.name);
+    const names = [`${Net.name || 'Siz'}${Net.role === 'host' ? boss : ''}`, ...others];
+    e.mpList.innerHTML = Net.role ? names.map(n => `<li>${n.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</li>`).join('') : '<li>Hali hech kim yo\'q</li>';
     e.mpLeave.hidden = !Net.role;
+    e.mpPvp.disabled = Net.role === 'guest'; e.mpPvp.checked = MP.pvp;
     const hud = document.getElementById('mpHud');
-    if (hud) { hud.hidden = !MP.active || !Net.peers.size; hud.textContent = `${MP.players.size + 1} o'yinchi${Net.room ? ' · xona ' + Net.room : ''}`; }
+    if (hud) { hud.hidden = !MP.active || !Net.peers.size; hud.textContent = `${(ws ? Net.peers.size : MP.players.size) + 1} o'yinchi${Net.room ? ' · xona ' + Net.room : ''}`; }
   },
 };
 

@@ -47,9 +47,9 @@ class RemotePlayer {
       this.rebuild();
     }
   }
-  // ~110 ms kechikish bilan ikki holat orasini silliq to'ldirish
+  // Kechikish bilan ikki holat orasini silliq to'ldirish (internet orqali — tebranish ko'proq, kechikish kattaroq)
   sample() {
-    const B = this.buf, t = performance.now() - 110;
+    const B = this.buf, t = performance.now() - (Net.mode === 'ws' ? 160 : 110);
     if (!B.length) return null;
     let a = B[B.length - 1], b = a;
     for (let i = B.length - 1; i > 0; i--) if (B[i - 1].rt <= t) { a = B[i - 1]; b = B[i]; break; }
@@ -136,7 +136,11 @@ const MP = {
       MPUI.refresh();
     };
     Net.onClose = (pid, name) => {
-      if (Net.role === 'guest') {
+      if (Net.mode === 'ws') {
+        // Online: server hammaga o'zi xabar beradi; xona egasi chiqsa ham o'yin davom etadi
+        this.removePlayer(pid);
+        toast('Ko\'p o\'yinchi', name || 'O\'yinchi', 'o\'yindan chiqdi');
+      } else if (Net.role === 'guest') {
         for (const id of [...this.players.keys()]) this.removePlayer(id);
         toast('Ko\'p o\'yinchi', 'Host o\'yinni yopdi', 'Siz yana yolg\'iz o\'ynayapsiz');
         Net.leave(); this.active = false;
@@ -146,6 +150,14 @@ const MP = {
         toast('Ko\'p o\'yinchi', name || 'O\'yinchi', 'o\'yindan chiqdi');
       }
       MPUI.refresh();
+    };
+    // Online: oldingi xona egasi chiqdi — vaqt va ob-havoni endi biz boshqaramiz
+    Net.onHost = () => { this.sendWorld(); MPUI.refresh(); toast('Ko\'p o\'yinchi', 'Xona egasi — endi siz', ''); };
+    Net.onLost = () => {
+      for (const id of [...this.players.keys()]) this.removePlayer(id);
+      this.active = false;
+      toast('Ko\'p o\'yinchi', 'Server bilan aloqa uzildi', 'Siz yana yolg\'iz o\'ynayapsiz');
+      MPUI.reset();
     };
   },
   stop() {
@@ -171,7 +183,9 @@ const MP = {
     if ((this.sendT -= dt) <= 0) {
       this.sendT = 1 / 15;
       const s = this.myState();
-      if (Net.role === 'host') Net.broadcast({ t: 'S', ps: [s, ...[...this.players.values()].map(r => r.last).filter(Boolean)] }, true);
+      // Online: har kim o'z holatini hammaga yuboradi (server tarqatadi). Wi-Fi'da: host hammaning holatini yig'ib yuboradi
+      if (Net.mode === 'ws') Net.broadcast(s, true);
+      else if (Net.role === 'host') Net.broadcast({ t: 'S', ps: [s, ...[...this.players.values()].map(r => r.last).filter(Boolean)] }, true);
       else Net.send('host', s, true);
     }
     if (Net.role === 'host' && (this.wT -= dt) <= 0) { this.wT = 4; this.sendWorld(); }
@@ -181,11 +195,12 @@ const MP = {
     if (P.passenger && (!P.inCar || P.inCar.driver !== 'remote')) { if (P.inCar) exitCar(); else P.passenger = null; }
   },
   onMsg(pid, m) {
-    const host = Net.role === 'host';
-    if (m.t === 's') { if (host) this.apply(m); }
+    // host — Wi-Fi rejimida xabarlarni boshqalarga uzatuvchi (online'da server uzatadi)
+    const host = Net.role === 'host' && Net.mode !== 'ws';
+    if (m.t === 's') { if (host || Net.mode === 'ws') { m.id = pid; this.apply(m); } }
     else if (m.t === 'S') { for (const s of m.ps) if (s.id !== Net.id) this.apply(s); }
     else if (m.t === 'hi') { MPUI.refresh(); }
-    else if (m.t === 'w') { World.dayT = m.day; this.pvp = m.pvp; Weather.timer = 9999; if (Weather.kind !== m.wx) Weather.set(m.wx, false); }
+    else if (m.t === 'w') { if (Net.mode === 'ws' && pid !== Net.hostId) return; World.dayT = m.day; this.pvp = m.pvp; Weather.timer = 9999; if (Weather.kind !== m.wx) Weather.set(m.wx, false); if (MPUI.el.mpPvp) MPUI.el.mpPvp.checked = m.pvp; }
     else if (m.t === 'shot') { this.remoteShot(m); if (host) Net.broadcast(m, false, pid); }
     else if (m.t === 'hit') {
       if (m.to === Net.id) this.takeHit(m);
@@ -204,7 +219,7 @@ const MP = {
   shot(ax, ay, az, bx, by, bz, w) {
     if (!this.active || !Net.peers.size) return;
     const m = { t: 'shot', id: Net.id, a: [ax, ay, az].map(v => +v.toFixed(2)), b: [bx, by, bz].map(v => +v.toFixed(2)), w };
-    if (Net.role === 'host') Net.broadcast(m, false); else Net.send('host', m, false);
+    if (Net.role === 'host' || Net.mode === 'ws') Net.broadcast(m, false); else Net.send('host', m, false);
   },
   remoteShot(m) {
     FX.tracer(...m.a, ...m.b);
@@ -233,7 +248,7 @@ const MP = {
   },
   hit(r, dmg) {
     const m = { t: 'hit', to: r.id, from: Net.id, dmg: Math.round(dmg) };
-    if (Net.role === 'host') Net.send(r.id, m, false); else Net.send('host', m, false);
+    if (Net.role === 'host' || Net.mode === 'ws') Net.send(r.id, m, false); else Net.send('host', m, false);
     Game.hitMark = 0.2;
   },
   takeHit(m) {
@@ -242,7 +257,7 @@ const MP = {
     hurtPlayer(m.dmg);
     if (Player.dead) {
       const k = { t: 'kill', k: m.from, v: Net.id };
-      if (Net.role === 'host') Net.broadcast(k, false); else Net.send('host', k, false);
+      if (Net.role === 'host' || Net.mode === 'ws') Net.broadcast(k, false); else Net.send('host', k, false);
       this.killFeed(k);
     }
   },
@@ -299,16 +314,20 @@ const MPUI = {
   el: {}, after: null,
   init() {
     for (const id of ['mpPanel', 'mpName', 'mpHost', 'mpQrHost', 'mpCode', 'mpJoin', 'mpQrJoin', 'mpLeave', 'mpPlay', 'mpClose', 'mpStatus', 'mpList',
-      'mpRoom', 'mpQrBox', 'mpQrImg', 'mpQrCap', 'mpOut', 'mpCopy', 'mpScan', 'mpIn', 'mpApply', 'mpPvp', 'mpSetup', 'mpWarn']) this.el[id] = document.getElementById(id);
+      'mpRoom', 'mpQrBox', 'mpQrImg', 'mpQrCap', 'mpOut', 'mpCopy', 'mpScan', 'mpIn', 'mpApply', 'mpPvp', 'mpSetup', 'mpWarn',
+      'mpPub', 'mpRooms', 'mpRefresh', 'mpLan']) this.el[id] = document.getElementById(id);
     const e = this.el;
     try { e.mpName.value = localStorage.getItem('kq-name') || ''; } catch (err) { /* saqlash yo'q */ }
     document.getElementById('btnMP').addEventListener('click', () => this.open());
     e.mpClose.addEventListener('click', () => this.close());
     e.mpPlay.addEventListener('click', () => { this.close(); startGame(); });
-    e.mpLeave.addEventListener('click', () => { MP.stop(); this.reset(); this.status('Xonadan chiqdingiz.'); });
+    e.mpLeave.addEventListener('click', () => { MP.stop(); this.reset(); this.status('Xonadan chiqdingiz.'); this.rooms(); });
     e.mpHost.addEventListener('click', () => this.host());
     e.mpQrHost.addEventListener('click', () => this.qrHost());
     e.mpJoin.addEventListener('click', () => this.join());
+    e.mpCode.addEventListener('keydown', ev => { if (ev.key === 'Enter') this.join(); });
+    e.mpRefresh.addEventListener('click', () => this.rooms());
+    e.mpRooms.addEventListener('click', ev => { const b = ev.target.closest('[data-code]'); if (b) this.join(b.dataset.code); });
     e.mpQrJoin.addEventListener('click', () => this.qrJoin());
     e.mpCopy.addEventListener('click', () => {
       const t = e.mpOut.value;
@@ -320,8 +339,8 @@ const MPUI = {
     e.mpPvp.addEventListener('change', () => { MP.pvp = e.mpPvp.checked; if (Net.role === 'host') MP.sendWorld(); });
     Net.onStatus = t => this.status(t);
   },
-  supported() {
-    // claude.ai sahifasi ichida (iframe) to'g'ridan-to'g'ri ulanish taqiqlangan
+  // Internetsiz (WebRTC) ulanish: boshqa sayt ichida (iframe) taqiqlangan
+  lanOk() {
     let framed = true;
     try { framed = window.top !== window.self; } catch (e) { framed = true; }
     if (!Net.supported() || framed || /claude\.ai$/.test(location.hostname)) return false;
@@ -329,8 +348,9 @@ const MPUI = {
   },
   open() {
     this.el.mpPanel.hidden = false;
-    const ok = this.supported();
-    this.el.mpWarn.hidden = ok; this.el.mpSetup.hidden = !ok;
+    const lan = this.lanOk();
+    this.el.mpWarn.hidden = lan; this.el.mpLan.hidden = !lan;
+    if (!Net.room) this.rooms();
     this.refresh();
   },
   close() { Scanner.stop(); this.el.mpPanel.hidden = true; },
@@ -355,13 +375,39 @@ const MPUI = {
       e.mpQrImg.src = qr.createDataURL(Math.max(2, Math.floor(300 / qr.getModuleCount())), 2);
     });
   },
-  host() {
-    if (Net.role === 'guest') MP.stop();
-    this.myName(); MP.start();
-    const code = Net.room || Net.hostRoom();
-    this.el.mpRoom.textContent = code;
-    this.status('Xona ochildi. Do\'stlaringiz «Qo\'shilish» bo\'limida shu kodni kiritsin (internet kerak).');
+  netErr(err) { return err.message === 'server' ? 'Serverga ulanib bo\'lmadi. Internetni tekshiring.' : err.message; },
+  // Online xona: o'yin serverida
+  async host() {
+    if (Net.mode === 'ws' && Net.role === 'host') { this.status('Xona ochiq: ' + Net.room); return; }
+    MP.stop(); this.reset(); this.myName(); MP.start();
+    this.status('Serverga ulanmoqda…');
+    try {
+      const code = await Net.onlineHost(this.el.mpPub.checked);
+      this.el.mpRoom.textContent = code;
+      this.status(`Xona ochildi. Do'stlaringiz shu kodni kiritsin${this.el.mpPub.checked ? ' yoki «Ochiq xonalar» dan tanlasin' : ''}.`);
+    } catch (err) { MP.stop(); this.status(this.netErr(err)); }
     this.refresh();
+  },
+  async join(code) {
+    code = String(code || this.el.mpCode.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length < 4) { this.status('Xona kodini kiriting.'); return; }
+    if (Net.mode === 'ws' && Net.room === code) { this.status('Siz shu xonadasiz.'); return; }
+    MP.stop(); this.reset(); this.myName(); MP.start();
+    this.status('Ulanmoqda…');
+    try {
+      this.el.mpRoom.textContent = await Net.onlineJoin(code);
+      this.status('Xonaga qo\'shildingiz. «O\'ynash» ni bosing.');
+    } catch (err) { MP.stop(); this.status(this.netErr(err)); }
+    this.refresh();
+  },
+  async rooms() {
+    const ul = this.el.mpRooms, esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+    ul.innerHTML = '<li class="mp-muted">Yuklanmoqda…</li>';
+    try {
+      const list = (await Net.onlineRooms()).filter(r => r.code !== Net.room);
+      ul.innerHTML = list.length ? list.map(r => `<li><span>${esc(r.name)}<small>${r.n}/${r.max}</small></span><button class="ghost mp-small" type="button" data-code="${esc(r.code)}">Qo'shilish</button></li>`).join('')
+        : '<li class="mp-muted">Hozircha ochiq xona yo\'q — o\'zingiz oching!</li>';
+    } catch (err) { ul.innerHTML = `<li class="mp-muted">${esc(this.netErr(err))}</li>`; }
   },
   // Kameraga ruxsat berilgan sahifaga brauzer telefonning haqiqiy lokal manzilini ochadi —
   // shunda hotspot va oddiy Wi-Fi'da telefonlar bir-birini ishonchliroq topadi
@@ -375,7 +421,7 @@ const MPUI = {
     } catch (e) { /* ruxsat berilmadi — baribir urinib ko'ramiz */ }
   },
   async qrHost() {
-    if (Net.role === 'guest') MP.stop();
+    if (Net.role === 'guest' || Net.mode === 'ws') MP.stop();
     this.myName(); MP.start();
     if (!Net.role) Net.role = 'host';
     await this.warmCamera();
@@ -383,12 +429,6 @@ const MPUI = {
     const str = await Net.qrHostOffer();
     this.showQR(str, '1) O\'yinchi «QR orqali qo\'shilish» ni bosib, shu kodni skanerlasin. 2) Keyin uning telefonidagi javob QR-kodini «Skanerlash» bilan o\'qing.', 'host');
     this.status('O\'yinchi skanerlashini kuting.');
-  },
-  join() {
-    const code = (this.el.mpCode.value || '').trim();
-    if (code.length < 4) { this.status('Xona kodini kiriting.'); return; }
-    MP.stop(); this.myName(); MP.start();
-    Net.joinRoom(code).catch(() => this.status('Ulanib bo\'lmadi. Internetni tekshiring yoki QR usulini sinang.'));
   },
   qrJoin() {
     MP.stop(); this.myName(); MP.start();
@@ -411,10 +451,14 @@ const MPUI = {
   refresh() {
     const e = this.el;
     if (!e.mpList) return;
-    const names = [`${Net.name || 'Siz'}${Net.role === 'host' ? ' (host)' : ''}`, ...[...MP.players.values()].map(r => r.name)];
-    e.mpList.innerHTML = Net.role ? names.map(n => `<li>${n.replace(/</g, '&lt;')}</li>`).join('') : '<li>Hali hech kim yo\'q</li>';
+    const ws = Net.mode === 'ws', boss = ws ? ' (xona egasi)' : ' (host)';
+    // Online'da xonadagilar serverdan ma'lum; Wi-Fi'da mehmon faqat hostni biladi — ro'yxat o'yinchilar holatidan
+    const others = ws ? [...Net.peers.values()].map(p => p.name + (p.id === Net.hostId ? boss : '')) : [...MP.players.values()].map(r => r.name);
+    const names = [`${Net.name || 'Siz'}${Net.role === 'host' ? boss : ''}`, ...others];
+    e.mpList.innerHTML = Net.role ? names.map(n => `<li>${n.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</li>`).join('') : '<li>Hali hech kim yo\'q</li>';
     e.mpLeave.hidden = !Net.role;
+    e.mpPvp.disabled = Net.role === 'guest'; e.mpPvp.checked = MP.pvp;
     const hud = document.getElementById('mpHud');
-    if (hud) { hud.hidden = !MP.active || !Net.peers.size; hud.textContent = `${MP.players.size + 1} o'yinchi${Net.room ? ' · xona ' + Net.room : ''}`; }
+    if (hud) { hud.hidden = !MP.active || !Net.peers.size; hud.textContent = `${(ws ? Net.peers.size : MP.players.size) + 1} o'yinchi${Net.room ? ' · xona ' + Net.room : ''}`; }
   },
 };

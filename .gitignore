@@ -13,3 +13,6 @@ tools/node_modules/
 
 # Dvigatel ovozlari manbalari (tools/prep-engines.py yuklab oladi)
 tools/engine-src/
+
+# O'yin serveri paketlari (serverda npm ci o'rnatadi)
+server/node_modules/

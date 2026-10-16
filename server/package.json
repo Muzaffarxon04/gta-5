@@ -1,0 +1,9 @@
+{
+  "name": "kocha-qiroli-server",
+  "private": true,
+  "description": "Ko'cha Qiroli — ko'p o'yinchi serveri (WebSocket): xonalar va o'yinchilar o'rtasida xabar uzatish",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.18.0" }
+}

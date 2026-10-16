@@ -1,0 +1,16 @@
+[Unit]
+Description=Ko'cha Qiroli — ko'p o'yinchi serveri
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/kocha-qiroli-server
+Environment=PORT=3100 BIND=127.0.0.1
+ExecStart=/usr/bin/env node server.js
+Restart=always
+RestartSec=3
+# Kichik server (1 GB): boshqa xizmatlarga xalaqit bermasligi uchun
+MemoryMax=200M
+
+[Install]
+WantedBy=multi-user.target
