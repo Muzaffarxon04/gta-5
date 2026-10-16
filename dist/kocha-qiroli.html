@@ -489,6 +489,15 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   .ghost { font-size: 15px; padding: 8px 12px; }
   .menu-drawer { gap: 4px; }
   .note { font-size: 13px; }
+  /* Ko'p o'yinchi oynasi: sarlavha ixcham, QR-kod va kamera ko'rinadigan qismga sig'adi */
+  .mp-card { max-height: 94vh; }
+  .mp-card .shop-head { padding: 8px 16px 6px; }
+  .mp-card .shop-head h2 { font-size: 22px; }
+  .mp-card .shop-foot { padding: 8px 16px; }
+  .mp-qr { padding: 8px; }
+  .mp-qr img { width: min(190px, calc(94vh - 150px)); }
+  .mp-qr video { max-height: calc(94vh - 150px); width: auto; max-width: 100%; }
+  .mp-qr-side { font-size: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .big div:first-child, .money.bump, .stars.flash span.on, .toast.show { animation: none; }
@@ -24331,6 +24340,13 @@ const MPUI = {
   },
   close() { Scanner.stop(); this.el.mpPanel.hidden = true; },
   status(t) { this.el.mpStatus.textContent = t; },
+  // Telefonda oyna past — QR bo'limi ro'yxat pastida qolib ketmasin
+  showQrBox() {
+    const b = this.el.mpQrBox;
+    b.hidden = false;
+    const list = b.closest('.shop-list');
+    list.scrollTop += b.getBoundingClientRect().top - list.getBoundingClientRect().top - 4;
+  },
   myName() {
     const n = (this.el.mpName.value || '').trim().slice(0, 16) || 'O\'yinchi ' + Math.floor(Math.random() * 90 + 10);
     this.el.mpName.value = n; Net.name = n;
@@ -24341,7 +24357,7 @@ const MPUI = {
   showQR(str, caption, after) {
     const e = this.el;
     e.mpQrCap.textContent = caption; e.mpOut.value = str; e.mpIn.value = '';
-    e.mpQrBox.hidden = false; this.after = after;
+    this.showQrBox(); this.after = after;
     // QR kutubxonasi birinchi kerak bo'lganda yuklanadi
     e.mpQrImg.removeAttribute('src');
     Loader.lib('lib/qrcode.js', () => {
@@ -24405,11 +24421,12 @@ const MPUI = {
     const str = await Net.qrHostOffer();
     this.showQR(str, '1) O\'yinchi «QR orqali qo\'shilish» ni bosib, shu kodni skanerlasin. 2) Keyin uning telefonidagi javob QR-kodini «Skanerlash» bilan o\'qing.', 'host');
     this.status('O\'yinchi skanerlashini kuting.');
+    this.refresh();
   },
   qrJoin() {
     MP.stop(); this.myName(); MP.start();
     this.after = 'guest';
-    this.el.mpQrBox.hidden = false; this.el.mpQrImg.removeAttribute('src');
+    this.showQrBox(); this.el.mpQrImg.removeAttribute('src');
     this.el.mpQrCap.textContent = 'Hostning QR-kodini skanerlang (yoki uning kodini pastga joylang).';
     this.el.mpOut.value = '';
     Scanner.start(txt => this.handleCode(txt));

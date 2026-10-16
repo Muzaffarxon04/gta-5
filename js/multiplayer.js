@@ -355,6 +355,13 @@ const MPUI = {
   },
   close() { Scanner.stop(); this.el.mpPanel.hidden = true; },
   status(t) { this.el.mpStatus.textContent = t; },
+  // Telefonda oyna past — QR bo'limi ro'yxat pastida qolib ketmasin
+  showQrBox() {
+    const b = this.el.mpQrBox;
+    b.hidden = false;
+    const list = b.closest('.shop-list');
+    list.scrollTop += b.getBoundingClientRect().top - list.getBoundingClientRect().top - 4;
+  },
   myName() {
     const n = (this.el.mpName.value || '').trim().slice(0, 16) || 'O\'yinchi ' + Math.floor(Math.random() * 90 + 10);
     this.el.mpName.value = n; Net.name = n;
@@ -365,7 +372,7 @@ const MPUI = {
   showQR(str, caption, after) {
     const e = this.el;
     e.mpQrCap.textContent = caption; e.mpOut.value = str; e.mpIn.value = '';
-    e.mpQrBox.hidden = false; this.after = after;
+    this.showQrBox(); this.after = after;
     // QR kutubxonasi birinchi kerak bo'lganda yuklanadi
     e.mpQrImg.removeAttribute('src');
     Loader.lib('lib/qrcode.js', () => {
@@ -429,11 +436,12 @@ const MPUI = {
     const str = await Net.qrHostOffer();
     this.showQR(str, '1) O\'yinchi «QR orqali qo\'shilish» ni bosib, shu kodni skanerlasin. 2) Keyin uning telefonidagi javob QR-kodini «Skanerlash» bilan o\'qing.', 'host');
     this.status('O\'yinchi skanerlashini kuting.');
+    this.refresh();
   },
   qrJoin() {
     MP.stop(); this.myName(); MP.start();
     this.after = 'guest';
-    this.el.mpQrBox.hidden = false; this.el.mpQrImg.removeAttribute('src');
+    this.showQrBox(); this.el.mpQrImg.removeAttribute('src');
     this.el.mpQrCap.textContent = 'Hostning QR-kodini skanerlang (yoki uning kodini pastga joylang).';
     this.el.mpOut.value = '';
     Scanner.start(txt => this.handleCode(txt));

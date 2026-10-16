@@ -414,6 +414,15 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
   .ghost { font-size: 15px; padding: 8px 12px; }
   .menu-drawer { gap: 4px; }
   .note { font-size: 13px; }
+  /* Ko'p o'yinchi oynasi: sarlavha ixcham, QR-kod va kamera ko'rinadigan qismga sig'adi */
+  .mp-card { max-height: 94vh; }
+  .mp-card .shop-head { padding: 8px 16px 6px; }
+  .mp-card .shop-head h2 { font-size: 22px; }
+  .mp-card .shop-foot { padding: 8px 16px; }
+  .mp-qr { padding: 8px; }
+  .mp-qr img { width: min(190px, calc(94vh - 150px)); }
+  .mp-qr video { max-height: calc(94vh - 150px); width: auto; max-width: 100%; }
+  .mp-qr-side { font-size: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .big div:first-child, .money.bump, .stars.flash span.on, .toast.show { animation: none; }
