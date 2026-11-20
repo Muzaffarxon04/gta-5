@@ -90,6 +90,7 @@ function randomOutfit(style) {
 }
 
 function makeHuman(o) {
+  if (o.model === 'hero' && MODELS.hero) return makeHero(o);
   const f = o.sex === 'f', bd = o.build || 1, P = [];
   const J = f ? { shX: 0.172, shY: 1.385, elY: 1.125, hipX: 0.088, hipY: 0.92, knY: 0.48, neckY: 1.53, hY: 1.645 }
     : { shX: 0.2, shY: 1.41, elY: 1.15, hipX: 0.095, hipY: 0.92, knY: 0.48, neckY: 1.55, hY: 1.665 };
@@ -196,8 +197,56 @@ function makeHuman(o) {
   return { g, mesh, b, hipsY: 0.95, stride: chapon || atlas || o.skirt ? 0.7 : 1 };
 }
 
+// ===== Personaj modeli (models/hero.js: Meshy + Mixamo skeleti, tools/prep-hero.mjs tayyorlagan) =====
+// Skelet "tozalangan" (dam holatida burilishlar 0), shuning uchun mashinada o'tirish, rul ushlash, qurol kabi kod bilan
+// yasalgan holatlar odam skeletidagidek ishlaydi. Turish, yurish va yugurish — modelning o'z animatsiyalari.
+const HERO_BONES = { hips: 'Hips', spine: 'Spine', head: 'Head', uaL: 'LeftArm', faL: 'LeftForeArm', uaR: 'RightArm', faR: 'RightForeArm',
+  thL: 'LeftUpLeg', shL: 'LeftLeg', thR: 'RightUpLeg', shR: 'RightLeg' };
+let _heroMat = null;
+function makeHero(o) {
+  const H = MODELS.hero, src = H.mesh, map = src.material.map;
+  const mat = _heroMat || (_heroMat = new THREE.MeshLambertMaterial({ map, skinning: true, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: 0.25 }));
+  // Suyaklar nusxasi (skelet tartibida)
+  const copy = {};
+  const clone = s => { const n = new THREE.Bone(); n.name = s.name; n.position.copy(s.position); n.quaternion.copy(s.quaternion); copy[s.name] = n; for (const c of s.children) if (c.isBone) n.add(clone(c)); return n; };
+  const root = clone(H.root), bones = src.skeleton.bones.map(x => copy[x.name]);
+  const mesh = new THREE.SkinnedMesh(src.geometry.clone(), mat);
+  mesh.add(root);
+  mesh.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton(bones, src.skeleton.boneInverses.map(m => m.clone())), new THREE.Matrix4());
+  mesh.castShadow = true;
+  mesh.frustumCulled = false;
+  const g = new THREE.Group(); g.rotation.order = 'YXZ'; g.add(mesh);
+  const find = k => bones.find(x => x.name.endsWith(k));
+  const b = {}; for (const k in HERO_BONES) b[k] = find(HERO_BONES[k]);
+  // Bilak qaysi tomonga qaragan (rul ushlashda kaft yo'nalishi uchun)
+  for (const [fa, hand] of [[b.faL, 'LeftHand'], [b.faR, 'RightHand']]) fa.userData.dir = find(hand).position.clone().normalize();
+  const mixer = new THREE.AnimationMixer(mesh), act = {};
+  for (const c of H.clips) act[c.name] = mixer.clipAction(c);
+  return { g, mesh, b, bones, hipsY: b.hips.position.y, stride: 1, mixer, act, anim: false, t: 0, last: 0 };
+}
+// Animatsiya: turish / yurish / yugurish aralashmasi; yurish va yugurish fazasi qadam fazasiga bog'langan (oyoq sirpanmaydi)
+function heroMove(hm, phase, amp, run) {
+  const now = performance.now(), dt = hm.last ? Math.min(0.1, (now - hm.last) / 1000) : 0;
+  hm.last = now; hm.t += dt;
+  const A = hm.act, m = clamp(amp, 0, 1), k = ((phase / TAU) % 1 + 1) % 1;
+  if (!hm.anim) { hm.anim = true; for (const n in A) A[n].play(); }
+  const set = (a, w, t) => { if (!a) return; a.setEffectiveWeight(w); a.time = t * a.getClip().duration; };
+  set(A.Idle, 1 - m, (hm.t / (A.Idle ? A.Idle.getClip().duration : 1)) % 1);
+  set(A.Walking, m * (1 - run), k);
+  set(A.Running, m * run, k);
+  hm.mixer.update(0);
+}
+// Kod bilan yasalgan holatga o'tish: animatsiya to'xtaydi, hamma suyak dam holatiga qaytadi
+function heroStill(hm) {
+  if (!hm.mixer || !hm.anim) return;
+  hm.mixer.stopAllAction(); hm.anim = false; hm.last = 0;
+  for (const x of hm.bones) x.quaternion.identity();
+}
+
 // Yurish/yugurish animatsiyasi: tizza va tirsak bukiladi, tana tebranadi
 function poseHuman(hm, phase, amp, run) {
+  if (hm.mixer) { heroMove(hm, phase, amp, run); return; }
   const b = hm.b, s = Math.sin(phase), c = Math.cos(phase), A = amp * (0.5 + run * 0.4) * hm.stride;
   b.thL.rotation.set(-s * A, 0, 0); b.thR.rotation.set(s * A, 0, 0);
   b.shL.rotation.x = (Math.max(0, c) * (0.9 + run * 0.7) + 0.05) * amp * hm.stride;
@@ -210,6 +259,7 @@ function poseHuman(hm, phase, amp, run) {
   b.hips.position.y = hm.hipsY + Math.abs(c) * 0.03 * amp * (1 + run);
 }
 function poseDead(hm) {
+  heroStill(hm);
   const b = hm.b;
   b.uaL.rotation.set(0, 0, 1.25); b.uaR.rotation.set(0, 0, -1.25);
   b.faL.rotation.set(-0.3, 0, 0); b.faR.rotation.set(-0.3, 0, 0);
@@ -221,6 +271,7 @@ function poseDead(hm) {
 
 // Mashinada o'tirish va mototsiklda yurish holatlari
 function poseSeated(hm) {
+  heroStill(hm);
   const b = hm.b;
   b.hips.position.y = hm.hipsY;
   // Mashinadagidek: biroz suyanib, oyoqlar oldinga cho'zilgan (tom va pol ichida qolsin)
@@ -238,9 +289,12 @@ const _hw = { m: new THREE.Matrix4(), inv: new THREE.Matrix4(), s: new THREE.Vec
   qf: new THREE.Quaternion(), DOWN: new THREE.Vector3(0, -1, 0) };
 function reachArm(hm, side, T) {
   const b = hm.b, ua = side > 0 ? b.uaL : b.uaR, fa = side > 0 ? b.faL : b.faR, H = _hw;
-  b.hips.updateMatrix(); b.spine.updateMatrix();
-  const S = H.s.copy(ua.position).applyMatrix4(H.m.multiplyMatrices(b.hips.matrix, b.spine.matrix));
-  const qp = H.q.copy(b.hips.quaternion).multiply(b.spine.quaternion);
+  // Yelka joyi va ota-suyaklar burilishi: hips → … → ua.parent (personaj modelida orada qo'shimcha suyaklar bor)
+  H.m.identity(); H.q.identity();
+  const chain = [];
+  for (let p = ua.parent; p && p.isBone; p = p.parent) chain.unshift(p);
+  for (const p of chain) { p.updateMatrix(); H.m.multiply(p.matrix); H.q.multiply(p.quaternion); }
+  const S = H.s.copy(ua.position).applyMatrix4(H.m), qp = H.q;
   const L1 = fa.position.length(), L2 = 0.3, d = H.d.subVectors(T, S);
   let D = d.length();
   d.multiplyScalar(1 / (D || 1));
@@ -252,7 +306,7 @@ function reachArm(hm, side, T) {
   const Wua = H.qa.setFromUnitVectors(H.r1.copy(fa.position).normalize(), H.v.subVectors(E, S).normalize());
   ua.quaternion.copy(qp).invert().multiply(Wua);
   const hand = H.t.copy(S).addScaledVector(d, D).sub(E).normalize();
-  fa.quaternion.copy(Wua).invert().multiply(H.qf.setFromUnitVectors(H.DOWN, hand));
+  fa.quaternion.copy(Wua).invert().multiply(H.qf.setFromUnitVectors(fa.userData.dir || H.DOWN, hand));
 }
 const _hwP = new THREE.Vector3(), _hwM = new THREE.Matrix4();
 function holdWheel(hm, car) {
@@ -276,6 +330,7 @@ function holdGrips(hm, car) {
   for (const side of [1, -1]) reachArm(hm, side, _hwP.set(side * G.x, G.y, G.z + side * car.steer * 0.05).applyMatrix4(inv));
 }
 function poseRider(hm) {
+  heroStill(hm);
   const b = hm.b;
   b.hips.position.y = hm.hipsY;
   // Sport mototsikl: tana oldinga egilgan, tizzalar bakni qisadi, oyoqlar orqadagi tayanchda

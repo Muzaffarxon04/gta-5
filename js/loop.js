@@ -38,6 +38,7 @@ function init(data) {
   });
 }
 function finishInit(data) {
+  if (MODELS.hero) setPlayerOutfit(Player.outfitId); // personaj modeli tayyor — o'yinchi shunga almashadi
   Landmarks.useTemurModel();
   Autodrom.placeInstructor();
   Player.money = Number.isFinite(data.money) ? data.money : 500;

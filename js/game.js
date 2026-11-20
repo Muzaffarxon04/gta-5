@@ -116,6 +116,7 @@ function onModelReady(n) {
   for (const c of Game.cars) if (c.T.model === n) c.upgradeBody();
   if (n === 'timur') Landmarks.useTemurModel();
   if (n === 'person') placePeople(World.scene);
+  if (n === 'hero' && Player.hm && Player.outfitId === 'default') setPlayerOutfit('default');
   if (SHOWCASE[n]) placeShowcase(n);
 }
 // Tirbandlik soatlarida ko'chalar gavjum, tunda bo'sh

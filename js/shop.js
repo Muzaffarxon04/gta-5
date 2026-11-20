@@ -40,7 +40,7 @@ function cycleWeapon(dir) {
 const PLAYER_BASE = { sex: 'm', skin: 0xd8a47c, hair: 0x15100e, hairStyle: 'short', build: 1.06, height: 1.02, beard: true };
 const CLOTHES = [
   { id: 'default', label: 'Charm kurtka', desc: 'Qora kurtka, oq futbolka, jinsi', price: 0,
-    o: { outfit: 'jacket', jacket: 0x1d1d1f, shirt: 0xf2f2f2, sleeves: 'long', pants: 0x2a4a72, shoes: 0xe8e8e8 } },
+    o: { model: 'hero', outfit: 'jacket', jacket: 0x1d1d1f, shirt: 0xf2f2f2, sleeves: 'long', pants: 0x2a4a72, shoes: 0xe8e8e8 } },
   { id: 'summer', label: 'Yozgi kiyim', desc: 'Oq futbolka, jinsi va kepka', price: 120,
     o: { outfit: 'casual', top: 0xffffff, sleeves: 'short', pants: 0x2a4a72, shoes: 0xe8e8e8, hat: 'cap', hatColor: 0x1c1c1c } },
   { id: 'sport', label: 'Sport kostyum', desc: 'Ko\'k sport kostyum va oq krossovka', price: 250,

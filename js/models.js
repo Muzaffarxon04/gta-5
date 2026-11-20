@@ -30,7 +30,7 @@ function loadModel(n, done) {
     const saved = window.createImageBitmap;
     window.createImageBitmap = undefined;
     try {
-      _gltf.parse(u.buffer, '', g => { let ok = false; try { MODELS[n] = prepModel(n, g.scene); ok = true; } catch (e) { console.warn(n, e); } done(ok); },
+      _gltf.parse(u.buffer, '', g => { let ok = false; try { MODELS[n] = prepModel(n, g.scene, g.animations); ok = true; } catch (e) { console.warn(n, e); } done(ok); },
         e => { console.warn('Model yuklanmadi:', n, e); done(false); });
     } finally { window.createImageBitmap = saved; }
   } catch (e) { console.warn('Model yuklanmadi:', n, e); done(false); }
@@ -76,7 +76,14 @@ function toFloatAttrs(geo) {
   }
 }
 
-function prepModel(name, scene) {
+function prepModel(name, scene, clips) {
+  // Personaj: skeletli mesh va animatsiyalar — har odam uchun nusxasini js/people.js (makeHero) yasaydi
+  if (name === 'hero') {
+    let mesh = null, root = null;
+    scene.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; if (o.isBone && !root) root = o; });
+    mesh.material.map.encoding = THREE.LinearEncoding; mesh.material.map.needsUpdate = true;
+    return { hero: true, mesh, root, clips };
+  }
   // Qismlarga bo'lingan modelda "paint" (bo'yoq) bor — rangini garajda ham o'zgartirsa bo'ladi
   const M = { scene, paint: !!scene.getObjectByName('paint') };
   scene.traverse(o => {
