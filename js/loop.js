@@ -207,7 +207,7 @@ function handleActions() {
   if (kp('KeyT')) { if (P.inCar && P.inCar.type === 'bus') BusJob.toggle(); else Taxi.toggle(); }
   if (kp('KeyV')) Cockpit.toggle();
   // Uzatmalar selektori: E — keyingi (D / yuqori uzatma tomon), Q — oldingi (R / P tomon)
-  if (P.inCar && !P.passenger) { if (kp('KeyE')) shiftStep(P.inCar, 1); if (kp('KeyQ')) shiftStep(P.inCar, -1); }
+  if (P.inCar && !P.passenger && gearUi()) { if (kp('KeyE')) shiftStep(P.inCar, 1); if (kp('KeyQ')) shiftStep(P.inCar, -1); }
   if (kp('KeyB')) Fuel.act();
   if (kp('KeyI') && !Input.touch) KeyHints.toggle();
   if (kp('KeyL') && P.inCar && !P.passenger) toggleCarLights(P.inCar);
@@ -233,8 +233,9 @@ function updatePlayerCar(dt) {
   if (J.active) { const y = Math.abs(J.y) < 0.15 ? 0 : J.y * 1.3; gas = clamp(-y, 0, 1); brk = clamp(y, 0, 1); }
   else { gas = kd('KeyW') || kd('ArrowUp') ? 1 : 0; brk = kd('KeyS') || kd('ArrowDown') ? 1 : 0; }
   if (pad.active && (pad.rt > 0.05 || pad.lt > 0.05)) { gas = pad.rt; brk = pad.lt; }
-  c.pedals = true; c.thr = gas; c.brk = brk;
-  gearHints(c, gas, brk, dt);
+  const pedals = gearUi() && (Input.touch || J.active || (pad.active && (pad.rt > 0.05 || pad.lt > 0.05 || gearUi())));
+  if (pedals) { c.pedals = true; c.thr = gas; c.brk = brk; gearHints(c, gas, brk, dt); }
+  else { c.pedals = false; c.brk = 0; c.thr = gas - brk; }  // kompyuter: W — oldinga, S — tormoz / orqaga
   // Rul: telefondagi rul/qiyshaytirish (Input.steer), joystik yoki tugmalar (chapga — musbat)
   const st = Input.steer.active ? Input.steer.v : J.active ? -J.x : (kd('KeyA') || kd('ArrowLeft') ? 1 : 0) - (kd('KeyD') || kd('ArrowRight') ? 1 : 0);
   c.steer = lerp(c.steer, st, 1 - Math.exp(-7 * dt));

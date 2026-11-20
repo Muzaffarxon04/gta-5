@@ -140,9 +140,9 @@ const Panel = {
       ${range('setSens', 'Sichqoncha sezgirligi', 0.4, 2.5, 0.1, v.sens, x => (+x).toFixed(1) + '×')}
       ${range('setFov', 'Ko\'rish burchagi', 55, 85, 1, v.fov, x => x + '°')}
       <label class="set-row" for="setInvert"><span>Kamerani teskari (yuqori/past)</span><input type="checkbox" id="setInvert"${v.invertY ? ' checked' : ''}></label>
-      <div class="set-row"><span>Uzatmalar qutisi</span><div class="segs" id="setGear">${[['auto', 'Avtomat'], ['manual', 'Mexanika']].map(([k, n]) =>
+      ${Input.touch ? `<div class="set-row"><span>Uzatmalar qutisi</span><div class="segs" id="setGear">${[['simple', 'Oddiy'], ['auto', 'Avtomat'], ['manual', 'Mexanika']].map(([k, n]) =>
         `<button type="button" class="seg${(v.gearbox || 'auto') === k ? ' on' : ''}" data-gear="${k}">${n}</button>`).join('')}</div></div>
-      <p class="set-note">Gaz faqat gaz, tormoz faqat tormoz: oldinga yoki orqaga yurishni selektor belgilaydi. Avtomatda P R N D, mexanikada R N 1…5 — uzatmani o'zingiz almashtirasiz. ${Input.touch ? 'Telefonda pedallar yonidagi selektor (avtomatda harfni bosing yoki barmoqni suring, mexanikada ▲ ▼).' : '<kbd>E</kbd> — keyingi (D / yuqori uzatma tomon), <kbd>Q</kbd> — oldingi (R / P tomon).'} Geympadda RB / LB. Mexanikada ko'rsatkich sariq bo'lsa — yuqoriga o'ting.</p>
+      <p class="set-note"><b>Oddiy</b> — selektor yo'q: gaz — oldinga, tormoz — orqaga. <b>Avtomat</b> — P R N D selektori, yurish yo'nalishini o'zingiz tanlaysiz. <b>Mexanika</b> — R N 1…5, uzatmani o'zingiz almashtirasiz (▲ ▼). Geympadda RB / LB. Kompyuterda uzatmalar qutisi yo'q: W / ↑ — oldinga, S / ↓ — orqaga.</p>` : ''}
       <label class="set-row" for="setFuel"><span>Yoqilg'i sarflanadi (zapravkada quyish kerak)</span><input type="checkbox" id="setFuel"${v.fuel !== false ? ' checked' : ''}></label>
       ${Input.touch ? '' : `<label class="set-row" for="setHints"><span>Tugmalar ko'rsatmasi o'yin ichida (I)</span><input type="checkbox" id="setHints"${v.keyHints !== false ? ' checked' : ''}></label>`}
       ${Input.touch ? `<div class="set-row"><span>Mashinani burish (telefonda)</span><div class="segs" id="setSteer">${STEER_MODES.map(([k, n]) =>

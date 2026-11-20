@@ -9,7 +9,7 @@ const TOUCH_ICONS = {
   exit: '<path d="M14 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H14"/><path d="M10 12h11M18 8.5l3.5 3.5-3.5 3.5"/>',
   punch: '<path d="M12 2.5l1.8 5.4 5.6-1.9-3.6 4.6 4.7 3.3-5.7.6.3 5.9-3.1-4.9-3.1 4.9.3-5.9-5.7-.6 4.7-3.3-3.6-4.6 5.6 1.9z"/>',
   shoot: '<path d="M2 8.5h11.5v3H8.6l-.8 1v2.3a.8.8 0 0 1-.8.8H5.3l-1 3.2H2.1l1.2-5.2L2 12z" fill="currentColor" stroke="none"/><path d="M16.5 10h5M16 6.5l4-2M16 13.5l4 2"/>',
-  horn: '<path d="M3 9.5v5h3.5L12 19V5L6.5 9.5z" fill="currentColor" stroke="none"/><path d="M15.5 9a4 4 0 0 1 0 6M18.3 6.3a8 8 0 0 1 0 11.4"/>',
+  horn: '<rect x="1.5" y="9" width="2.6" height="3.2" rx="1" fill="currentColor" stroke="none"/><path fill-rule="evenodd" fill="currentColor" stroke="none" d="M4 9.6h5.5L14 8.4 19.6 4.6c1.3-.9 2.4-.5 2.4.9v13c0 1.4-1.1 1.8-2.4.9L14 15.6V16a2 2 0 0 1-2 2H8.5a3 3 0 0 1-3-3v-3.2H4zM7.5 12.6V14a.8.8 0 0 0 .8.8H12a.8.8 0 0 0 .8-.8v-1.4a.8.8 0 0 0-.8-.8H8.3a.8.8 0 0 0-.8.8z"/>',
   jump: '<path d="M12 16V4M6.5 9.5 12 4l5.5 5.5"/><path d="M4 20.5h16"/>',
   handbrake: '<circle cx="12" cy="12" r="7"/><path d="M10.2 15.8V8.2h2.6a2.4 2.4 0 0 1 0 4.8h-2.6"/><path d="M3.2 6.5a10.5 10.5 0 0 0 0 11M20.8 6.5a10.5 10.5 0 0 1 0 11"/>',
   siren: '<path d="M7 18v-5.5a5 5 0 0 1 10 0V18"/><path d="M5 18h14v3H5z"/><path d="M12 2v2.5M4.6 5.2l1.7 1.7M19.4 5.2l-1.7 1.7M2 11.5h2.4M19.6 11.5H22"/>',
@@ -21,7 +21,7 @@ const TOUCH_ICONS = {
   sigR: '<path d="M14 5l7 7-7 7v-4H5V9h9z" fill="currentColor" fill-opacity=".3"/>',
   hazard: '<path d="M12 3.5 21 19.5H3z"/><path d="M12 8.2 16.8 16.8H7.2z"/>',
   lights: '<path d="M11 5.5C6.6 5.5 3.5 8.4 3.5 12s3.1 6.5 7.5 6.5z" fill="currentColor" fill-opacity=".25"/><path d="M14 7h7M14 10.3h7M14 13.7h7M14 17h7"/>',
-  view: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  view: '<path d="M20.4 8.6A9 9 0 0 0 3.3 10.8M3.6 15.4a9 9 0 0 0 17.1-2.2"/><path d="M1.2 10.2 3.4 13.4 6 10.6z" fill="currentColor"/><path d="M18.2 13.6 20.8 10.4 23.2 13.4z" fill="currentColor"/><path fill-rule="evenodd" fill="currentColor" stroke="none" d="M8.5 9.4h1.2l.6-1.5h3.4l.6 1.5h1.2c.6 0 1 .4 1 1V15c0 .6-.4 1-1 1H8.5c-.6 0-1-.4-1-1v-4.6c0-.6.4-1 1-1zM12 11.1a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6z"/>',
   left: '<path d="M16 4.5 6.5 12l9.5 7.5z" fill="currentColor" stroke="none"/>',
   right: '<path d="M8 4.5 17.5 12 8 19.5z" fill="currentColor" stroke="none"/>',
   gas: '<path d="M6 13l6-6 6 6M6 19.5l6-6 6 6"/>',
@@ -289,10 +289,12 @@ const TouchUI = {
     // Nishonga olish faqat o'qotar qurolda ishlaydi (musht va bitada kerak emas)
     const gun = !car && !WEAPONS[Player.weapon].melee;
     const manual = driving && Settings.v.gearbox === 'manual';
-    const key = [car, pol, taxi, nitro, driving, gun, manual].join('|');
+    const simple = driving && Settings.v.gearbox === 'simple';
+    const key = [car, pol, taxi, nitro, driving, gun, manual, simple].join('|');
     if (key === this._car) return;
     this._car = key;
     this.root.classList.toggle('manual', manual);
+    this.root.classList.toggle('simple', simple);
     // Haydaganda joystik o'rniga chap/o'ng tugmalari va gaz/tormoz pedallari
     this.root.classList.toggle('driving', driving);
     if (!driving) {
@@ -310,6 +312,8 @@ const TouchUI = {
     this.setIcon(this.btn('jump'), car ? 'handbrake' : 'jump', car ? 'Qo\'l tormozi' : 'Sakrash');
     this.setIcon(this.btn('enter'), 'exit', 'Mashinadan tushish');
     this.setIcon(this.btn('fire'), car ? 'horn' : gun ? 'shoot' : 'punch', car ? 'Signal' : gun ? 'Otish' : 'Urish');
+    // «Oddiy» rejimda pedal tormoz emas, orqaga yurish tugmasi
+    this.setIcon(this.root.querySelector('[data-key="ArrowDown"]'), simple ? 'reverse' : 'brake', simple ? 'Orqaga' : 'Tormoz');
     for (const a of ['run', 'weapon']) this.btn(a).hidden = car;
     this.btn('enter').hidden = !car; // piyodaga: har bir yaqin mashina eshigi oldida belgi (updateDoors)
     if (nitro) this.btn('weapon').hidden = true;

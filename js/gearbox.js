@@ -12,7 +12,9 @@ const REV_MAX = 13; // orqaga eng yuqori tezlik (m/s)
 // Dvigatel kuchi aylanishga qarab: pastda biroz sust, o'rtada to'liq, cheklovchiga yaqinlashganda yo'qoladi
 const engineTorque = r => (r < 0.3 ? 0.82 + 0.6 * r : r > 0.92 ? Math.max(0, (1.04 - r) / 0.12) : 1);
 const gearSet = c => GEAR_SETS[c.T.gears] || GEAR_SETS[5];
-const manualBox = c => c.driver === 'player' && Settings.v.gearbox === 'manual';
+// Uzatmalar qutisi (selektor, pedallar) faqat telefon va geympadda (Sozlamalarda «Oddiy» tanlansa — u ham yo'q); kompyuterda klaviatura: W/↑ — oldinga, S/↓ — orqaga
+const gearUi = () => Settings.v.gearbox !== 'simple' && !!(Input.touch || (Input.pad && Input.pad.active));
+const manualBox = c => c.driver === 'player' && Settings.v.gearbox === 'manual' && gearUi();
 // sel: P / R / N / D (mexanikada D — oldinga, raqami g da)
 const gearState = c => c.gb || (c.gb = { g: 1, sel: 'D', shiftT: 0, rpm: 0.1 });
 
@@ -111,4 +113,4 @@ function gearHints(c, gas, brk, dt) {
   HUD.help(key === 'rev' ? `Orqaga yurish uchun uzatmani <b>R</b> ga o'tkazing (${how}), keyin gazni bosing` : `Uzatma <b>${sel}</b> da — yurish uchun <b>D</b> ga o'tkazing (${how})`, 3.5);
 }
 // Mashinada Q / E — uzatma, shuning uchun kamera ular bilan burilmaydi (sichqoncha bilan buriladi)
-const camKeysFree = () => !(Player.inCar && !Player.passenger);
+const camKeysFree = () => !(Player.inCar && !Player.passenger && gearUi());

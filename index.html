@@ -238,7 +238,18 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
 .touch-ui.driving:not([data-steer="arrows"]) .steer-pad,
 .touch-ui:not(.driving) .steer-wheel, .touch-ui:not([data-steer="wheel"]) .steer-wheel,
 .touch-ui:not(.driving) .tilt-ind, .touch-ui:not([data-steer="tilt"]) .tilt-ind { display: none; }
-.touch-ui.driving .tbtns { right: calc(192px + env(safe-area-inset-right, 0px)); grid-template-columns: repeat(3, 58px); grid-auto-rows: 58px; gap: 8px; }
+/* Mashinada: pedallar yonidagi tugmalar bitta qatorda, pastda */
+.touch-ui.driving .tbtns { right: calc(192px + env(safe-area-inset-right, 0px)); display: flex; flex-direction: row; align-items: flex-end; gap: 8px; }
+.touch-ui.driving .tbtns .tbtn { width: 54px; height: 54px; flex: none; }
+.touch-ui.driving .tbtns .tbtn[hidden] { display: none; }
+/* Radio va ko'z — pauza ostida, vertikal; uzatmalar qutisi gaz pedali ustida */
+.car-quick { position: absolute; top: calc(62px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); display: none; flex-direction: column; gap: 8px; }
+.touch-ui.driving .car-quick { display: flex; }
+.car-quick .tbtn { width: 54px; height: 54px; }
+.touch-ui.driving.simple .gearbox-ui { display: none; }
+.touch-ui.driving .gearbox-ui { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); right: calc(18px + env(safe-area-inset-right, 0px)); }
+/* Past ekranda ikki belgi selektorning chap tomoniga o'tadi */
+@media (max-height: 440px) { .touch-ui.driving .car-quick { right: calc(88px + env(safe-area-inset-right, 0px)); } }
 .touch-ui.driving .tbtn[data-act="fire"] svg { width: 30px; height: 30px; }
 .tbtn[data-act="view"] { font-size: 13px; }
 .door-btn { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; pointer-events: auto; touch-action: none; padding: 0;
@@ -552,6 +563,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="tbtn" type="button" data-act="sigL">◀</button>
     <button class="tbtn" type="button" data-act="sigH">!</button>
     <button class="tbtn" type="button" data-act="sigR">▶</button>
+    <button class="tbtn" type="button" data-act="lights" hidden>Fara</button>
   </div>
   <div class="steer-pad">
     <button class="sbtn" type="button" data-key="ArrowLeft" aria-label="Chapga">&#9664;</button>
@@ -580,6 +592,10 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="pedal brake" type="button" data-key="ArrowDown">TORMOZ</button>
     <button class="pedal gas" type="button" data-key="ArrowUp">GAZ</button>
   </div>
+  <div class="car-quick">
+    <button class="tbtn" type="button" data-act="radio" hidden>Radio</button>
+    <button class="tbtn" type="button" data-act="view" hidden>Kamera</button>
+  </div>
   <button class="tbtn pause-btn" type="button" data-act="pause" aria-label="Pauza">II</button>
   <!-- Vaziyatga qarab chiqadigan amal (zapravkada quyish, bak bo'sh bo'lsa kanistr) -->
   <button class="act-pill" type="button" data-act="fuel" hidden>Quyish</button>
@@ -587,11 +603,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <button class="tbtn" type="button" data-act="weapon">Qurol</button>
     <button class="tbtn" type="button" data-act="aim">Nishon</button>
     <button class="tbtn" type="button" data-act="siren" hidden>Sirena</button>
-    <button class="tbtn" type="button" data-act="radio" hidden>Radio</button>
     <button class="tbtn" type="button" data-act="taxi" hidden>Taksi</button>
     <button class="tbtn" type="button" data-act="nitro" hidden>Nitro</button>
-    <button class="tbtn" type="button" data-act="view" hidden>Kamera</button>
-    <button class="tbtn" type="button" data-act="lights" hidden>Fara</button>
     <button class="tbtn" type="button" data-act="run">Yugurish</button>
     <button class="tbtn" type="button" data-act="enter">Minish</button>
     <button class="tbtn" type="button" data-act="fire">Otish</button>
@@ -635,7 +648,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night)
     <dt>O'ng tugma</dt><dd>Nishonga olish</dd>
     <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Qurol tanlash (sichqoncha g'ildiragi ham)</dd>
     <dt><kbd>H</kbd></dt><dd>Signal chalish (bosib tursangiz uzun chaladi)</dd>
-    <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Mashinada — uzatmalar selektori (P R N D): E — D tomonga, Q — R / P tomonga. Orqaga yurish uchun R</dd>
+    <dt><kbd>W</kbd> <kbd>S</kbd> / <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Mashinada — oldinga / orqaga (uzatmalar qutisi shart emas)</dd>
     <dt><kbd>B</kbd></dt><dd>Zapravkada yoqilg'i quyish / bak bo'sh bo'lsa — kanistr chaqirish</dd>
     <dt><kbd>G</kbd></dt><dd>Sirena va chiroqlar (politsiya mashinasida)</dd>
     <dt><kbd>R</kbd></dt><dd>Radio stansiyasini almashtirish (mashinada)</dd>

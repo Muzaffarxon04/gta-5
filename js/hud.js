@@ -67,6 +67,8 @@ const HUD = {
     }
     if (car) {
       // Uzatmalar qutisi: P R N D (mexanikada R N 1…5); aylanish cheklovchiga yaqin bo'lsa — sariq ("yuqoriga o'ting")
+      if (!gearUi()) { if (this._gk !== 'off') { this._gk = 'off'; (this._gs || (this._gs = document.getElementById('gearStrip'))).innerHTML = ''; } }
+      else {
       const opts = gearOptions(car), cur = gearSel(car), S = gearState(car), sh = manualBox(car) && (Game.rpm || 0) > 0.92;
       const key = opts.join('') + '|' + cur + '|' + S.g + '|' + sh;
       if (key !== this._gk) {
@@ -78,6 +80,7 @@ const HUD = {
         const gp = document.getElementById('gearPadInd');
         if (gp) { gp.textContent = gearLabel(car); gp.className = sh ? 'shift' : ''; }
         document.querySelectorAll('#shifter [data-sel]').forEach(b => { const on = b.dataset.sel === cur; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.textContent = on && cur === 'D' ? 'D' + S.g : b.dataset.sel; });
+      }
       }
     }
     if (car) { e.kmh.textContent = Math.round(car.speed * 3.6); e.carhp.style.width = clamp(car.hp / (car.maxHp || car.T.hp) * 100, 0, 100) + '%'; }
