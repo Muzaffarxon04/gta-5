@@ -5,7 +5,7 @@
 // Bu fayl birinchi bo'lib ishga tushadi — modellar Three.js va boshqa skriptlar bilan bir vaqtda yuklana boshlaydi.
 // [nom, hajmi baytda (foiz uchun, tools/build-offline.mjs yangilaydi), bosqich]
 const MODEL_FILES = [
-  ['nexia', 462976, 1], ['cobalt', 469078, 1], ['gentra', 544040, 1], ['spark', 465093, 1], ['hero', 1024520, 1],
+  ['nexia', 462976, 1], ['cobalt', 469078, 1], ['gentra', 544040, 1], ['spark', 465093, 1], ['hero', 1012867, 1],
   ['malibu', 429938, 2], ['moto', 372642, 2], ['bus', 543871, 2], ['damas', 423635, 2], ['lacetti', 393947, 2],
   ['police', 431977, 2], ['timur', 854555, 2], ['person', 923718, 2], ['gls', 1242204, 2], ['charger', 630887, 2],
 ];

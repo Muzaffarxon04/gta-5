@@ -4,7 +4,8 @@
 //  2. Skelet "tozalanadi": hamma suyakning dam holati burilishi 0 bo'ladi (faqat siljish). Shunda o'yindagi kod (mashinada o'tirish,
 //     rul ushlash, qurol) odam skeleti kabi, oddiy burchaklar bilan boshqara oladi. Animatsiyalar shu skeletga qayta hisoblanadi:
 //       yangi_burilish = Pr · q · Lr⁻¹ · Pr⁻¹   (Pr — ota-suyakning dam holati, Lr — suyakning ota-suyakka nisbatan dam holati)
-//  3. Faqat Idle, Walking, Running animatsiyalari saqlanadi (Hips'ning faqat balandlik tebranishi).
+//     Dam holati (A-poza) o'zgartirilmaydi: aralash og'irlikli joylar (yelka, tirsak) buzilmasin. Nishonga olish — IK (js/people.js heroAim).
+//  3. Faqat Idle, Walking, Running animatsiyalari saqlanadi (Hips'ning joyidagi chayqalishi).
 // Ishlatish (bir marta: cd tools && npm install): node tools/prep-hero.mjs [fayl.glb]
 import { NodeIO, Document } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
@@ -34,6 +35,18 @@ function inv4(m) {
   o[12] = (a[5] * b07 - a[4] * b09 - a[6] * b06) * d; o[13] = (a[0] * b09 - a[1] * b07 + a[2] * b06) * d; o[14] = (a[13] * b01 - a[12] * b03 - a[14] * b00) * d; o[15] = (a[8] * b03 - a[9] * b01 + a[10] * b00) * d;
   return o;
 }
+const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const norm3 = a => { const l = Math.hypot(...a) || 1; return a.map(v => v / l); };
+function mul4(a, b) { const o = new Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; }
+const trans4 = t => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, t[0], t[1], t[2], 1];
+function rot4(q) { const [x, y, z, w] = q; return [1 - 2 * (y * y + z * z), 2 * (x * y + z * w), 2 * (x * z - y * w), 0, 2 * (x * y - z * w), 1 - 2 * (x * x + z * z), 2 * (y * z + x * w), 0, 2 * (x * z + y * w), 2 * (y * z - x * w), 1 - 2 * (x * x + y * y), 0, 0, 0, 0, 1]; }
+function qfromto(a, b) { // a → b (birlik vektorlar)
+  const d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const c = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  return qnorm([c[0], c[1], c[2], 1 + d]);
+}
+const pos3 = m => [m[12], m[13], m[14]];
+const xf = (m, v) => [0, 1, 2].map(k => m[k] * v[0] + m[4 + k] * v[1] + m[8 + k] * v[2] + m[12 + k]);
 function mat2quat(m) { // 3x3 (ustunlar m[0..2], m[4..6], m[8..10]) — masshtabsiz aylanish deb olinadi
   const c = [[m[0], m[1], m[2]], [m[4], m[5], m[6]], [m[8], m[9], m[10]]].map(v => { const l = Math.hypot(...v) || 1; return v.map(x => x / l); });
   const r00 = c[0][0], r10 = c[0][1], r20 = c[0][2], r01 = c[1][0], r11 = c[1][1], r21 = c[1][2], r02 = c[2][0], r12 = c[2][1], r22 = c[2][2];
@@ -52,11 +65,12 @@ const prim = root.listMeshes()[0].listPrimitives()[0];
 const NJ = J.length, name = i => J[i].getName();
 
 // Dam holati (bind): suyaklarning jahon matritsasi = ibm⁻¹
-const W = J.map((_, i) => inv4(ibmAcc.getElement(i, new Array(16).fill(0))));
+const IBM = J.map((_, i) => ibmAcc.getElement(i, new Array(16).fill(0)));
+const W = IBM.map(inv4);
 const parent = J.map(n => J.indexOf(n.getParentNode()));
+
 const Wq = W.map(mat2quat);
 const Pr = parent.map(p => (p >= 0 ? Wq[p] : [0, 0, 0, 1]));
-const Lr = Wq.map((q, i) => qmul(qinv(Pr[i]), q));
 const S = HEIGHT / 1.70; // mesh balandligi 1.70 m (oyoq y=0)
 
 // --- Mesh: payvandlash (joy+UV+suyak) va soddalashtirish ---
@@ -66,7 +80,10 @@ for (let k = 0; k < I.getCount(); k++) {
   const i = I.getScalar(k), p = Pa.getElement(i, [0, 0, 0]), t = Ta.getElement(i, [0, 0]), j = Ja.getElement(i, [0, 0, 0, 0]), w = Wa.getElement(i, [0, 0, 0, 0]);
   const key = p.map(v => Math.round(v * 5000)).join(',') + ',' + Math.round(t[0] * 8192) + ',' + Math.round(t[1] * 8192);
   let v = map.get(key);
-  if (v === undefined) { v = pos.length / 3; map.set(key, v); pos.push(p[0] * S, p[1] * S, p[2] * S); uv.push(t[0], t[1]); jn.push(...j); wt.push(...w); }
+  if (v === undefined) {
+    v = pos.length / 3; map.set(key, v);
+    pos.push(p[0] * S, p[1] * S, p[2] * S); uv.push(t[0], t[1]); jn.push(...j); wt.push(...w);
+  }
   idx.push(v);
 }
 await MeshoptSimplifier.ready;
@@ -123,18 +140,43 @@ const hips = J.findIndex(n => n.getName().endsWith('Hips'));
 let nkeys = 0;
 for (const an of root.listAnimations()) {
   if (!KEEP.includes(an.getName())) continue;
-  const A2 = D.createAnimation(an.getName());
+  const A2 = D.createAnimation(an.getName()), idle = an.getName() === 'Idle';
+  const qmean = (o, n) => { const m = [0, 0, 0, 0]; for (let k = 0; k < n; k++) { const sg = o[k * 4 + 3] < 0 ? -1 : 1; for (let e = 0; e < 4; e++) m[e] += o[k * 4 + e] * sg; } return qnorm(m); };
+  // Turish: chanoqning o'rtacha qiyaligi (oldinga/yonga egilish) — olib tashlanadi, oyoqlar esa joyida qoladi
+  let HM = null;
+  if (idle) {
+    const hc = an.listChannels().find(c => J.indexOf(c.getTargetNode()) === hips && c.getTargetPath() === 'rotation'), v = hc.getSampler().getOutput(), n = v.getCount();
+    const o = new Float32Array(n * 4);
+    for (let k = 0; k < n; k++) o.set(qnorm(qmul(qmul(Pr[hips], qnorm(v.getElement(k, [0, 0, 0, 1]))), qinv(Wq[hips]))), k * 4);
+    const m = qmean(o, n);
+    HM = qnorm(qmul(m, qinv(qnorm([0, m[1], 0, m[3]])))); // faqat qiyalik (Y atrofidagi burilish qoladi)
+  }
   for (const ch of an.listChannels()) {
     const i = J.indexOf(ch.getTargetNode()), path = ch.getTargetPath();
     if (i < 0 || (path !== 'rotation' && !(path === 'translation' && i === hips))) continue;
+    // Kaft: Meshy skeletida Mixamo kaft animatsiyasi bilakni qiyshiq bukadi — kaft bilak bilan bir chiziqda qoladi
+    if (/(Left|Right)Hand$/.test(name(i))) continue;
     const s = ch.getSampler(), times = s.getInput(), vals = s.getOutput(), n = times.getCount();
     let o;
     if (path === 'rotation') {
       o = new Float32Array(n * 4);
-      for (let k = 0; k < n; k++) o.set(qnorm(qmul(qmul(qmul(Pr[i], qnorm(vals.getElement(k, [0, 0, 0, 1]))), qinv(Lr[i])), qinv(Pr[i]))), k * 4);
-    } else { // Hips: faqat balandlik tebranishi (gorizontal siljish yo'q)
+      // Bilak: o'z o'qi atrofidagi buralish olib tashlanadi (faqat egilish) — kaft dam holatidagidek songa qaragan bo'ladi
+      const ax = /(Left|Right)ForeArm$/.test(name(i)) ? norm3(sub3(pos3(W[J.findIndex(n => n.getParentNode() === J[i])]), pos3(W[i]))) : null;
+      for (let k = 0; k < n; k++) {
+        let q = qnorm(qmul(qmul(Pr[i], qnorm(vals.getElement(k, [0, 0, 0, 1]))), qinv(Wq[i])));
+        if (ax) { const d = q[0] * ax[0] + q[1] * ax[1] + q[2] * ax[2]; q = qnorm(qmul(q, qinv(qnorm([ax[0] * d, ax[1] * d, ax[2] * d, q[3]])))); }
+        if (HM && i === hips) q = qnorm(qmul(q, qinv(HM)));
+        if (HM && /UpLeg$/.test(name(i))) q = qnorm(qmul(HM, q));
+        o.set(q, k * 4);
+      }
+      // Turish (Idle): umurtqa, bo'yin va boshdagi doimiy oldinga egilish olib tashlanadi — faqat nafas olish tebranishi qoladi
+      if (idle && /(Spine\d?|Neck|Head)$/.test(name(i))) {
+        const mi = qinv(qmean(o, n));
+        for (let k = 0; k < n; k++) o.set(qnorm(qmul(Array.from(o.subarray(k * 4, k * 4 + 4)), mi)), k * 4);
+      }
+    } else { // Hips: tebranish (animatsiyalar joyida — ko'pi bilan 6 sm chayqalish; olib tashlansa oyoqlar sirpanadi)
       o = new Float32Array(n * 3);
-      for (let k = 0; k < n; k++) { const t = vals.getElement(k, [0, 0, 0]); o.set([W[hips][12] * S, t[1] * S, W[hips][14] * S], k * 3); }
+      for (let k = 0; k < n; k++) { const t = vals.getElement(k, [0, 0, 0]); o.set([t[0] * S, t[1] * S, t[2] * S], k * 3); }
     }
     const samp = D.createAnimationSampler().setInput(acc('SCALAR', new Float32Array(Array.from({ length: n }, (_, k) => times.getScalar(k))))).setOutput(acc(path === 'rotation' ? 'VEC4' : 'VEC3', o)).setInterpolation('LINEAR');
     A2.addSampler(samp).addChannel(D.createAnimationChannel().setTargetNode(nodes[i]).setTargetPath(path).setSampler(samp));

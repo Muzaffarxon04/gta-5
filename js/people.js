@@ -237,6 +237,19 @@ function heroMove(hm, phase, amp, run) {
   set(A.Running, m * run, k);
   hm.mixer.update(0);
 }
+// Nishonga olish (personaj modeli): ikki qo'l bilan oldinga, kamera qiyaligiga qarab (qo'l IK — reachArm)
+const _aimT = new THREE.Vector3(), _aimQ = new THREE.Quaternion(), _aimQ2 = new THREE.Quaternion(), _aimE = new THREE.Euler();
+function heroAim(hm, pitch, both) {
+  const y = 1.4 - Math.sin(pitch * 0.8) * 0.75, z = 0.75 * Math.cos(pitch * 0.8);
+  reachArm(hm, -1, _aimT.set(-0.06, y, z));
+  if (both) reachArm(hm, 1, _aimT.set(-0.02, y - 0.04, z - 0.1));
+  // O'ng bilak (qurol shunga biriktirilgan) — odam modelidagi kabi aynan nishon tomonga: model fazosida −90° + qiyalik
+  _aimQ.identity();
+  const chain = [];
+  for (let p = hm.b.faR.parent; p && p.isBone; p = p.parent) chain.unshift(p);
+  for (const p of chain) _aimQ.multiply(p.quaternion);
+  hm.b.faR.quaternion.copy(_aimQ.invert().multiply(_aimQ2.setFromEuler(_aimE.set(-Math.PI / 2 + pitch * 0.8, 0, 0))));
+}
 // Kod bilan yasalgan holatga o'tish: animatsiya to'xtaydi, hamma suyak dam holatiga qaytadi
 function heroStill(hm) {
   if (!hm.mixer || !hm.anim) return;
@@ -559,7 +572,8 @@ function updatePlayerFoot(dt, yaw, cars) {
     P.punchT -= dt;
     const k2 = Math.sin(clamp(P.punchT / 0.3, 0, 1) * Math.PI);
     b.uaR.rotation.set(-1.5 * k2, 0, -0.07); b.faR.rotation.set(-0.15, 0, 0); b.spine.rotation.y = 0.3 * k2;
-  } else if (aiming) {
+  } else if (aiming && hm.mixer) heroAim(hm, Game.camPitch, true);
+  else if (aiming) {
     b.uaR.rotation.set(-Math.PI / 2 + Game.camPitch * 0.8, 0, 0); b.faR.rotation.set(0, 0, 0);
     b.uaL.rotation.set(-1.2, 0, -0.5); b.faL.rotation.set(-0.4, 0, 0);
   }
